@@ -28,7 +28,11 @@ export async function GET(request: Request) {
     );
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}${next}`);
+    console.error('[auth/callback] exchangeCodeForSession failed:', error.message);
+    return NextResponse.redirect(
+      `${origin}/?auth_error=${encodeURIComponent(error.message)}`,
+    );
   }
 
-  return NextResponse.redirect(`${origin}/?auth_error=1`);
+  return NextResponse.redirect(`${origin}/?auth_error=missing_code`);
 }
