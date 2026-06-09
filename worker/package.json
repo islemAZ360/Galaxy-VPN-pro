@@ -1,0 +1,19 @@
+{
+  "name": "galaxyvpn-tester-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GalaxyVPN tester worker: pulls server links from GitHub repos, tests them, syncs working ones to Supabase.",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "sync": "node --env-file-if-exists=.env src/run-once.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3"
+  }
+}

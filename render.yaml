@@ -1,0 +1,39 @@
+# Render Blueprint for GalaxyVPN.
+# Assumes this `galaxyvpn/` folder is the repo root pushed to GitHub.
+services:
+  # --- Next.js web app ---
+  - type: web
+    name: galaxyvpn-web
+    runtime: node
+    rootDir: .
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: WORKER_TRIGGER_URL
+        sync: false
+      - key: WORKER_TRIGGER_SECRET
+        sync: false
+
+  # --- Tester worker (background) ---
+  - type: worker
+    name: galaxyvpn-worker
+    runtime: docker
+    rootDir: worker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: WORKER_TRIGGER_SECRET
+        sync: false
+      - key: SYNC_CRON
+        value: "*/20 * * * *"

@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# env / secrets — NEVER commit these
+.env
+.env.local
+.env*.local
+worker/.env
+
+# next.js
+.next/
+out/
+build/
+next-env.d.ts
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+.vercel
+coverage/
