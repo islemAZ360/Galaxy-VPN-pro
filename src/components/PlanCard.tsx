@@ -4,7 +4,15 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import type { Plan } from '@/lib/plans';
 
-export function PlanCard({ plan, featured }: { plan: Plan; featured?: boolean }) {
+export function PlanCard({
+  plan,
+  featured,
+  href,
+}: {
+  plan: Plan;
+  featured?: boolean;
+  href?: string;
+}) {
   const t = useTranslations('plans');
   return (
     <div
@@ -24,7 +32,7 @@ export function PlanCard({ plan, featured }: { plan: Plan; featured?: boolean })
         <li>✦ {t('share')}</li>
       </ul>
       <Link
-        href={`/checkout/${plan.id}`}
+        href={href ?? `/checkout/${plan.id}`}
         className="mt-6 rounded-xl bg-galaxy-primary px-4 py-3 text-center font-medium hover:opacity-90"
       >
         {t('buy')}

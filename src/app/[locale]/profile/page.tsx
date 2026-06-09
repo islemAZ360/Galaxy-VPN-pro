@@ -1,12 +1,25 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { headers } from 'next/headers';
-import { Link, redirect } from '@/i18n/routing';
+import { redirect } from '@/i18n/routing';
 import { createClient } from '@/lib/supabase/server';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { SubLink } from '@/components/SubLink';
+import { PlanCard } from '@/components/PlanCard';
+import { PLANS } from '@/lib/plans';
 
 // per-user auth-gated page — never prerender at build
 export const dynamic = 'force-dynamic';
+
+// In-account plan picker — this is where the user actually chooses & pays.
+function PlansGrid() {
+  return (
+    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {PLANS.map((p) => (
+        <PlanCard key={p.id} plan={p} featured={p.id === 3} />
+      ))}
+    </div>
+  );
+}
 
 export default async function ProfilePage({
   params,
@@ -21,6 +34,11 @@ export default async function ProfilePage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
+
+  // The admin owns the platform — send them straight to the dashboard,
+  // never to the customer "buy a subscription" screen.
+  const ADMIN_EMAIL = 'islamazaizia360@gmail.com';
+  if (user!.email === ADMIN_EMAIL) redirect({ href: '/admin', locale });
 
   const t = await getTranslations('profile');
 
@@ -73,13 +91,14 @@ export default async function ProfilePage({
       )}
 
       <div className="mt-6">
-        {/* No subscription */}
+        {/* No subscription → choose a plan right here */}
         {!sub && (
-          <div className="glass p-8 text-center">
-            <p className="text-white/70">{t('noSub')}</p>
-            <Link href="/#plans" className="mt-5 inline-block rounded-xl bg-galaxy-primary px-6 py-3 font-medium hover:opacity-90">
-              {t('choosePlan')}
-            </Link>
+          <div>
+            <div className="glass p-6 text-center">
+              <p className="text-white/70">{t('noSub')}</p>
+              <h2 className="mt-2 text-xl font-semibold">{t('choosePlan')}</h2>
+            </div>
+            <PlansGrid />
           </div>
         )}
 
@@ -98,9 +117,7 @@ export default async function ProfilePage({
             <div className="text-2xl">✖️</div>
             <h2 className="mt-3 text-xl font-semibold text-red-400">{t('rejectedTitle')}</h2>
             <p className="mt-2 text-white/70">{t('rejectedDesc')}</p>
-            <Link href="/#plans" className="mt-5 inline-block rounded-xl bg-galaxy-primary px-6 py-3 font-medium hover:opacity-90">
-              {t('choosePlan')}
-            </Link>
+            <PlansGrid />
           </div>
         )}
 
@@ -129,9 +146,8 @@ export default async function ProfilePage({
           <div className="glass p-8 text-center">
             <div className="text-2xl">⛔</div>
             <h2 className="mt-3 text-xl font-semibold">{t('expiredTitle')}</h2>
-            <Link href="/#plans" className="mt-5 inline-block rounded-xl bg-galaxy-primary px-6 py-3 font-medium hover:opacity-90">
-              {t('renew')}
-            </Link>
+            <p className="mt-2 text-white/70">{t('renew')}</p>
+            <PlansGrid />
           </div>
         )}
       </div>
