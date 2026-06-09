@@ -1,3 +1,29 @@
+// Country-code (ISO-2) → flag emoji (regional indicator letters).
+export function flagEmoji(cc) {
+  if (!cc || cc.length !== 2) return '🏳️';
+  return cc
+    .toUpperCase()
+    .replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
+
+// Return a copy of the config URI with its display remark renamed.
+// vmess stores the name in the base64 JSON `ps`; the rest use the `#fragment`.
+export function renameConfig(uri, name) {
+  const scheme = (uri.split('://')[0] || '').toLowerCase();
+  try {
+    if (scheme === 'vmess') {
+      const json = JSON.parse(Buffer.from(uri.slice('vmess://'.length), 'base64').toString('utf8'));
+      json.ps = name;
+      return 'vmess://' + Buffer.from(JSON.stringify(json), 'utf8').toString('base64');
+    }
+    const hashIdx = uri.indexOf('#');
+    const base = hashIdx >= 0 ? uri.slice(0, hashIdx) : uri;
+    return `${base}#${encodeURIComponent(name)}`;
+  } catch {
+    return uri;
+  }
+}
+
 // Extract { host, port, name } from a proxy config URI across protocols.
 export function parseConfig(uri) {
   const scheme = (uri.split('://')[0] || '').toLowerCase();
