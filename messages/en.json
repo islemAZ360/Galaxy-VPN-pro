@@ -1,0 +1,150 @@
+{
+  "brand": "GalaxyVPN",
+  "nav": {
+    "home": "Home",
+    "plans": "Plans",
+    "profile": "Profile",
+    "support": "Support",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "admin": "Admin"
+  },
+  "home": {
+    "heroTitle": "Fast, private internet across the galaxy",
+    "heroSubtitle": "GalaxyVPN gives you a constantly-updated pool of working servers from around the world. Pick a plan, scan, connect.",
+    "cta": "View plans",
+    "features": {
+      "speedTitle": "Always-working servers",
+      "speedDesc": "Our system tests every server around the clock and removes the dead ones automatically.",
+      "globalTitle": "Worldwide locations",
+      "globalDesc": "Servers across many countries, each labelled with its flag and latency.",
+      "shareTitle": "Share across devices",
+      "shareDesc": "Use your subscription on multiple devices at the same time.",
+      "privacyTitle": "Private by design",
+      "privacyDesc": "We don't track your browsing. Pay once, connect freely."
+    }
+  },
+  "plans": {
+    "title": "Choose your plan",
+    "subtitle": "Servers are refreshed continuously. Prices in Russian Rubles (₽).",
+    "servers": "{count} servers",
+    "share": "Multi-device sharing",
+    "buy": "Subscribe",
+    "duration": {
+      "month1": "1 month",
+      "months3": "3 months",
+      "months6": "6 months",
+      "year1": "1 year"
+    }
+  },
+  "auth": {
+    "title": "Sign in to GalaxyVPN",
+    "subtitle": "Use your Google account to continue.",
+    "google": "Continue with Google"
+  },
+  "checkout": {
+    "title": "Complete your payment",
+    "summary": "Order summary",
+    "amount": "Amount to pay",
+    "qrHint": "Scan to pay",
+    "qrPlaceholder": "Demo QR — the real payment QR will appear here",
+    "sberTitle": "Pay via Sber Bank",
+    "sberInstruction": "Send the exact amount above to our Sber Bank account, then attach the receipt screenshot below.",
+    "uploadLabel": "Payment receipt",
+    "choose": "Choose receipt image",
+    "change": "Change image",
+    "submit": "Submit for review",
+    "submitting": "Submitting…",
+    "noReceipt": "Please attach the receipt image first.",
+    "error": "Something went wrong. Please try again."
+  },
+  "profile": {
+    "title": "Your account",
+    "noSub": "You don't have a subscription yet.",
+    "choosePlan": "Choose a plan",
+    "pendingTitle": "Payment under review",
+    "pendingDesc": "We received your receipt. Your subscription activates as soon as an admin approves it.",
+    "rejectedTitle": "Payment rejected",
+    "rejectedDesc": "Your last payment was not approved.",
+    "adminMessage": "Message from admin",
+    "activeTitle": "Subscription active",
+    "remaining": "Time remaining",
+    "expiredTitle": "Subscription expired",
+    "renew": "Renew / change plan",
+    "subLinkLabel": "Your subscription link",
+    "subLinkHint": "Add this link in your VPN app (Hiddify / v2rayN …).",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "serversIncluded": "{count} servers included",
+    "d": "d", "h": "h", "m": "m", "s": "s"
+  },
+  "support": {
+    "title": "Support",
+    "placeholder": "Type a message…",
+    "send": "Send",
+    "attach": "Attach image",
+    "empty": "No messages yet. Say hello!",
+    "you": "You",
+    "agent": "Support"
+  },
+  "admin": {
+    "title": "Admin dashboard",
+    "tabStats": "Statistics",
+    "tabServers": "Servers",
+    "tabUsers": "Users & Payments",
+    "tabSupport": "Support",
+    "stats": {
+      "totalUsers": "Total users",
+      "activeSubs": "Active subscriptions",
+      "workingServers": "Working servers",
+      "revenue": "Total revenue",
+      "pendingPayments": "Pending payments",
+      "lastCheck": "Last server check",
+      "revenueByPlan": "Revenue by plan",
+      "plan": "Plan",
+      "sales": "Sales"
+    },
+    "servers": {
+      "title": "Live server pool",
+      "name": "Name",
+      "country": "Country",
+      "protocol": "Protocol",
+      "latency": "Latency",
+      "empty": "No servers yet — run a check from the Hiddify app."
+    },
+    "payments": {
+      "title": "Pending payments",
+      "none": "No pending payments.",
+      "amount": "Amount",
+      "plan": "Plan",
+      "receipt": "Receipt",
+      "approve": "Approve",
+      "reject": "Reject",
+      "messagePlaceholder": "Optional message to the user…",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "users": {
+      "title": "Users",
+      "search": "Search by email…",
+      "email": "Email",
+      "role": "Role",
+      "subEnds": "Subscription ends",
+      "status": "Status",
+      "active": "Active",
+      "banned": "Banned",
+      "none": "—",
+      "ban": "Ban 30d",
+      "unban": "Unban",
+      "extend": "+30 days",
+      "delete": "Delete",
+      "confirmDelete": "Delete this user permanently?"
+    },
+    "support": {
+      "title": "Conversations",
+      "none": "No conversations yet.",
+      "reply": "Reply…",
+      "send": "Send"
+    }
+  }
+}

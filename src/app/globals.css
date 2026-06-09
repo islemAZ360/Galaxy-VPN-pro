@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Segoe UI', system-ui, sans-serif;
+}
+
+body {
+  @apply bg-galaxy-bg text-white antialiased;
+  background-image: radial-gradient(ellipse at top, #1e1b4b 0%, #0a0a1a 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+.glass {
+  @apply bg-white/5 backdrop-blur border border-white/10 rounded-2xl;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-18px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 90s linear infinite; }
