@@ -260,6 +260,18 @@ do $$ begin
   alter publication supabase_realtime add table public.subscriptions;
 exception when duplicate_object then null; end $$;
 
+-- ----------------------------------------------------------------------------
+-- 13. Harden the admin views
+-- Views bypass RLS (they run with the owner's rights), and Supabase grants
+-- select to anon/authenticated by default — which would leak aggregate
+-- business stats (user counts, revenue) to any logged-in client. Revoke that;
+-- the admin dashboard reads these via the service_role key, which is unaffected.
+-- ----------------------------------------------------------------------------
+revoke all on public.admin_stats          from anon, authenticated;
+revoke all on public.admin_revenue_by_plan from anon, authenticated;
+alter view public.admin_stats           set (security_invoker = on);
+alter view public.admin_revenue_by_plan set (security_invoker = on);
+
 -- ============================================================================
 -- Done.
 -- ============================================================================
