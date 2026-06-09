@@ -3,6 +3,9 @@ import { redirect } from '@/i18n/routing';
 import { createClient } from '@/lib/supabase/server';
 import { ChatThread } from '@/components/ChatThread';
 
+// per-user auth-gated page — never prerender at build
+export const dynamic = 'force-dynamic';
+
 export default async function SupportPage({
   params,
 }: {
