@@ -125,3 +125,20 @@ export async function deleteUser(userId: string) {
   await admin.auth.admin.deleteUser(userId);
   revalidatePath('/', 'layout');
 }
+
+// ---- GitHub repo management (the worker reads these on its next run) ----
+export async function addRepo(repoUrl: string) {
+  await assertAdmin();
+  const url = repoUrl.trim();
+  if (!/github\.com\//i.test(url)) throw new Error('invalid github url');
+  const admin = createAdminClient();
+  await admin.from('repos').upsert({ repo_url: url, enabled: true }, { onConflict: 'repo_url' });
+  revalidatePath('/', 'layout');
+}
+
+export async function deleteRepo(id: string) {
+  await assertAdmin();
+  const admin = createAdminClient();
+  await admin.from('repos').delete().eq('id', id);
+  revalidatePath('/', 'layout');
+}

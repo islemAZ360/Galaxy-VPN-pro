@@ -74,40 +74,37 @@ WORKER_TRIGGER_SECRET=...           # كلمة سر مشتركة لحماية ز
 
 ---
 
-## 7) مفاتيح Render — ماذا تضع في Environment (بعد الرفع)
+## 7) النشر — Vercel (الموقع) + GitHub Actions (الـ Worker)
 
-> ⚠️ لا تضع أي مفتاح في الكود إطلاقاً. كل الأسرار تُوضع في **Render → Service → Environment** (مشفّرة وخارج الكود). الملف [`render.yaml`](render.yaml) يعرّف الخدمتين تلقائياً، عليك فقط ملء القيم.
+> ⚠️ لا تضع أي مفتاح في الكود. كل الأسرار متغيّرات بيئة.
+> ملاحظة: تخلّينا عن Render لأن طبقته المجانية تحظر مشاريع VPN/الفحص الشبكي. (`render.yaml` يبقى للمرجع إن استأجرت VPS لاحقاً.)
 
-### أ. خدمة الموقع — `galaxyvpn-web`
-| المفتاح | القيمة (مثال) | سرّي؟ |
-|--------|---------------|------|
+### أ. الموقع على **Vercel**
+1. [vercel.com](https://vercel.com) → Add New → Project → استورد مستودع `Galaxy-VPN-pro`.
+2. Framework: **Next.js** (يُكتشف تلقائياً) · Root Directory: `.`
+3. **Environment Variables**:
+
+| المفتاح | القيمة | سرّي؟ |
+|--------|--------|------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://oneezcaqqqaqsjkuaoor.supabase.co` | لا |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | مفتاح `anon` | لا (عام بطبيعته، محميّ بـ RLS) |
-| `SUPABASE_SERVICE_ROLE_KEY` | مفتاح `service_role` | **نعم** |
-| `NEXT_PUBLIC_SITE_URL` | `https://galaxyvpn-web.onrender.com` | لا |
-| `WORKER_TRIGGER_URL` | `https://galaxyvpn-worker.onrender.com/trigger-sync` | لا |
-| `WORKER_TRIGGER_SECRET` | كلمة السر المشتركة | **نعم** |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | مفتاح `anon` | لا (محميّ بـ RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | مفتاح `service_role` | **نعم** 🔒 |
 
-### ب. خدمة الـ Worker — `galaxyvpn-worker`
-| المفتاح | القيمة (مثال) | سرّي؟ |
-|--------|---------------|------|
-| `SUPABASE_URL` | `https://oneezcaqqqaqsjkuaoor.supabase.co` | لا |
-| `SUPABASE_SERVICE_ROLE_KEY` | مفتاح `service_role` | **نعم** |
-| `WORKER_TRIGGER_SECRET` | نفس كلمة السر المشتركة | **نعم** |
-| `SYNC_CRON` | `*/20 * * * *` | لا |
-| `GITHUB_TOKEN` | اختياري — يرفع حد GitHub API | **نعم** |
+4. **Deploy** → ستحصل على دومين مثل `https://galaxy-vpn-pro.vercel.app`.
 
-### ج. تطبيق Hiddify (نسخة الأدمن)
-يُبنى عبر `--dart-define` (لا يحمل مفاتيح Supabase — يتصل بالـ Worker فقط):
-```
-flutter build <target> \
-  --dart-define=GALAXY_WORKER_URL=https://galaxyvpn-worker.onrender.com \
-  --dart-define=GALAXY_WORKER_SECRET=<كلمة السر المشتركة>
-```
+### ب. الـ Worker على **GitHub Actions** (مجاني، لا يُحظر)
+1. في المستودع → **Settings → Secrets and variables → Actions → New repository secret**، أضف:
+   - `SUPABASE_URL` = `https://oneezcaqqqaqsjkuaoor.supabase.co`
+   - `SUPABASE_SERVICE_ROLE_KEY` = مفتاح `service_role` 🔒
+2. تبويب **Actions** → فعّل الـ workflows إن طُلب.
+3. الفحص يعمل تلقائياً **كل 30 دقيقة** ([.github/workflows/sync.yml](.github/workflows/sync.yml))، أو يدوياً: Actions → "Sync VPN servers" → **Run workflow**.
 
-### بعد النشر: حدّث قوائم السماح
-1. **Google Console** → JavaScript origins: أضف `https://galaxyvpn-web.onrender.com`.
-2. **Supabase → Authentication → URL Configuration**: اجعل Site URL = دومين Render، وأضف `https://galaxyvpn-web.onrender.com/auth/callback` إلى Redirect URLs.
+### ج. بعد النشر — قوائم السماح (لتسجيل الدخول)
+1. **Supabase → Authentication → URL Configuration**: Site URL = دومين Vercel، وأضف `https://<دومين-Vercel>/auth/callback` إلى Redirect URLs.
+2. **Google Console → Authorized JavaScript origins**: أضف دومين Vercel.
+
+### د. إدارة المستودعات
+انتقلت إلى **لوحة الأدمن في الموقع** (تبويب «المستودعات») — الأدمن يضيف/يحذف روابط GitHub، وتقرؤها مهمة GitHub Actions في تشغيلها التالي. (شاشة Hiddify السابقة كانت تعتمد خادم Worker دائماً؛ لم تعد مستخدمة في هذا المسار.)
 
 ---
 
