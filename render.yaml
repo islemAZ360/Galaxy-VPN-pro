@@ -22,12 +22,18 @@ services:
       - key: WORKER_TRIGGER_SECRET
         sync: false
 
-  # --- Tester worker (background) ---
-  - type: worker
+  # --- Tester worker ---
+  # Deployed as a `web` service (not `worker`) so it runs on Render's free tier.
+  # It serves /health + /trigger-sync and runs the sync on an internal cron.
+  # NOTE: free web services sleep after ~15 min idle, pausing the internal cron.
+  # To keep syncing 24/7, either upgrade this service, or ping /trigger-sync from
+  # an external scheduler (e.g. cron-job.org) — that both wakes it and syncs.
+  - type: web
     name: galaxyvpn-worker
     runtime: docker
     rootDir: worker
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
     envVars:
       - key: SUPABASE_URL
         sync: false
