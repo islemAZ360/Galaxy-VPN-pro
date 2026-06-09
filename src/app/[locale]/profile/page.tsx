@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { SubLink } from '@/components/SubLink';
 
+// per-user auth-gated page — never prerender at build
+export const dynamic = 'force-dynamic';
+
 export default async function ProfilePage({
   params,
 }: {

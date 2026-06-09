@@ -3,6 +3,9 @@ import { redirect } from '@/i18n/routing';
 import { createClient } from '@/lib/supabase/server';
 import { AdminTabs } from '@/components/admin/AdminTabs';
 
+// admin area is per-user auth-gated — force dynamic for all nested pages
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout({
   children,
   params,
