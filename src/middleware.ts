@@ -32,6 +32,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // run on everything except api routes, static files and assets
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+  // run on everything except api/auth routes, static files and assets.
+  // `auth` is excluded so the OAuth callback (/auth/callback) is NOT given a
+  // locale prefix by next-intl (which would 404 — the route lives at /auth/callback).
+  matcher: ['/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 };
