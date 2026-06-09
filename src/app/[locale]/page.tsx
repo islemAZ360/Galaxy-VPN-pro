@@ -74,8 +74,10 @@ export default async function HomePage({
       <section id="plans" className="scroll-mt-24">
         <PlansHeader />
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {/* Showcase only — the button sends visitors to sign in; the actual
+              plan selection + payment happens in their account (profile). */}
           {PLANS.map((p) => (
-            <PlanCard key={p.id} plan={p} featured={p.id === 3} />
+            <PlanCard key={p.id} plan={p} featured={p.id === 3} href="/login" />
           ))}
         </div>
       </section>

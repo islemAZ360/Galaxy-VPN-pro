@@ -22,8 +22,8 @@ export async function Navbar() {
         </Link>
         <div className="hidden gap-5 text-sm text-white/80 md:flex">
           <Link href="/">{t('home')}</Link>
-          <Link href="/#plans">{t('plans')}</Link>
-          {user && <Link href="/profile">{t('profile')}</Link>}
+          {!isAdmin && <Link href="/#plans">{t('plans')}</Link>}
+          {user && !isAdmin && <Link href="/profile">{t('profile')}</Link>}
           {user && <Link href="/support">{t('support')}</Link>}
           {isAdmin && (
             <Link href="/admin" className="text-galaxy-accent">
