@@ -1,6 +1,7 @@
 import { supa } from './supa.js';
 import { fetchRepoTexts } from './github.js';
 import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
+import { flagEmoji, renameConfig } from './uri.js';
 import { testAll } from './test.js';
 import { lookupCountries } from './geoip.js';
 
@@ -80,21 +81,35 @@ export async function runSync() {
     // 4. geoip for working hosts
     const geo = await lookupCountries(working.map((w) => w.host));
 
-    // 5. build rows + upsert
-    const rows = working.map((w) => {
+    // 5. Smart rename: sort by country (then latency), number per country, and
+    // rewrite BOTH the display name and the config's own remark so the clean
+    // "🇩🇿 Algeria #1" name shows in the admin panel AND in the user's app (Happ).
+    const now = new Date().toISOString();
+    const sorted = [...working].sort((a, b) => {
+      const ca = geo.get(a.host)?.country || 'ZZZ';
+      const cb = geo.get(b.host)?.country || 'ZZZ';
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      return (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity);
+    });
+    const counters = {};
+    const rows = sorted.map((w) => {
       const g = geo.get(w.host) || {};
+      const country = g.country || 'Unknown';
+      const cc = g.country_code ?? null;
+      counters[country] = (counters[country] || 0) + 1;
+      const displayName = `${flagEmoji(cc)} ${country} #${counters[country]}`;
       return {
-        name: w.name || w.host,
+        name: displayName,
         country: g.country ?? null,
-        country_code: g.country_code ?? null,
+        country_code: cc,
         protocol: PROTOCOL_OF(w.uri),
-        config_uri: w.uri,
-        config_hash: hashConfig(w.uri),
+        config_uri: renameConfig(w.uri, displayName), // what the user sees in Happ
+        config_hash: hashConfig(w.uri), // hash the ORIGINAL uri = stable identity
         latency_ms: w.latencyMs,
         is_working: true,
         source_repo: configs.get(hashConfig(w.uri))?.source ?? null,
-        last_checked_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        last_checked_at: now,
+        updated_at: now,
       };
     });
     // upsert in chunks (resilient to transient network errors)
