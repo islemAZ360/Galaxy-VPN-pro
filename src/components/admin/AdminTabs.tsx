@@ -6,6 +6,7 @@ import { Link, usePathname } from '@/i18n/routing';
 const TABS = [
   { href: '/admin', key: 'tabStats' },
   { href: '/admin/servers', key: 'tabServers' },
+  { href: '/admin/repos', key: 'tabRepos' },
   { href: '/admin/users', key: 'tabUsers' },
   { href: '/admin/support', key: 'tabSupport' },
 ] as const;

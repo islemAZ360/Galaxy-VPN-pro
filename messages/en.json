@@ -91,6 +91,7 @@
     "title": "Admin dashboard",
     "tabStats": "Statistics",
     "tabServers": "Servers",
+    "tabRepos": "Repos",
     "tabUsers": "Users & Payments",
     "tabSupport": "Support",
     "stats": {
@@ -139,6 +140,13 @@
       "extend": "+30 days",
       "delete": "Delete",
       "confirmDelete": "Delete this user permanently?"
+    },
+    "repos": {
+      "title": "GitHub repositories",
+      "hint": "Add repos whose .txt files hold server links. The scheduled worker tests them and updates the live pool.",
+      "add": "Add",
+      "delete": "Delete",
+      "none": "No repositories yet."
     },
     "support": {
       "title": "Conversations",
