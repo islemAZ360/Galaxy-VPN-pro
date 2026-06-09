@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { headers } from 'next/headers';
 import { Link, redirect } from '@/i18n/routing';
 import { createClient } from '@/lib/supabase/server';
 import { CountdownTimer } from '@/components/CountdownTimer';
@@ -46,8 +47,13 @@ export default async function ProfilePage({
     sub?.status === 'expired' ||
     (sub?.status === 'active' && sub.end_at && new Date(sub.end_at).getTime() <= now);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? '';
-  const subUrl = sub ? `${siteUrl}/api/sub/${sub.sub_token}` : '';
+  // Derive the public base URL from the request so the sub link is always
+  // correct in any environment (no build-time NEXT_PUBLIC_SITE_URL needed).
+  const h = await headers();
+  const host = h.get('x-forwarded-host') ?? h.get('host');
+  const proto = h.get('x-forwarded-proto') ?? 'https';
+  const base = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_SITE_URL ?? '');
+  const subUrl = sub ? `${base}/api/sub/${sub.sub_token}` : '';
 
   return (
     <div className="mx-auto max-w-3xl pt-12">
