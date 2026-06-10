@@ -1,12 +1,6 @@
+import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { requireAdmin } from '@/lib/admin';
-
-function flag(cc?: string | null) {
-  if (!cc || cc.length !== 2) return '🏳️';
-  return cc
-    .toUpperCase()
-    .replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)));
-}
 
 export default async function AdminServersPage({
   params,
@@ -71,8 +65,20 @@ export default async function AdminServersPage({
                     )}
                   </td>
                   <td className="py-2">
-                    <span className="me-1">{flag(s.country_code)}</span>
-                    {s.country ?? '—'}
+                    <div className="flex items-center gap-2">
+                      {s.country_code && s.country_code.length === 2 ? (
+                        <Image
+                          src={`https://flagcdn.com/${s.country_code.toLowerCase()}.svg`}
+                          alt={s.country_code}
+                          width={20}
+                          height={15}
+                          className="rounded-[2px]"
+                        />
+                      ) : (
+                        <span className="text-base">🏳️</span>
+                      )}
+                      <span>{s.country ?? '—'}</span>
+                    </div>
                   </td>
                   <td className="py-2 uppercase text-white/70">{s.protocol ?? '—'}</td>
                   <td className="py-2 tabular-nums">{s.latency_ms != null ? `${s.latency_ms} ms` : '—'}</td>
