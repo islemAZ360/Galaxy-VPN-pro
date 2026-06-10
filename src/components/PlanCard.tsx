@@ -3,11 +3,12 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import type { Plan, NetworkType } from '@/lib/plans';
+import { Wifi, Signal, Sparkles, Infinity } from 'lucide-react';
 
-const TIERS: { net: NetworkType; emoji: string; title: string; ring: string; chip: string; price: string }[] = [
-  { net: 'wifi',   emoji: '📡', title: 'Wi-Fi',                ring: 'hover:border-galaxy-accent/70', chip: 'bg-galaxy-accent/15 text-galaxy-accent', price: 'text-white' },
-  { net: 'lte',    emoji: '📶', title: 'LTE / Wi-Fi',          ring: 'hover:border-amber-400/70',     chip: 'bg-amber-400/15 text-amber-300',         price: 'text-white' },
-  { net: 'gemini', emoji: '✨', title: 'LTE / Wi-Fi / Gemini', ring: 'hover:border-fuchsia-400/70',   chip: 'bg-fuchsia-400/15 text-fuchsia-300',     price: 'text-white' },
+const TIERS: { net: NetworkType; icon: typeof Wifi; title: string; ring: string; chip: string; price: string }[] = [
+  { net: 'wifi',   icon: Wifi,      title: 'Wi-Fi',                ring: 'hover:border-galaxy-accent/70', chip: 'bg-galaxy-accent/15 text-galaxy-accent', price: 'text-white' },
+  { net: 'lte',    icon: Signal,    title: 'LTE / Wi-Fi',          ring: 'hover:border-amber-400/70',     chip: 'bg-amber-400/15 text-amber-300',         price: 'text-white' },
+  { net: 'gemini', icon: Sparkles,  title: 'LTE / Wi-Fi / Gemini', ring: 'hover:border-fuchsia-400/70',   chip: 'bg-fuchsia-400/15 text-fuchsia-300',     price: 'text-white' },
 ];
 
 export function PlanCard({
@@ -39,13 +40,13 @@ export function PlanCard({
       <div className="border-b border-white/10 pb-4">
         <div className="text-xl font-bold">{t(`duration.${plan.durationKey}`)}</div>
         <div className="mt-1 flex items-center gap-1.5 text-xs text-white/50">
-          <span>♾️</span> {t('share')}
+          <Infinity className="w-4 h-4" /> {t('share')}
         </div>
       </div>
 
       {/* Tier options */}
       <div className="mt-4 flex flex-1 flex-col gap-2.5">
-        {TIERS.map(({ net, emoji, title, ring, chip, price }) => {
+        {TIERS.map(({ net, icon: Icon, title, ring, chip, price }) => {
           const v = plan[net];
           const url = href ?? `/checkout/${plan.id}?net=${net}`;
           return (
@@ -55,8 +56,8 @@ export function PlanCard({
               aria-label={`${t(`duration.${plan.durationKey}`)} — ${title} — ${v.priceRub}₽`}
               className={`flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3 transition hover:bg-white/[0.04] ${ring}`}
             >
-              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-base ${chip}`}>
-                {emoji}
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${chip}`}>
+                <Icon className="w-[18px] h-[18px]" />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13px] font-semibold leading-tight">{title}</div>

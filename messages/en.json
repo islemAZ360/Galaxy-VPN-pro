@@ -2,7 +2,9 @@
   "brand": "GalaxyVPN",
   "nav": {
     "home": "Home",
+    "features": "Features",
     "plans": "Plans",
+    "faq": "FAQ",
     "profile": "Profile",
     "support": "Support",
     "login": "Sign in",
@@ -230,6 +232,50 @@
       "none": "No conversations yet.",
       "reply": "Reply…",
       "send": "Send"
+    }
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about GalaxyVPN.",
+    "whatIsVpn": {
+      "q": "What is GalaxyVPN and how does it work?",
+      "a": "GalaxyVPN is a high-speed VPN service that uses V2Ray/VLESS protocols to encrypt your internet traffic and route it through our servers worldwide. This allows you to bypass geo-restrictions, access blocked websites, and browse privately."
+    },
+    "howToUse": {
+      "q": "How do I start using GalaxyVPN?",
+      "a": "Simply create an account, choose a plan, complete the payment, and you'll receive a subscription link. Import this link into any V2Ray-compatible app (like Hiddify or v2rayN) and connect with one tap."
+    },
+    "whichDevices": {
+      "q": "Which devices and platforms are supported?",
+      "a": "GalaxyVPN works on Android (Hiddify, v2rayNG), iOS (Streisand, Shadowrocket), Windows (Hiddify, v2rayN), macOS, and Linux. Any app that supports V2Ray/VLESS protocols will work."
+    },
+    "paymentMethods": {
+      "q": "What payment methods do you accept?",
+      "a": "We currently accept payments via Sber Bank transfer. After making the transfer, simply upload a screenshot of your receipt and our team will verify it within minutes."
+    },
+    "howManyDevices": {
+      "q": "Can I use my subscription on multiple devices?",
+      "a": "Yes! All plans include multi-device sharing. You can use the same subscription link on your phone, tablet, and computer simultaneously."
+    },
+    "serverDifference": {
+      "q": "What is the difference between Wi-Fi, LTE, and Gemini servers?",
+      "a": "Wi-Fi servers work great on home/office Wi-Fi networks. LTE servers are optimized for mobile data connections and resist severe network disruptions. Gemini servers can additionally unblock Google Gemini AI, which most VPNs cannot."
+    },
+    "geminiServer": {
+      "q": "Why do I need a special server for Gemini?",
+      "a": "Google Gemini uses advanced detection that blocks most VPN connections. Our Gemini-tier servers use specialized techniques to bypass this detection, giving you reliable access to Gemini AI."
+    },
+    "lteServer": {
+      "q": "When should I use LTE servers?",
+      "a": "Use LTE servers when you're on mobile data (SIM card), or during internet disruptions. They're specifically engineered to maintain stable connections even under heavy network interference."
+    },
+    "cancelRefund": {
+      "q": "Can I get a refund if I'm not satisfied?",
+      "a": "If you experience persistent issues that our support team cannot resolve, please contact us through the support chat. We handle refund requests on a case-by-case basis."
+    },
+    "notWorking": {
+      "q": "What should I do if my VPN is not connecting?",
+      "a": "First, try switching to a different server from your subscription. If the issue persists, our servers are automatically tested and refreshed — try again in a few minutes. You can also reach out via our Support chat for immediate help."
     }
   }
 }

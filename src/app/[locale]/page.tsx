@@ -3,9 +3,10 @@ import { Link } from '@/i18n/routing';
 import { PLANS } from '@/lib/plans';
 import { PlanCard } from '@/components/PlanCard';
 import { FadeIn } from '@/components/FadeIn';
-import { Zap, Lock, Globe, CheckCircle, ShieldCheck, ArrowRight, PlaySquare, Smartphone, Download, MapPin } from 'lucide-react';
+import { Zap, Lock, Globe, CheckCircle, ShieldCheck, ArrowRight, PlaySquare, Smartphone, Download, MapPin, HelpCircle } from 'lucide-react';
 import FloatingLines from '@/components/FloatingLines';
 import Marquee from '@/components/Marquee';
+import { FAQ } from '@/components/FAQ';
 
 export default async function HomePage({
   params,
@@ -306,6 +307,16 @@ export default async function HomePage({
           ))}
         </div>
       </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="scroll-mt-24 px-4 max-w-6xl mx-auto w-full">
+        <FadeIn direction="up">
+          <FAQHeader />
+        </FadeIn>
+        <FadeIn direction="up" delay={0.2}>
+          <FAQ />
+        </FadeIn>
+      </section>
     </div>
   );
 }
@@ -315,6 +326,17 @@ async function PlansHeader() {
   return (
     <div className="text-center">
       <h2 className="text-3xl font-bold">{t('title')}</h2>
+      <p className="mt-3 text-white/70">{t('subtitle')}</p>
+    </div>
+  );
+}
+
+async function FAQHeader() {
+  const t = await getTranslations('faq');
+  return (
+    <div className="text-center mb-10">
+      <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">FAQ</p>
+      <h2 className="text-3xl md:text-4xl font-bold">{t('title')}</h2>
       <p className="mt-3 text-white/70">{t('subtitle')}</p>
     </div>
   );

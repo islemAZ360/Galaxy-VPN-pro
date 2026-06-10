@@ -22,7 +22,9 @@ export async function Navbar() {
         </Link>
         <div className="hidden gap-5 text-sm text-white/80 md:flex">
           <Link href="/">{t('home')}</Link>
+          {!isAdmin && <Link href="/#why">{t('features')}</Link>}
           {!isAdmin && <Link href="/#plans">{t('plans')}</Link>}
+          {!isAdmin && <Link href="/#faq">{t('faq')}</Link>}
           {user && !isAdmin && <Link href="/profile">{t('profile')}</Link>}
           {user && <Link href="/support">{t('support')}</Link>}
           {isAdmin && (
