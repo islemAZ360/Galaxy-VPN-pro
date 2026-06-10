@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { PLANS } from '@/lib/plans';
 import { PlanCard } from '@/components/PlanCard';
+import { FadeIn } from '@/components/FadeIn';
 
 export default async function HomePage({
   params,
@@ -48,36 +49,48 @@ export default async function HomePage({
           style={{ animationDelay: '1.5s' }}
         />
 
-        <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-          {t('heroTitle')}
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-white/70">{t('heroSubtitle')}</p>
-        <Link
-          href="/#plans"
-          className="mt-10 inline-block rounded-xl bg-galaxy-primary px-8 py-3 font-medium shadow-lg shadow-galaxy-primary/30 transition hover:opacity-90"
-        >
-          {t('cta')}
-        </Link>
+        <FadeIn direction="up">
+          <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
+            {t('heroTitle')}
+          </h1>
+        </FadeIn>
+        <FadeIn direction="up" delay={0.2}>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-white/70">{t('heroSubtitle')}</p>
+        </FadeIn>
+        <FadeIn direction="up" delay={0.4}>
+          <Link
+            href="/#plans"
+            className="mt-10 inline-block rounded-xl bg-galaxy-primary px-8 py-3 font-medium shadow-lg shadow-galaxy-primary/30 transition hover:opacity-90"
+          >
+            {t('cta')}
+          </Link>
+        </FadeIn>
       </section>
 
       {/* Features */}
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {features.map((f) => (
-          <div key={f} className="glass p-6">
-            <h3 className="text-lg font-semibold">{t(`features.${f}Title`)}</h3>
-            <p className="mt-2 text-sm text-white/70">{t(`features.${f}Desc`)}</p>
-          </div>
+        {features.map((f, i) => (
+          <FadeIn key={f} delay={i * 0.1} direction="up" className="h-full">
+            <div className="glass p-6 h-full flex flex-col">
+              <h3 className="text-lg font-semibold">{t(`features.${f}Title`)}</h3>
+              <p className="mt-2 text-sm text-white/70 flex-grow">{t(`features.${f}Desc`)}</p>
+            </div>
+          </FadeIn>
         ))}
       </section>
 
       {/* Plans */}
       <section id="plans" className="scroll-mt-24">
-        <PlansHeader />
+        <FadeIn direction="up">
+          <PlansHeader />
+        </FadeIn>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Showcase only — the button sends visitors to sign in; the actual
               plan selection + payment happens in their account (profile). */}
-          {PLANS.map((p) => (
-            <PlanCard key={p.id} plan={p} featured={p.id === 3} href="/login" />
+          {PLANS.map((p, i) => (
+            <FadeIn key={p.id} delay={i * 0.15} direction="up" className="h-full">
+              <PlanCard plan={p} featured={p.id === 3} href="/login" />
+            </FadeIn>
           ))}
         </div>
       </section>
