@@ -4,57 +4,93 @@ import { runSync, isRunning } from './sync.js';
 import { banner, log } from './log.js';
 
 const CRON = process.env.SYNC_CRON || '*/30 * * * *'; // every 30 min
+const POLL_MS = Number(process.env.REQUEST_POLL_MS || 15_000);
 
 banner();
 log.ok(`Connected to Supabase: ${process.env.SUPABASE_URL}`);
-log.info(`Scheduled cron: ${CRON}`);
+log.info(`Scheduled cron: ${CRON}  ·  request poll: ${POLL_MS / 1000}s`);
 
-// --- Live admin trigger (Supabase Realtime on sync_requests) -----------------
-// Admin presses "Re-check all repos" in the dashboard → row inserted here →
-// we run runSync() and mark the row processed.
-async function handleRequest(row) {
-  log.bell(`Sync requested by admin (request id ${row.id.slice(0, 8)}…)`);
+// --- Heartbeat + status (so the admin dashboard sees us live) ----------------
+async function setStatus(fields) {
+  try {
+    await supa
+      .from('worker_status')
+      .upsert({ id: 'worker', updated_at: new Date().toISOString(), ...fields }, { onConflict: 'id' });
+  } catch { /* best-effort */ }
+}
+const heartbeat = () => setStatus({ last_seen: new Date().toISOString() });
+heartbeat();
+setInterval(heartbeat, 10_000);
+
+async function syncWithStatus(reason) {
+  await setStatus({ state: 'syncing', last_seen: new Date().toISOString() });
   const result = await runSync();
-  await supa
-    .from('sync_requests')
-    .update({ processed_at: new Date().toISOString(), result })
-    .eq('id', row.id);
+  await setStatus({
+    state: 'idle',
+    last_seen: new Date().toISOString(),
+    last_sync_at: new Date().toISOString(),
+    last_result: { reason, ...result },
+  });
+  return result;
 }
 
-const channel = supa
+// --- Process admin sync requests --------------------------------------------
+// Realtime gives an instant trigger; a poll loop guarantees nothing is missed
+// if the (sometimes flaky) websocket drops. drainPending() claims all currently
+// pending rows with a single sync, so duplicate triggers can't double-run.
+let draining = false;
+async function drainPending(source) {
+  if (draining || isRunning()) return;
+  draining = true;
+  try {
+    const { data: pending, error } = await supa
+      .from('sync_requests').select('id').is('processed_at', null);
+    if (error || !pending?.length) return;
+    log.bell(`${pending.length} sync request(s) pending (${source}) — running now`);
+    const result = await syncWithStatus('admin');
+    await supa
+      .from('sync_requests')
+      .update({ processed_at: new Date().toISOString(), result })
+      .in('id', pending.map((p) => p.id));
+  } catch (e) {
+    log.err(`drain failed: ${e.message}`);
+  } finally {
+    draining = false;
+  }
+}
+
+// Realtime (instant) — best-effort; the poll loop is the reliability guarantee.
+let warnedRealtime = false;
+supa
   .channel('worker-sync-requests')
   .on('postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'sync_requests' },
-      (payload) => handleRequest(payload.new))
+      () => drainPending('realtime'))
   .subscribe((status) => {
-    if (status === 'SUBSCRIBED') log.ok('Listening for admin sync requests (Realtime)');
-    else if (status === 'CHANNEL_ERROR') log.err('Realtime channel error');
+    if (status === 'SUBSCRIBED') {
+      log.ok('Realtime connected — instant admin triggers enabled');
+      warnedRealtime = false;
+    } else if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && !warnedRealtime) {
+      log.warn('Realtime reconnecting… (polling still active, nothing is missed)');
+      warnedRealtime = true; // don't spam on every reconnect
+    }
   });
 
-// Drain any pending requests that arrived while the worker was offline.
-(async () => {
-  const { data: pending } = await supa
-    .from('sync_requests').select('id').is('processed_at', null).order('requested_at');
-  if (pending?.length) {
-    log.bell(`${pending.length} pending request(s) queued while offline — running now`);
-    for (const r of pending) await handleRequest(r);
-  }
-})();
+// Poll fallback
+setInterval(() => drainPending('poll'), POLL_MS);
 
 // --- Scheduled background sync ----------------------------------------------
 cron.schedule(CRON, () => {
   if (isRunning()) return;
   log.info('Cron tick — running scheduled sync');
-  runSync();
+  syncWithStatus('cron');
 });
 
 // --- Initial sync on boot ----------------------------------------------------
 log.step('Running initial sync on startup…');
-runSync();
+syncWithStatus('startup').then(() => drainPending('startup'));
 
-// Keep the process alive
 process.on('SIGINT', () => {
   log.warn('Shutting down…');
-  channel.unsubscribe();
-  process.exit(0);
+  setStatus({ state: 'offline', last_seen: new Date().toISOString() }).finally(() => process.exit(0));
 });

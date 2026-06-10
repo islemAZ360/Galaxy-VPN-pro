@@ -89,6 +89,17 @@
   },
   "admin": {
     "title": "لوحة تحكم الأدمن",
+    "worker": {
+      "title": "أداة الفحص المحلية",
+      "online": "متصلة",
+      "offline": "غير متصلة",
+      "syncing": "جارٍ الفحص…",
+      "lastSeen": "آخر ظهور",
+      "lastSync": "آخر فحص",
+      "live": "{count} شغّال",
+      "never": "أبداً",
+      "startHint": "شغّل start-worker.bat على جهازك"
+    },
     "tabStats": "الإحصائيات",
     "tabServers": "السيرفرات",
     "tabRepos": "المستودعات",

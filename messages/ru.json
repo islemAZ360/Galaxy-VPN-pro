@@ -89,6 +89,17 @@
   },
   "admin": {
     "title": "Панель администратора",
+    "worker": {
+      "title": "Локальный тестер",
+      "online": "В сети",
+      "offline": "Не в сети",
+      "syncing": "Синхронизация…",
+      "lastSeen": "был(а)",
+      "lastSync": "Последняя синхр.",
+      "live": "{count} рабочих",
+      "never": "никогда",
+      "startHint": "запустите start-worker.bat на своём ПК"
+    },
     "tabStats": "Статистика",
     "tabServers": "Серверы",
     "tabRepos": "Репозитории",
