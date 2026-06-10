@@ -89,6 +89,17 @@
   },
   "admin": {
     "title": "Admin dashboard",
+    "worker": {
+      "title": "Local tester",
+      "online": "Online",
+      "offline": "Offline",
+      "syncing": "Syncing…",
+      "lastSeen": "last seen",
+      "lastSync": "Last sync",
+      "live": "{count} live",
+      "never": "never",
+      "startHint": "start start-worker.bat on your machine"
+    },
     "tabStats": "Statistics",
     "tabServers": "Servers",
     "tabRepos": "Repos",
