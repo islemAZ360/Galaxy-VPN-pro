@@ -17,32 +17,33 @@ export default async function HomePage({
 
   return (
     <div className="flex flex-col gap-32 pt-16 pb-24 overflow-x-hidden relative">
-      <div className="absolute top-0 left-0 w-full h-[100vh] -z-10 bg-[#0a0a1a]">
-        <FloatingLines
-          enabledWaves={['top', 'middle', 'bottom']}
-          lineCount={[10, 15, 20]}
-          lineDistance={[8, 6, 4]}
-          bendRadius={5.0}
-          bendStrength={-0.5}
-          interactive={true}
-          parallax={true}
-        />
-      </div>
-
       {/* Hero Section */}
       <section className="relative text-center mt-12 px-4">
+        {/* FloatingLines Background - rounded rectangle behind hero */}
+        <div className="absolute inset-0 -z-10 mx-auto max-w-6xl overflow-hidden rounded-3xl" style={{ top: '-2rem', bottom: '-2rem' }}>
+          <FloatingLines
+            enabledWaves={['top', 'middle', 'bottom']}
+            lineCount={[10, 15, 20]}
+            lineDistance={[8, 6, 4]}
+            bendRadius={5.0}
+            bendStrength={-0.5}
+            interactive={true}
+            parallax={true}
+          />
+        </div>
+
         <FadeIn direction="up">
           <div className="inline-flex items-center gap-2 rounded-full border border-galaxy-primary/30 bg-galaxy-primary/10 px-4 py-1.5 text-xs font-semibold tracking-widest text-galaxy-primary uppercase shadow-[0_0_15px_rgba(34,211,238,0.15)] backdrop-blur-sm mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-galaxy-primary animate-pulse"></span>
             {t('heroPill')}
           </div>
-          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white drop-shadow-lg">
+          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white" style={{ textShadow: '0 2px 20px rgba(0,0,0,0.8), 0 0 40px rgba(0,0,0,0.5)' }}>
             {t('heroTitle')}
           </h1>
         </FadeIn>
         
         <FadeIn direction="up" delay={0.2}>
-          <p className="mx-auto mt-8 max-w-2xl text-lg text-white/70 leading-relaxed">
+          <p className="mx-auto mt-8 max-w-2xl text-lg text-white leading-relaxed" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7)' }}>
             {t('heroSubtitle')}
           </p>
         </FadeIn>
@@ -57,7 +58,7 @@ export default async function HomePage({
             </Link>
             <Link
               href="#why"
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-3.5 font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10"
+              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-8 py-3.5 font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20"
             >
               Learn More
             </Link>
@@ -65,7 +66,7 @@ export default async function HomePage({
         </FadeIn>
 
         <FadeIn direction="up" delay={0.6}>
-          <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm font-medium text-white/60">
+          <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm font-medium text-white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>
             <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom1')}</div>
             <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom2')}</div>
             <div className="flex items-center gap-2"><Lock className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom3')}</div>
