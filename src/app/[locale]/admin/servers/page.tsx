@@ -54,7 +54,9 @@ export default async function AdminServersPage({
             <tbody>
               {servers.map((s) => (
                 <tr key={s.id} className="border-t border-white/5">
-                  <td className="max-w-xs truncate py-2">{s.name}</td>
+                  <td className="max-w-xs truncate py-2">
+                    {s.name.replace(/^[\s\u{1F1E6}-\u{1F1FF}🌐🏳️]+/, '').trim()}
+                  </td>
                   <td className="py-2">
                     {s.network_type === 'gemini' ? (
                       <span className="rounded bg-fuchsia-400/15 px-1.5 py-0.5 text-xs text-fuchsia-300">✨ Gemini</span>
