@@ -35,6 +35,20 @@ function chunk(arr, n) {
   return out;
 }
 
+// Naming: "🇩🇿 Algeria #2 | WIFI | LTE". The capability tags are cumulative —
+// gemini servers also work on lte+wifi, lte servers also work on wifi.
+const TIER_TAGS = { wifi: ' | WIFI', lte: ' | WIFI | LTE', gemini: ' | WIFI | LTE | GEMINI' };
+
+// Smart label: real flag+country when known; a neutral 🌐 + "Server" otherwise
+// (no more blank-flag "Unknown"). Number only added when a country repeats.
+function baseLabel(country, cc, numbered, idx) {
+  const flag = cc ? flagEmoji(cc) : '🌐';
+  return `${flag} ${country || 'Server'}${numbered ? ` #${idx}` : ''}`;
+}
+
+// Re-tag an existing name with a new tier, preserving its "flag country #n" base.
+const retag = (name, tier) => `${(name || '').split(' | ')[0]}${TIER_TAGS[tier] || TIER_TAGS.wifi}`;
+
 export async function runSync() {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
@@ -64,6 +78,16 @@ export async function runSync() {
     }
     stats.discovered = configs.size;
     log.ok(`Discovered ${stats.discovered} unique server configs`);
+
+    // GUARD: if we discovered nothing (e.g. GitHub was unreachable), DO NOT wipe
+    // the existing pool. Abort the run so a transient network blip can't delete
+    // every server. The pool is preserved; the next successful run refreshes it.
+    if (stats.discovered === 0) {
+      log.warn('Discovered 0 configs (repos unreachable?) — keeping the existing pool untouched.');
+      stats.finishedAt = new Date().toISOString();
+      stats.aborted = 'no-configs';
+      return stats;
+    }
 
     // 3. test a bounded, evenly-spread sample of candidates.
     // Testing thousands of hosts exhausts OS sockets (esp. on Windows) and
