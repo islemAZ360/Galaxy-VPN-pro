@@ -138,17 +138,10 @@ export async function runSync() {
       const hash = hashConfig(w.uri);
       const g = geo.get(w.host) || {};
       
-      // Smart Fallback for Unknown: use the original URI remark if available
       let country = g.country;
       let cc = g.country_code ?? null;
       if (!country) {
-        try {
-          const parsed = new URL(w.uri);
-          const remark = decodeURIComponent(parsed.hash.substring(1));
-          country = remark ? remark.trim() : 'Server';
-        } catch {
-          country = 'Server';
-        }
+        country = 'Server';
       }
       
       counters[country] = (counters[country] || 0) + 1;
