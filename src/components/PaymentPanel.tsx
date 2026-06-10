@@ -121,7 +121,8 @@ export function PaymentPanel({
         </span>
       </div>
       <div className="mt-1 text-xs text-white/60">
-        {net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'} ·  {variant.serverCount} servers
+        {net === 'gemini' ? '✨ LTE / Wi-Fi / Gemini' : net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}
+        {' · '}{variant.serverCount} servers
       </div>
 
       {/* Payment QR */}

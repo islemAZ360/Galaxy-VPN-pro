@@ -161,7 +161,13 @@
       "recheck": "إعادة فحص الكل",
       "recheckHint": "إعادة سحب كل المستودعات وفحص جميع السيرفرات وحذف غير الشغّالة.",
       "syncRequested": "✓ بدأ الفحص — ستظهر السيرفرات المحدّثة قريباً.",
-      "syncFailed": "تعذّر بدء الفحص."
+      "syncFailed": "تعذّر بدء الفحص.",
+      "lteRecheck": "فحص LTE",
+      "lteRecheckHint": "شغّله وحاسوبك على LTE (أو هوت‑سبوت الهاتف). الناجح يُصنّف LTE، والباقي Wi-Fi فقط.",
+      "lteRequested": "✓ بدأ فحص LTE — تأكّد أنك على بيانات الجوال الآن.",
+      "geminiRecheck": "فحص Gemini",
+      "geminiRecheckHint": "شغّله على LTE. السيرفرات التي تصل إلى Gemini تُصنّف Gemini، والباقي ينزل إلى LTE.",
+      "geminiRequested": "✓ بدأ فحص Gemini — نختبر أي سيرفرات تصل إلى Gemini."
     },
     "support": {
       "title": "المحادثات",

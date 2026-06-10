@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { supa } from './supa.js';
-import { runSync, runLteRecheck, isRunning } from './sync.js';
+import { runSync, runLteRecheck, runGeminiRecheck, isRunning } from './sync.js';
 import { banner, log } from './log.js';
 
 const CRON = process.env.SYNC_CRON || '*/30 * * * *'; // every 30 min
@@ -35,6 +35,7 @@ async function runWithStatus(reason, fn) {
 }
 const syncWithStatus = (reason) => runWithStatus(reason, runSync);
 const lteWithStatus = (reason) => runWithStatus(reason, runLteRecheck);
+const geminiWithStatus = (reason) => runWithStatus(reason, runGeminiRecheck);
 
 // --- Process admin sync requests --------------------------------------------
 // Realtime gives an instant trigger; a poll loop guarantees nothing is missed
@@ -49,23 +50,18 @@ async function drainPending(source) {
       .from('sync_requests').select('id, kind').is('processed_at', null);
     if (error || !pending?.length) return;
 
+    const geminiReqs = pending.filter((p) => p.kind === 'gemini');
     const lteReqs = pending.filter((p) => p.kind === 'lte');
-    const fullReqs = pending.filter((p) => p.kind !== 'lte');
-    log.bell(`${pending.length} request(s) pending (${source}) — full:${fullReqs.length} lte:${lteReqs.length}`);
+    const fullReqs = pending.filter((p) => p.kind !== 'lte' && p.kind !== 'gemini');
+    log.bell(`${pending.length} request(s) pending (${source}) — full:${fullReqs.length} lte:${lteReqs.length} gemini:${geminiReqs.length}`);
 
-    // Run a full sync if any full request is queued, then an LTE re-check if any.
-    if (fullReqs.length) {
-      const result = await syncWithStatus('admin');
-      await supa.from('sync_requests')
-        .update({ processed_at: new Date().toISOString(), result })
-        .in('id', fullReqs.map((p) => p.id));
-    }
-    if (lteReqs.length) {
-      const result = await lteWithStatus('admin-lte');
-      await supa.from('sync_requests')
-        .update({ processed_at: new Date().toISOString(), result })
-        .in('id', lteReqs.map((p) => p.id));
-    }
+    const markDone = (ids, result) =>
+      supa.from('sync_requests').update({ processed_at: new Date().toISOString(), result }).in('id', ids);
+
+    // Order: full → lte → gemini (each refines the previous classification).
+    if (fullReqs.length) await markDone(fullReqs.map((p) => p.id), await syncWithStatus('admin'));
+    if (lteReqs.length) await markDone(lteReqs.map((p) => p.id), await lteWithStatus('admin-lte'));
+    if (geminiReqs.length) await markDone(geminiReqs.map((p) => p.id), await geminiWithStatus('admin-gemini'));
   } catch (e) {
     log.err(`drain failed: ${e.message}`);
   } finally {

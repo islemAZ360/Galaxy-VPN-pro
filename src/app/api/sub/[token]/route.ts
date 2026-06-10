@@ -64,7 +64,7 @@ export async function GET(
   // Active: hand out the best (lowest-latency) working servers FROM THE POOL the
   // customer paid for. wifi plan → Wi-Fi servers; lte plan → LTE servers (which
   // also work on Wi-Fi). Default to 'wifi' for older rows.
-  const pool = sub.network_type === 'lte' ? 'lte' : 'wifi';
+  const pool = ['wifi', 'lte', 'gemini'].includes(sub.network_type) ? sub.network_type : 'wifi';
   const { data: servers } = await supa
     .from('servers')
     .select('config_uri')

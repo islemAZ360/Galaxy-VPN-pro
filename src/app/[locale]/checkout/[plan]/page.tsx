@@ -45,7 +45,7 @@ export default async function CheckoutPage({
             </span>
           </div>
           <ul className="mt-4 space-y-2 text-sm text-white/80">
-            <li>{net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}</li>
+            <li>{net === 'gemini' ? '✨ LTE / Wi-Fi / Gemini' : net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}</li>
             <li>✦ {tp('servers', { count: variant.serverCount })}</li>
             <li>✦ {tp('share')}</li>
           </ul>

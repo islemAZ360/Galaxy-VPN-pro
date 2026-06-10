@@ -177,7 +177,10 @@
       "syncFailed": "Could not start the re-check.",
       "lteRecheck": "LTE re-check",
       "lteRecheckHint": "Run this while your PC is on LTE (or a phone hotspot). Servers that still pass become LTE-tagged; the rest become Wi-Fi only.",
-      "lteRequested": "✓ LTE re-check started — make sure you're on mobile data right now."
+      "lteRequested": "✓ LTE re-check started — make sure you're on mobile data right now.",
+      "geminiRecheck": "Gemini re-check",
+      "geminiRecheckHint": "Run on LTE. Servers that can reach Gemini become Gemini-tier; the rest drop to LTE.",
+      "geminiRequested": "✓ Gemini re-check started — testing which servers can reach Gemini."
     },
     "support": {
       "title": "Conversations",
