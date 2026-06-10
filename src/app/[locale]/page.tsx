@@ -5,6 +5,7 @@ import { PlanCard } from '@/components/PlanCard';
 import { FadeIn } from '@/components/FadeIn';
 import { Zap, Lock, Globe, CheckCircle, ShieldCheck, ArrowRight, PlaySquare, Smartphone, Download, MapPin } from 'lucide-react';
 import FloatingLines from '@/components/FloatingLines';
+import Marquee from '@/components/Marquee';
 
 export default async function HomePage({
   params,
@@ -159,32 +160,136 @@ export default async function HomePage({
       </section>
 
       {/* No More Blocks */}
-      <section className="px-4 max-w-4xl mx-auto w-full text-center">
+      <section className="w-full text-center overflow-hidden">
         <FadeIn direction="up">
           <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('blocksLabel')}</p>
-          <h2 className="text-3xl md:text-4xl font-bold mb-8">{t('blocksTitle')}</h2>
-          <div className="flex flex-wrap justify-center gap-3">
-            {['Spotify', 'ChatGPT', 'Gemini', 'Claude', 'Discord', 'Instagram', 'Telegram', 'YouTube'].map((app, i) => (
-              <div key={app} className="glass px-6 py-3 rounded-full flex items-center gap-2 text-sm font-medium hover:bg-white/5 transition-colors">
-                <CheckCircle className="w-4 h-4 text-galaxy-primary" /> {app}
+          <h2 className="text-3xl md:text-4xl font-bold mb-10">{t('blocksTitle')}</h2>
+        </FadeIn>
+
+        <FadeIn direction="up" delay={0.2}>
+          <Marquee speed={40} direction="left">
+            {[
+              { name: 'Instagram', icon: 'instagram', color: '#E4405F' },
+              { name: 'Facebook', icon: 'facebook', color: '#1877F2' },
+              { name: 'X (Twitter)', icon: 'x', color: '#ffffff' },
+              { name: 'LinkedIn', icon: 'linkedin', color: '#0A66C2' },
+              { name: 'YouTube', icon: 'youtube', color: '#FF0000' },
+              { name: 'Spotify', icon: 'spotify', color: '#1DB954' },
+              { name: 'Discord', icon: 'discord', color: '#5865F2' },
+              { name: 'ChatGPT', icon: 'openai', color: '#412991' },
+              { name: 'Gemini', icon: 'googlegemini', color: '#8E75B2' },
+              { name: 'Claude', icon: 'anthropic', color: '#D4A574' },
+              { name: 'Netflix', icon: 'netflix', color: '#E50914' },
+              { name: 'Telegram', icon: 'telegram', color: '#26A5E4' },
+              { name: 'WhatsApp', icon: 'whatsapp', color: '#25D366' },
+              { name: 'TikTok', icon: 'tiktok', color: '#ffffff' },
+            ].map((app) => (
+              <div key={app.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} className="w-5 h-5" />
+                {app.name}
               </div>
             ))}
-          </div>
+          </Marquee>
+        </FadeIn>
+
+        <div className="h-4" />
+
+        <FadeIn direction="up" delay={0.3}>
+          <Marquee speed={45} direction="right">
+            {[
+              { name: 'Twitch', icon: 'twitch', color: '#9146FF' },
+              { name: 'Reddit', icon: 'reddit', color: '#FF4500' },
+              { name: 'Snapchat', icon: 'snapchat', color: '#FFFC00' },
+              { name: 'Pinterest', icon: 'pinterest', color: '#BD081C' },
+              { name: 'Signal', icon: 'signal', color: '#3A76F0' },
+              { name: 'Steam', icon: 'steam', color: '#ffffff' },
+              { name: 'Hulu', icon: 'hulu', color: '#1CE783' },
+              { name: 'Disney+', icon: 'disneyplus', color: '#113CCF' },
+              { name: 'Amazon', icon: 'amazon', color: '#FF9900' },
+              { name: 'Slack', icon: 'slack', color: '#4A154B' },
+              { name: 'GitHub', icon: 'github', color: '#ffffff' },
+              { name: 'Google', icon: 'google', color: '#4285F4' },
+              { name: 'Zoom', icon: 'zoom', color: '#0B5CFF' },
+              { name: 'Viber', icon: 'viber', color: '#7360F2' },
+            ].map((app) => (
+              <div key={app.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} className="w-5 h-5" />
+                {app.name}
+              </div>
+            ))}
+          </Marquee>
         </FadeIn>
       </section>
 
       {/* Global Network */}
-      <section className="px-4 max-w-5xl mx-auto w-full text-center">
+      <section className="w-full text-center overflow-hidden">
         <FadeIn direction="up">
           <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('networkLabel')}</p>
-          <h2 className="text-3xl md:text-4xl font-bold mb-8">{t('networkTitle')}</h2>
-          <div className="flex flex-wrap justify-center gap-4">
-            {['Netherlands', 'Turkey', 'Russia', 'Finland', 'Germany', 'France', 'USA'].map((country, i) => (
-              <div key={country} className="glass px-6 py-3 rounded-full flex items-center gap-2 text-sm font-medium hover:border-galaxy-primary/30 transition-colors">
-                <MapPin className="w-4 h-4 text-galaxy-primary" /> {country}
+          <h2 className="text-3xl md:text-4xl font-bold mb-10">{t('networkTitle')}</h2>
+        </FadeIn>
+
+        <FadeIn direction="up" delay={0.2}>
+          <Marquee speed={50} direction="left">
+            {[
+              { name: 'Russia', flag: '🇷🇺' },
+              { name: 'United States', flag: '🇺🇸' },
+              { name: 'Germany', flag: '🇩🇪' },
+              { name: 'France', flag: '🇫🇷' },
+              { name: 'Netherlands', flag: '🇳🇱' },
+              { name: 'United Kingdom', flag: '🇬🇧' },
+              { name: 'Turkey', flag: '🇹🇷' },
+              { name: 'Japan', flag: '🇯🇵' },
+              { name: 'Canada', flag: '🇨🇦' },
+              { name: 'Australia', flag: '🇦🇺' },
+              { name: 'Brazil', flag: '🇧🇷' },
+              { name: 'India', flag: '🇮🇳' },
+              { name: 'South Korea', flag: '🇰🇷' },
+              { name: 'Singapore', flag: '🇸🇬' },
+              { name: 'Sweden', flag: '🇸🇪' },
+              { name: 'Switzerland', flag: '🇨🇭' },
+              { name: 'Finland', flag: '🇫🇮' },
+              { name: 'Poland', flag: '🇵🇱' },
+            ].map((c) => (
+              <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
+                <span className="text-xl leading-none">{c.flag}</span>
+                {c.name}
               </div>
             ))}
-          </div>
+          </Marquee>
+        </FadeIn>
+
+        <div className="h-4" />
+
+        <FadeIn direction="up" delay={0.3}>
+          <Marquee speed={55} direction="right">
+            {[
+              { name: 'Italy', flag: '🇮🇹' },
+              { name: 'Spain', flag: '🇪🇸' },
+              { name: 'Mexico', flag: '🇲🇽' },
+              { name: 'Argentina', flag: '🇦🇷' },
+              { name: 'Egypt', flag: '🇪🇬' },
+              { name: 'South Africa', flag: '🇿🇦' },
+              { name: 'UAE', flag: '🇦🇪' },
+              { name: 'Saudi Arabia', flag: '🇸🇦' },
+              { name: 'Algeria', flag: '🇩🇿' },
+              { name: 'Norway', flag: '🇳🇴' },
+              { name: 'Denmark', flag: '🇩🇰' },
+              { name: 'Austria', flag: '🇦🇹' },
+              { name: 'Belgium', flag: '🇧🇪' },
+              { name: 'Ireland', flag: '🇮🇪' },
+              { name: 'Portugal', flag: '🇵🇹' },
+              { name: 'Romania', flag: '🇷🇴' },
+              { name: 'Ukraine', flag: '🇺🇦' },
+              { name: 'Indonesia', flag: '🇮🇩' },
+            ].map((c) => (
+              <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
+                <span className="text-xl leading-none">{c.flag}</span>
+                {c.name}
+              </div>
+            ))}
+          </Marquee>
         </FadeIn>
       </section>
 
