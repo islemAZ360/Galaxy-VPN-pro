@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { addRepo, deleteRepo } from '@/lib/admin-actions';
+import { addRepo, deleteRepo, requestSync } from '@/lib/admin-actions';
 
 type Repo = { id: string; repo_url: string; enabled: boolean };
 
@@ -29,10 +29,39 @@ export function RepoManager({ repos }: { repos: Repo[] }) {
       router.refresh();
     });
 
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const recheck = () =>
+    startTransition(async () => {
+      setSyncMsg(null);
+      try {
+        await requestSync();
+        setSyncMsg(t('syncRequested'));
+      } catch (e) {
+        setSyncMsg(t('syncFailed') + ' ' + (e instanceof Error ? e.message : ''));
+      }
+    });
+
   return (
     <div className="glass p-5">
-      <h2 className="text-lg font-semibold">{t('title')}</h2>
-      <p className="mt-1 text-sm text-white/60">{t('hint')}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">{t('title')}</h2>
+          <p className="mt-1 text-sm text-white/60">{t('hint')}</p>
+        </div>
+        <button
+          onClick={recheck}
+          disabled={isPending}
+          title={t('recheckHint')}
+          className="shrink-0 rounded-lg border border-galaxy-accent/40 bg-galaxy-accent/10 px-3 py-2 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 disabled:opacity-60"
+        >
+          ↻ {t('recheck')}
+        </button>
+      </div>
+      {syncMsg && (
+        <p className="mt-3 rounded-lg border border-galaxy-accent/30 bg-galaxy-accent/10 px-3 py-2 text-sm">
+          {syncMsg}
+        </p>
+      )}
 
       <div className="mt-4 flex gap-2">
         <input
