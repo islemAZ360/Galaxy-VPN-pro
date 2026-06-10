@@ -42,13 +42,13 @@ export default async function HomePage({
             <span className="w-1.5 h-1.5 rounded-full bg-galaxy-primary animate-pulse"></span>
             {t('heroPill')}
           </div>
-          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white" style={{ WebkitTextStroke: '1px rgba(0,0,0,0.8)', textShadow: '0 4px 30px rgba(0,0,0,0.8)' }}>
+          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white" style={{ textShadow: '1px 1px 0 #0f172a, -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 0 4px 30px rgba(0,0,0,0.8)' }}>
             {t('heroTitle')}
           </h1>
         </FadeIn>
         
         <FadeIn direction="up" delay={0.2}>
-          <p className="mx-auto mt-8 max-w-2xl text-lg text-white font-medium leading-relaxed" style={{ WebkitTextStroke: '0.5px rgba(0,0,0,0.6)', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>
+          <p className="mx-auto mt-8 max-w-2xl text-lg text-white font-medium leading-relaxed" style={{ textShadow: '1px 1px 0 #0f172a, -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 0 2px 20px rgba(0,0,0,0.8)' }}>
             {t('heroSubtitle')}
           </p>
         </FadeIn>
@@ -189,7 +189,7 @@ export default async function HomePage({
               { name: 'TikTok', icon: 'tiktok', color: '#ffffff' },
             ].map((app) => (
               <div key={app.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <Image src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width={20} height={20} />
+                <Image unoptimized={true} src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width={20} height={20} />
                 {app.name}
               </div>
             ))}
@@ -217,7 +217,7 @@ export default async function HomePage({
               { name: 'Viber', icon: 'viber', color: '#7360F2' },
             ].map((app) => (
               <div key={app.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <Image src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width={20} height={20} />
+                <Image unoptimized={true} src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width={20} height={20} />
                 {app.name}
               </div>
             ))}
@@ -255,7 +255,7 @@ export default async function HomePage({
               { name: 'Poland', code: 'pl' },
             ].map((c) => (
               <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <Image src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width={20} height={15} className="rounded-[2px]" />
+                <Image unoptimized={true} src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width={20} height={15} className="rounded-[2px]" />
                 {c.name}
               </div>
             ))}
@@ -287,7 +287,7 @@ export default async function HomePage({
               { name: 'Indonesia', code: 'id' },
             ].map((c) => (
               <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <Image src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width={20} height={15} className="rounded-[2px]" />
+                <Image unoptimized={true} src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width={20} height={15} className="rounded-[2px]" />
                 {c.name}
               </div>
             ))}
