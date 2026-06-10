@@ -6,6 +6,10 @@
   --font-sans: 'Segoe UI', system-ui, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   @apply bg-[#0a0a1a] text-white antialiased;
   min-height: 100vh;
