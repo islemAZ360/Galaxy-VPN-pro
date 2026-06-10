@@ -4,6 +4,7 @@ import { PLANS } from '@/lib/plans';
 import { PlanCard } from '@/components/PlanCard';
 import { FadeIn } from '@/components/FadeIn';
 import { Zap, Lock, Globe, CheckCircle, ShieldCheck, ArrowRight, PlaySquare, Smartphone, Download, MapPin } from 'lucide-react';
+import Galaxy from '@/components/Galaxy';
 
 export default async function HomePage({
   params,
@@ -16,7 +17,16 @@ export default async function HomePage({
 
   return (
     <div className="flex flex-col gap-32 pt-16 pb-24 overflow-x-hidden">
-
+      <div className="fixed inset-0 -z-10 bg-[#0a0a1a]" style={{ width: '100vw', height: '100vh', position: 'fixed' }}>
+        <Galaxy
+          mouseRepulsion={true}
+          mouseInteraction={true}
+          density={1.5}
+          glowIntensity={0.5}
+          saturation={0.8}
+          hueShift={240}
+        />
+      </div>
 
       {/* Hero Section */}
       <section className="relative text-center mt-12 px-4">
