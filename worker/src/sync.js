@@ -118,6 +118,14 @@ export async function runSync() {
     // 5. Smart rename: sort by country (then latency), number per country, and
     // rewrite BOTH the display name and the config's own remark so the clean
     // "🇩🇿 Algeria #1" name shows in the admin panel AND in the user's app (Happ).
+    // Fetch existing servers to preserve their network_type and tags
+    const existingBefore = await withRetry(async () => {
+      const { data, error } = await supa.from('servers').select('config_hash, network_type');
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }, { label: 'select-existing-before' });
+    const existingTiers = new Map(existingBefore.map(s => [s.config_hash, s.network_type]));
+
     const now = new Date().toISOString();
     const sorted = [...working].sort((a, b) => {
       const ca = geo.get(a.host)?.country || 'ZZZ';
@@ -127,21 +135,38 @@ export async function runSync() {
     });
     const counters = {};
     const rows = sorted.map((w) => {
+      const hash = hashConfig(w.uri);
       const g = geo.get(w.host) || {};
-      const country = g.country || 'Unknown';
-      const cc = g.country_code ?? null;
+      
+      // Smart Fallback for Unknown: use the original URI remark if available
+      let country = g.country;
+      let cc = g.country_code ?? null;
+      if (!country) {
+        try {
+          const parsed = new URL(w.uri);
+          const remark = decodeURIComponent(parsed.hash.substring(1));
+          country = remark ? remark.trim() : 'Server';
+        } catch {
+          country = 'Server';
+        }
+      }
+      
       counters[country] = (counters[country] || 0) + 1;
-      const displayName = `${flagEmoji(cc)} ${country} #${counters[country]}`;
+      const baseName = `${flagEmoji(cc)} ${country} #${counters[country]}`;
+      
+      const tier = existingTiers.get(hash) || 'wifi';
+      const displayName = retag(baseName, tier);
+      
       return {
         name: displayName,
         country: g.country ?? null,
         country_code: cc,
         protocol: PROTOCOL_OF(w.uri),
         config_uri: renameConfig(w.uri, displayName), // what the user sees in Happ
-        config_hash: hashConfig(w.uri), // hash the ORIGINAL uri = stable identity
+        config_hash: hash, // hash the ORIGINAL uri = stable identity
         latency_ms: w.latencyMs,
         is_working: true,
-        source_repo: configs.get(hashConfig(w.uri))?.source ?? null,
+        source_repo: configs.get(hash)?.source ?? null,
         last_checked_at: now,
         updated_at: now,
       };
@@ -223,12 +248,23 @@ export async function runLteRecheck() {
 
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
-      for (const batch of chunk(ids, 200)) {
+      const { data: current } = await supa.from('servers').select('id, name, config_uri').in('id', ids);
+      if (!current) return;
+      
+      const updates = current.map(c => {
+        const newName = retag(c.name, type);
+        return {
+          id: c.id,
+          name: newName,
+          config_uri: renameConfig(c.config_uri, newName),
+          network_type: type,
+          last_checked_at: now
+        };
+      });
+
+      for (const batch of chunk(updates, 200)) {
         await withRetry(async () => {
-          const { error } = await supa
-            .from('servers')
-            .update({ network_type: type, last_checked_at: now })
-            .in('id', batch);
+          const { error } = await supa.from('servers').upsert(batch, { onConflict: 'id' });
           if (error) throw new Error(error.message);
         }, { label: `classify-${type}` });
       }
@@ -288,12 +324,24 @@ export async function runGeminiRecheck() {
 
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
-      for (const batch of chunk(ids, 200)) {
+      // First, fetch existing names to retag them
+      const { data: current } = await supa.from('servers').select('id, name, config_uri').in('id', ids);
+      if (!current) return;
+      
+      const updates = current.map(c => {
+        const newName = retag(c.name, type);
+        return {
+          id: c.id,
+          name: newName,
+          config_uri: renameConfig(c.config_uri, newName),
+          network_type: type,
+          last_checked_at: now
+        };
+      });
+
+      for (const batch of chunk(updates, 200)) {
         await withRetry(async () => {
-          const { error } = await supa
-            .from('servers')
-            .update({ network_type: type, last_checked_at: now })
-            .in('id', batch);
+          const { error } = await supa.from('servers').upsert(batch, { onConflict: 'id' });
           if (error) throw new Error(error.message);
         }, { label: `classify-${type}` });
       }
