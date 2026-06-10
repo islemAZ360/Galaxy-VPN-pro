@@ -32,7 +32,7 @@ export async function GET(
 
   const { data: sub } = await supa
     .from('subscriptions')
-    .select('id, user_id, status, end_at, server_count')
+    .select('id, user_id, status, end_at, server_count, network_type')
     .eq('sub_token', token)
     .maybeSingle();
 
@@ -61,11 +61,15 @@ export async function GET(
     return toSubscription([noticeConfig(reason)]);
   }
 
-  // Active: hand out the best (lowest-latency) working servers.
+  // Active: hand out the best (lowest-latency) working servers FROM THE POOL the
+  // customer paid for. wifi plan → Wi-Fi servers; lte plan → LTE servers (which
+  // also work on Wi-Fi). Default to 'wifi' for older rows.
+  const pool = sub.network_type === 'lte' ? 'lte' : 'wifi';
   const { data: servers } = await supa
     .from('servers')
     .select('config_uri')
     .eq('is_working', true)
+    .eq('network_type', pool)
     .order('latency_ms', { ascending: true, nullsFirst: false })
     .limit(sub.server_count);
 

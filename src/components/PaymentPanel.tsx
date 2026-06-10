@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from '@/i18n/routing';
-import type { Plan } from '@/lib/plans';
+import type { Plan, NetworkType } from '@/lib/plans';
 
 // Compress an image file to a JPEG data-URL (<= maxW px, given quality).
 function compressImage(file: File, maxW = 1100, quality = 0.7): Promise<string> {
@@ -30,12 +30,21 @@ function compressImage(file: File, maxW = 1100, quality = 0.7): Promise<string> 
   });
 }
 
-export function PaymentPanel({ plan, amountLabel }: { plan: Plan; amountLabel: string }) {
+export function PaymentPanel({
+  plan,
+  net,
+  amountLabel,
+}: {
+  plan: Plan;
+  net: NetworkType;
+  amountLabel: string;
+}) {
   const t = useTranslations('checkout');
   const router = useRouter();
   const [receipt, setReceipt] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const variant = plan[net];
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -64,16 +73,17 @@ export function PaymentPanel({ plan, amountLabel }: { plan: Plan; amountLabel: s
       return;
     }
 
-    // 1) pending subscription
+    // 1) pending subscription (carries the chosen network type)
     const { data: sub, error: subErr } = await supabase
       .from('subscriptions')
       .insert({
         user_id: user.id,
         plan: plan.id,
-        server_count: plan.serverCount,
-        price_rub: plan.priceRub,
+        server_count: variant.serverCount,
+        price_rub: variant.priceRub,
         duration_days: plan.durationDays,
         status: 'pending',
+        network_type: net,
       })
       .select('id')
       .single();
@@ -88,7 +98,7 @@ export function PaymentPanel({ plan, amountLabel }: { plan: Plan; amountLabel: s
       user_id: user.id,
       subscription_id: sub.id,
       plan: plan.id,
-      amount_rub: plan.priceRub,
+      amount_rub: variant.priceRub,
       receipt_base64: receipt,
       status: 'pending',
     });
@@ -107,8 +117,11 @@ export function PaymentPanel({ plan, amountLabel }: { plan: Plan; amountLabel: s
       <div className="flex items-baseline justify-between">
         <span className="text-sm uppercase tracking-wide text-white/60">{amountLabel}</span>
         <span className="text-2xl font-bold">
-          {plan.priceRub} <span className="text-base text-white/70">₽</span>
+          {variant.priceRub} <span className="text-base text-white/70">₽</span>
         </span>
+      </div>
+      <div className="mt-1 text-xs text-white/60">
+        {net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'} ·  {variant.serverCount} servers
       </div>
 
       {/* Payment QR */}

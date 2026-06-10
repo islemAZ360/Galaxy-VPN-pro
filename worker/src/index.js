@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { supa } from './supa.js';
-import { runSync, isRunning } from './sync.js';
+import { runSync, runLteRecheck, isRunning } from './sync.js';
 import { banner, log } from './log.js';
 
 const CRON = process.env.SYNC_CRON || '*/30 * * * *'; // every 30 min
@@ -22,9 +22,9 @@ const heartbeat = () => setStatus({ last_seen: new Date().toISOString() });
 heartbeat();
 setInterval(heartbeat, 10_000);
 
-async function syncWithStatus(reason) {
+async function runWithStatus(reason, fn) {
   await setStatus({ state: 'syncing', last_seen: new Date().toISOString() });
-  const result = await runSync();
+  const result = await fn();
   await setStatus({
     state: 'idle',
     last_seen: new Date().toISOString(),
@@ -33,6 +33,8 @@ async function syncWithStatus(reason) {
   });
   return result;
 }
+const syncWithStatus = (reason) => runWithStatus(reason, runSync);
+const lteWithStatus = (reason) => runWithStatus(reason, runLteRecheck);
 
 // --- Process admin sync requests --------------------------------------------
 // Realtime gives an instant trigger; a poll loop guarantees nothing is missed
@@ -44,14 +46,26 @@ async function drainPending(source) {
   draining = true;
   try {
     const { data: pending, error } = await supa
-      .from('sync_requests').select('id').is('processed_at', null);
+      .from('sync_requests').select('id, kind').is('processed_at', null);
     if (error || !pending?.length) return;
-    log.bell(`${pending.length} sync request(s) pending (${source}) — running now`);
-    const result = await syncWithStatus('admin');
-    await supa
-      .from('sync_requests')
-      .update({ processed_at: new Date().toISOString(), result })
-      .in('id', pending.map((p) => p.id));
+
+    const lteReqs = pending.filter((p) => p.kind === 'lte');
+    const fullReqs = pending.filter((p) => p.kind !== 'lte');
+    log.bell(`${pending.length} request(s) pending (${source}) — full:${fullReqs.length} lte:${lteReqs.length}`);
+
+    // Run a full sync if any full request is queued, then an LTE re-check if any.
+    if (fullReqs.length) {
+      const result = await syncWithStatus('admin');
+      await supa.from('sync_requests')
+        .update({ processed_at: new Date().toISOString(), result })
+        .in('id', fullReqs.map((p) => p.id));
+    }
+    if (lteReqs.length) {
+      const result = await lteWithStatus('admin-lte');
+      await supa.from('sync_requests')
+        .update({ processed_at: new Date().toISOString(), result })
+        .in('id', lteReqs.map((p) => p.id));
+    }
   } catch (e) {
     log.err(`drain failed: ${e.message}`);
   } finally {

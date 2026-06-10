@@ -119,10 +119,11 @@
     "servers": {
       "title": "Live server pool",
       "name": "Name",
+      "network": "Network",
       "country": "Country",
       "protocol": "Protocol",
       "latency": "Latency",
-      "empty": "No servers yet — run a check from the Hiddify app."
+      "empty": "No servers yet — run a check from the admin Repos page."
     },
     "payments": {
       "title": "Pending payments",
@@ -147,10 +148,22 @@
       "banned": "Banned",
       "none": "—",
       "ban": "Ban 30d",
+      "banFor": "Ban for",
+      "banBtn": "Ban",
       "unban": "Unban",
       "extend": "+30 days",
       "delete": "Delete",
-      "confirmDelete": "Delete this user permanently?"
+      "confirmDelete": "Delete this user permanently?",
+      "time": "Time",
+      "seconds": "seconds",
+      "minutes": "minutes",
+      "hours": "hours",
+      "days": "days",
+      "months": "months",
+      "setTime": "Set time",
+      "addTime": "Add time",
+      "messagePlaceholder": "Message to user…",
+      "sendMessage": "Send"
     },
     "repos": {
       "title": "GitHub repositories",
@@ -161,7 +174,10 @@
       "recheck": "Re-check all",
       "recheckHint": "Re-fetch every repo, retest all servers, drop the ones that no longer work.",
       "syncRequested": "✓ Re-check started — the local worker will refresh the server list shortly.",
-      "syncFailed": "Could not start the re-check."
+      "syncFailed": "Could not start the re-check.",
+      "lteRecheck": "LTE re-check",
+      "lteRecheckHint": "Run this while your PC is on LTE (or a phone hotspot). Servers that still pass become LTE-tagged; the rest become Wi-Fi only.",
+      "lteRequested": "✓ LTE re-check started — make sure you're on mobile data right now."
     },
     "support": {
       "title": "Conversations",

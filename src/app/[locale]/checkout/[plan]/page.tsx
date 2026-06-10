@@ -2,19 +2,24 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/routing';
 import { createClient } from '@/lib/supabase/server';
-import { getPlan } from '@/lib/plans';
+import { getPlan, isNetworkType, type NetworkType } from '@/lib/plans';
 import { PaymentPanel } from '@/components/PaymentPanel';
 
 export default async function CheckoutPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; plan: string }>;
+  searchParams: Promise<{ net?: string }>;
 }) {
   const { locale, plan: planParam } = await params;
+  const { net: netParam } = await searchParams;
   setRequestLocale(locale);
 
   const plan = getPlan(Number(planParam));
   if (!plan) notFound();
+  const net: NetworkType = isNetworkType(netParam) ? netParam : 'wifi';
+  const variant = plan[net];
 
   const supabase = await createClient();
   const {
@@ -36,17 +41,18 @@ export default async function CheckoutPage({
           <div className="mt-4 flex items-baseline justify-between">
             <span className="text-lg font-medium">{tp(`duration.${plan.durationKey}`)}</span>
             <span className="text-2xl font-bold">
-              {plan.priceRub} <span className="text-base text-white/70">₽</span>
+              {variant.priceRub} <span className="text-base text-white/70">₽</span>
             </span>
           </div>
           <ul className="mt-4 space-y-2 text-sm text-white/80">
-            <li>✦ {tp('servers', { count: plan.serverCount })}</li>
+            <li>{net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}</li>
+            <li>✦ {tp('servers', { count: variant.serverCount })}</li>
             <li>✦ {tp('share')}</li>
           </ul>
         </div>
 
         {/* Payment + receipt */}
-        <PaymentPanel plan={plan} amountLabel={t('amount')} />
+        <PaymentPanel plan={plan} net={net} amountLabel={t('amount')} />
       </div>
     </div>
   );
