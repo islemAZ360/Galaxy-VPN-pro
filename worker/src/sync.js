@@ -222,3 +222,68 @@ export async function runLteRecheck() {
     running = false;
   }
 }
+
+// Gemini re-check: retest the live pool but aim the connectivity test at a
+// Gemini endpoint. Servers that can REACH Gemini through the proxy become
+// 'gemini' (premium tier); the rest are demoted to 'lte'. Run on LTE.
+const GEMINI_URL = process.env.GEMINI_TEST_URL || 'https://generativelanguage.googleapis.com/';
+export async function runGeminiRecheck() {
+  if (running) return { skipped: true, reason: 'already running' };
+  running = true;
+  const stats = { startedAt: new Date().toISOString(), mode: 'gemini' };
+  const keyOf = (u) => renameConfig(u, '');
+  console.log('');
+  log.step(`Gemini re-check — testing the pool against ${GEMINI_URL}…`);
+  try {
+    const existing = await withRetry(async () => {
+      const { data, error } = await supa.from('servers').select('id, config_uri');
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }, { label: 'select-pool' });
+    stats.total = existing.length;
+    if (!stats.total) {
+      log.warn('No servers in the pool yet — run a normal sync first.');
+      stats.finishedAt = new Date().toISOString();
+      return stats;
+    }
+    log.info(`Testing ${stats.total} servers for Gemini reachability…`);
+    const CONC = Number(process.env.TEST_CONCURRENCY || 40);
+    const results = await testAll(existing.map((s) => s.config_uri), {
+      concurrency: CONC,
+      timeoutMs: 4000,
+      url: GEMINI_URL,
+    });
+    const okKeys = new Set(results.filter((r) => r.ok).map((r) => keyOf(r.uri)));
+
+    const geminiIds = [];
+    const lteIds = [];
+    for (const s of existing) (okKeys.has(keyOf(s.config_uri)) ? geminiIds : lteIds).push(s.id);
+    stats.gemini = geminiIds.length;
+    stats.lte = lteIds.length;
+    log.ok(`${stats.gemini} reach Gemini  ·  ${stats.lte} demoted to LTE`);
+
+    const now = new Date().toISOString();
+    const classify = async (ids, type) => {
+      for (const batch of chunk(ids, 200)) {
+        await withRetry(async () => {
+          const { error } = await supa
+            .from('servers')
+            .update({ network_type: type, last_checked_at: now })
+            .in('id', batch);
+          if (error) throw new Error(error.message);
+        }, { label: `classify-${type}` });
+      }
+    };
+    await classify(geminiIds, 'gemini');
+    await classify(lteIds, 'lte');
+
+    stats.finishedAt = new Date().toISOString();
+    log.done(`Gemini re-check done — ${stats.gemini} Gemini · ${stats.lte} LTE · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
+    return stats;
+  } catch (e) {
+    log.err(`Gemini re-check failed: ${e.message}`);
+    return { error: e.message, ...stats };
+  } finally {
+    running = false;
+  }
+}

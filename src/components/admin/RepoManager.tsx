@@ -30,18 +30,21 @@ export function RepoManager({ repos }: { repos: Repo[] }) {
     });
 
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
-  const requestKind = (kind: 'full' | 'lte') =>
+  const requestKind = (kind: 'full' | 'lte' | 'gemini') =>
     startTransition(async () => {
       setSyncMsg(null);
       try {
         await requestSync(kind);
-        setSyncMsg(kind === 'lte' ? t('lteRequested') : t('syncRequested'));
+        setSyncMsg(
+          kind === 'gemini' ? t('geminiRequested') : kind === 'lte' ? t('lteRequested') : t('syncRequested'),
+        );
       } catch (e) {
         setSyncMsg(t('syncFailed') + ' ' + (e instanceof Error ? e.message : ''));
       }
     });
   const recheck = () => requestKind('full');
   const lteRecheck = () => requestKind('lte');
+  const geminiRecheck = () => requestKind('gemini');
 
   return (
     <div className="glass p-5">
@@ -51,6 +54,14 @@ export function RepoManager({ repos }: { repos: Repo[] }) {
           <p className="mt-1 text-sm text-white/60">{t('hint')}</p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            onClick={geminiRecheck}
+            disabled={isPending}
+            title={t('geminiRecheckHint')}
+            className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 px-3 py-2 text-sm font-medium text-fuchsia-300 hover:bg-fuchsia-400/20 disabled:opacity-60"
+          >
+            ✨ {t('geminiRecheck')}
+          </button>
           <button
             onClick={lteRecheck}
             disabled={isPending}

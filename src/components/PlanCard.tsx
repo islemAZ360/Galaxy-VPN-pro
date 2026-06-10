@@ -18,19 +18,24 @@ export function PlanCard({
 }) {
   const t = useTranslations('plans');
 
-  const variant = (net: 'wifi' | 'lte') => {
+  const LABELS: Record<'wifi' | 'lte' | 'gemini', string> = {
+    wifi: '📡 Wi-Fi',
+    lte: '📶 LTE / Wi-Fi',
+    gemini: '✨ LTE / Wi-Fi / Gemini',
+  };
+  const variant = (net: 'wifi' | 'lte' | 'gemini') => {
     const v = plan[net];
     const url = href ?? `/checkout/${plan.id}?net=${net}`;
     const accent =
-      net === 'lte'
-        ? 'border-amber-400/40 hover:bg-amber-400/10'
-        : 'border-galaxy-accent/40 hover:bg-galaxy-accent/10';
+      net === 'gemini'
+        ? 'border-fuchsia-400/40 hover:bg-fuchsia-400/10'
+        : net === 'lte'
+          ? 'border-amber-400/40 hover:bg-amber-400/10'
+          : 'border-galaxy-accent/40 hover:bg-galaxy-accent/10';
     return (
       <div className={`flex flex-col rounded-xl border ${accent} p-3`}>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wide">
-            {net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}
-          </span>
+          <span className="text-xs font-semibold uppercase tracking-wide">{LABELS[net]}</span>
           <span className="text-lg font-bold">
             {v.priceRub} <span className="text-xs font-normal text-white/70">₽</span>
           </span>
@@ -55,6 +60,7 @@ export function PlanCard({
       <div className="mt-4 grid gap-3">
         {variant('wifi')}
         {variant('lte')}
+        {variant('gemini')}
       </div>
     </div>
   );

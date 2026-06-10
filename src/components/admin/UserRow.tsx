@@ -35,7 +35,7 @@ export function UserRow({
   bannedUntil: string | null;
   subEnd: string | null;
   plan: number | null;
-  network: 'wifi' | 'lte' | null;
+  network: 'wifi' | 'lte' | 'gemini' | null;
 }) {
   const t = useTranslations('admin.users');
   const tp = useTranslations('plans');
@@ -80,12 +80,14 @@ export function UserRow({
             {network && (
               <span
                 className={
-                  network === 'lte'
-                    ? 'rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-300'
-                    : 'rounded bg-galaxy-accent/15 px-1.5 py-0.5 text-galaxy-accent'
+                  network === 'gemini'
+                    ? 'rounded bg-fuchsia-400/15 px-1.5 py-0.5 text-fuchsia-300'
+                    : network === 'lte'
+                      ? 'rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-300'
+                      : 'rounded bg-galaxy-accent/15 px-1.5 py-0.5 text-galaxy-accent'
                 }
               >
-                {network === 'lte' ? '📶 LTE' : '📡 Wi-Fi'}
+                {network === 'gemini' ? '✨ Gemini' : network === 'lte' ? '📶 LTE' : '📡 Wi-Fi'}
               </span>
             )}
           </div>

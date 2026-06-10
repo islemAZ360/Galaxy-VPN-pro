@@ -5,7 +5,7 @@ import { UserRow } from '@/components/admin/UserRow';
 
 export const dynamic = 'force-dynamic';
 
-type LatestSub = { end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | null };
+type LatestSub = { end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null };
 
 export default async function AdminUsersPage({
   params,
@@ -41,7 +41,7 @@ export default async function AdminUsersPage({
     latest.set(s.user_id, {
       end_at: s.end_at,
       plan: s.plan,
-      network: (s.network_type as 'wifi' | 'lte' | null) ?? null,
+      network: (s.network_type as 'wifi' | 'lte' | 'gemini' | null) ?? null,
     });
   }
 
