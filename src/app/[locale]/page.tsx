@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { PLANS } from '@/lib/plans';
 import { PlanCard } from '@/components/PlanCard';
+import Image from 'next/image';
 import { FadeIn } from '@/components/FadeIn';
 import { Zap, Lock, Globe, CheckCircle, ShieldCheck, ArrowRight, PlaySquare, Smartphone, Download, MapPin, HelpCircle } from 'lucide-react';
 import FloatingLines from '@/components/FloatingLines';
@@ -22,7 +23,7 @@ export default async function HomePage({
       {/* Hero Section */}
       <section className="relative text-center mt-12 px-4">
         {/* FloatingLines Background - rounded rectangle behind hero */}
-        <div className="absolute inset-0 -z-10 mx-auto max-w-6xl overflow-hidden rounded-3xl" style={{ top: '-2rem', bottom: '-2rem' }}>
+        <div className="absolute inset-0 z-0">
           <FloatingLines
             enabledWaves={['top', 'middle', 'bottom']}
             lineCount={[10, 15, 20]}
@@ -32,20 +33,24 @@ export default async function HomePage({
             interactive={true}
             parallax={true}
           />
+          {/* Dark overlays to ensure text readability */}
+          <div className="absolute inset-0 bg-[#0a0a1a]/30" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(10,10,26,0.8)_0%,_transparent_70%)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a1a] via-transparent to-[#0a0a1a]" />
         </div>
 
         <FadeIn direction="up">
-          <div className="inline-flex items-center gap-2 rounded-full border border-galaxy-primary/30 bg-galaxy-primary/10 px-4 py-1.5 text-xs font-semibold tracking-widest text-galaxy-primary uppercase shadow-[0_0_15px_rgba(34,211,238,0.15)] backdrop-blur-sm mb-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-galaxy-primary/30 bg-galaxy-primary/10 px-4 py-2 text-sm font-medium text-galaxy-primary shadow-[0_0_15px_rgba(34,211,238,0.2)]">
             <span className="w-1.5 h-1.5 rounded-full bg-galaxy-primary animate-pulse"></span>
             {t('heroPill')}
           </div>
-          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white" style={{ textShadow: '0 2px 20px rgba(0,0,0,0.8), 0 0 40px rgba(0,0,0,0.5)' }}>
+          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-[#0a0a1a]" style={{ textShadow: '0 0 40px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8)' }}>
             {t('heroTitle')}
           </h1>
         </FadeIn>
         
         <FadeIn direction="up" delay={0.2}>
-          <p className="mx-auto mt-8 max-w-2xl text-lg text-white leading-relaxed" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7)' }}>
+          <p className="mx-auto mt-8 max-w-2xl text-lg text-[#0a0a1a] font-medium leading-relaxed" style={{ textShadow: '0 0 20px rgba(255,255,255,1), 0 0 10px rgba(255,255,255,0.8)' }}>
             {t('heroSubtitle')}
           </p>
         </FadeIn>
@@ -186,8 +191,7 @@ export default async function HomePage({
               { name: 'TikTok', icon: 'tiktok', color: '#ffffff' },
             ].map((app) => (
               <div key={app.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} className="w-5 h-5" />
+                <Image src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width={20} height={20} />
                 {app.name}
               </div>
             ))}
@@ -215,8 +219,7 @@ export default async function HomePage({
               { name: 'Viber', icon: 'viber', color: '#7360F2' },
             ].map((app) => (
               <div key={app.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} className="w-5 h-5" />
+                <Image src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width={20} height={20} />
                 {app.name}
               </div>
             ))}
@@ -234,27 +237,27 @@ export default async function HomePage({
         <FadeIn direction="up" delay={0.2}>
           <Marquee speed={50} direction="left">
             {[
-              { name: 'Russia', flag: '🇷🇺' },
-              { name: 'United States', flag: '🇺🇸' },
-              { name: 'Germany', flag: '🇩🇪' },
-              { name: 'France', flag: '🇫🇷' },
-              { name: 'Netherlands', flag: '🇳🇱' },
-              { name: 'United Kingdom', flag: '🇬🇧' },
-              { name: 'Turkey', flag: '🇹🇷' },
-              { name: 'Japan', flag: '🇯🇵' },
-              { name: 'Canada', flag: '🇨🇦' },
-              { name: 'Australia', flag: '🇦🇺' },
-              { name: 'Brazil', flag: '🇧🇷' },
-              { name: 'India', flag: '🇮🇳' },
-              { name: 'South Korea', flag: '🇰🇷' },
-              { name: 'Singapore', flag: '🇸🇬' },
-              { name: 'Sweden', flag: '🇸🇪' },
-              { name: 'Switzerland', flag: '🇨🇭' },
-              { name: 'Finland', flag: '🇫🇮' },
-              { name: 'Poland', flag: '🇵🇱' },
+              { name: 'Russia', code: 'ru' },
+              { name: 'United States', code: 'us' },
+              { name: 'Germany', code: 'de' },
+              { name: 'France', code: 'fr' },
+              { name: 'Netherlands', code: 'nl' },
+              { name: 'United Kingdom', code: 'gb' },
+              { name: 'Turkey', code: 'tr' },
+              { name: 'Japan', code: 'jp' },
+              { name: 'Canada', code: 'ca' },
+              { name: 'Australia', code: 'au' },
+              { name: 'Brazil', code: 'br' },
+              { name: 'India', code: 'in' },
+              { name: 'South Korea', code: 'kr' },
+              { name: 'Singapore', code: 'sg' },
+              { name: 'Sweden', code: 'se' },
+              { name: 'Switzerland', code: 'ch' },
+              { name: 'Finland', code: 'fi' },
+              { name: 'Poland', code: 'pl' },
             ].map((c) => (
               <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <span className="text-xl leading-none">{c.flag}</span>
+                <Image src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width={20} height={15} className="rounded-[2px]" />
                 {c.name}
               </div>
             ))}
@@ -266,27 +269,27 @@ export default async function HomePage({
         <FadeIn direction="up" delay={0.3}>
           <Marquee speed={55} direction="right">
             {[
-              { name: 'Italy', flag: '🇮🇹' },
-              { name: 'Spain', flag: '🇪🇸' },
-              { name: 'Mexico', flag: '🇲🇽' },
-              { name: 'Argentina', flag: '🇦🇷' },
-              { name: 'Egypt', flag: '🇪🇬' },
-              { name: 'South Africa', flag: '🇿🇦' },
-              { name: 'UAE', flag: '🇦🇪' },
-              { name: 'Saudi Arabia', flag: '🇸🇦' },
-              { name: 'Algeria', flag: '🇩🇿' },
-              { name: 'Norway', flag: '🇳🇴' },
-              { name: 'Denmark', flag: '🇩🇰' },
-              { name: 'Austria', flag: '🇦🇹' },
-              { name: 'Belgium', flag: '🇧🇪' },
-              { name: 'Ireland', flag: '🇮🇪' },
-              { name: 'Portugal', flag: '🇵🇹' },
-              { name: 'Romania', flag: '🇷🇴' },
-              { name: 'Ukraine', flag: '🇺🇦' },
-              { name: 'Indonesia', flag: '🇮🇩' },
+              { name: 'Italy', code: 'it' },
+              { name: 'Spain', code: 'es' },
+              { name: 'Mexico', code: 'mx' },
+              { name: 'Argentina', code: 'ar' },
+              { name: 'Egypt', code: 'eg' },
+              { name: 'South Africa', code: 'za' },
+              { name: 'UAE', code: 'ae' },
+              { name: 'Saudi Arabia', code: 'sa' },
+              { name: 'Algeria', code: 'dz' },
+              { name: 'Norway', code: 'no' },
+              { name: 'Denmark', code: 'dk' },
+              { name: 'Austria', code: 'at' },
+              { name: 'Belgium', code: 'be' },
+              { name: 'Ireland', code: 'ie' },
+              { name: 'Portugal', code: 'pt' },
+              { name: 'Romania', code: 'ro' },
+              { name: 'Ukraine', code: 'ua' },
+              { name: 'Indonesia', code: 'id' },
             ].map((c) => (
               <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <span className="text-xl leading-none">{c.flag}</span>
+                <Image src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width={20} height={15} className="rounded-[2px]" />
                 {c.name}
               </div>
             ))}
