@@ -7,9 +7,7 @@
 }
 
 body {
-  @apply bg-galaxy-bg text-white antialiased;
-  background-image: radial-gradient(ellipse at top, #1e1b4b 0%, #0a0a1a 60%);
-  background-attachment: fixed;
+  @apply bg-[#0a0a1a] text-white antialiased;
   min-height: 100vh;
 }
 
