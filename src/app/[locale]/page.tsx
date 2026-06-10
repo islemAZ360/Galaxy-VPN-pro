@@ -236,7 +236,7 @@ export default async function HomePage({
         </FadeIn>
 
         <FadeIn direction="up" delay={0.2}>
-          <Marquee speed={50} direction="left">
+          <Marquee speed={350} direction="left">
             {COUNTRIES.slice(0, Math.ceil(COUNTRIES.length / 2)).map((c) => (
               <div key={c.code} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
                 <img src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width="20" height="15" className="rounded-[2px]" loading="eager" decoding="async" />
@@ -249,7 +249,7 @@ export default async function HomePage({
         <div className="h-4" />
 
         <FadeIn direction="up" delay={0.3}>
-          <Marquee speed={55} direction="right">
+          <Marquee speed={400} direction="right">
             {COUNTRIES.slice(Math.ceil(COUNTRIES.length / 2)).map((c) => (
               <div key={c.code} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
                 <img src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width="20" height="15" className="rounded-[2px]" loading="eager" decoding="async" />
