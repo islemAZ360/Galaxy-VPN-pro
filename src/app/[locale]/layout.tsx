@@ -33,14 +33,14 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir}>
       <body>
-        <div className="fixed inset-0 -z-10 bg-[#0a0a1a]">
+        <div className="fixed inset-0 -z-10 bg-[#0a0a1a]" style={{ width: '100%', height: '100vh', position: 'fixed' }}>
           <Galaxy
-            transparent={true}
+            mouseRepulsion={true}
+            mouseInteraction={true}
             density={1.5}
             glowIntensity={0.5}
-            starSpeed={0.5}
-            mouseInteraction={true}
-            hueShift={220} /* Adjust hue to match galaxy VPN theme (blues/purples) */
+            saturation={0.8}
+            hueShift={240}
           />
         </div>
         <NextIntlClientProvider>
