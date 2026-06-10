@@ -3,6 +3,7 @@ import { Link } from '@/i18n/routing';
 import { PLANS } from '@/lib/plans';
 import { PlanCard } from '@/components/PlanCard';
 import { FadeIn } from '@/components/FadeIn';
+import { Zap, Lock, Globe, CheckCircle, ShieldCheck, ArrowRight, PlaySquare, Smartphone, Download, MapPin } from 'lucide-react';
 
 export default async function HomePage({
   params,
@@ -13,80 +14,209 @@ export default async function HomePage({
   setRequestLocale(locale);
   const t = await getTranslations('home');
 
-  const features = ['speed', 'global', 'share', 'privacy'] as const;
-
   return (
-    <div className="flex flex-col gap-24 pt-16">
-      {/* Hero */}
-      <section className="relative text-center">
-        {/* decorative space art */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 select-none overflow-hidden">
-          {/* eslint-disable @next/next/no-img-element */}
-          <img
-            src="/planets/galaxy.png"
-            alt=""
-            className="animate-spin-slow absolute left-1/2 top-1/2 w-[680px] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-40 blur-[1px]"
-          />
-          <img
-            src="/planets/nebula_cloud.png"
-            alt=""
-            className="absolute -right-24 top-0 w-80 opacity-30 blur-sm"
-          />
-          {/* eslint-enable @next/next/no-img-element */}
-        </div>
-
+    <div className="flex flex-col gap-32 pt-16 pb-24 overflow-x-hidden">
+      {/* Decorative Space Art (Persistent Background) */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 select-none overflow-hidden">
+        {/* eslint-disable @next/next/no-img-element */}
         <img
-          aria-hidden
-          src="/planets/astronaut.png"
+          src="/planets/galaxy.png"
           alt=""
-          className="animate-float pointer-events-none absolute -top-4 end-0 hidden w-40 select-none drop-shadow-[0_0_30px_rgba(34,211,238,0.25)] lg:block"
+          className="animate-spin-slow absolute left-1/2 top-1/2 w-[680px] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-40 blur-[1px]"
         />
         <img
-          aria-hidden
-          src="/planets/planet_3.png"
+          src="/planets/nebula_cloud.png"
           alt=""
-          className="animate-float pointer-events-none absolute bottom-0 start-0 hidden w-28 select-none opacity-90 lg:block"
-          style={{ animationDelay: '1.5s' }}
+          className="absolute -right-24 top-0 w-80 opacity-30 blur-sm"
         />
+        {/* eslint-enable @next/next/no-img-element */}
+      </div>
 
+      <img
+        aria-hidden
+        src="/planets/astronaut.png"
+        alt=""
+        className="animate-float pointer-events-none absolute top-40 right-[10%] hidden w-40 select-none drop-shadow-[0_0_30px_rgba(34,211,238,0.25)] xl:block z-10"
+      />
+      <img
+        aria-hidden
+        src="/planets/astronaut.png"
+        alt=""
+        className="animate-float pointer-events-none absolute top-[2500px] right-[25%] hidden w-32 select-none drop-shadow-[0_0_30px_rgba(34,211,238,0.25)] xl:block z-10 opacity-80"
+        style={{ animationDelay: '2s' }}
+      />
+      <img
+        aria-hidden
+        src="/planets/planet_3.png"
+        alt=""
+        className="animate-float pointer-events-none absolute top-[800px] left-[5%] hidden w-28 select-none opacity-90 xl:block z-10"
+        style={{ animationDelay: '1.5s' }}
+      />
+
+      {/* Hero Section */}
+      <section className="relative text-center mt-12 px-4">
         <FadeIn direction="up">
-          <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-galaxy-primary/30 bg-galaxy-primary/10 px-4 py-1.5 text-xs font-semibold tracking-widest text-galaxy-primary uppercase shadow-[0_0_15px_rgba(34,211,238,0.15)] backdrop-blur-sm mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-galaxy-primary animate-pulse"></span>
+            {t('heroPill')}
+          </div>
+          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white drop-shadow-lg">
             {t('heroTitle')}
           </h1>
         </FadeIn>
+        
         <FadeIn direction="up" delay={0.2}>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-white/70">{t('heroSubtitle')}</p>
+          <p className="mx-auto mt-8 max-w-2xl text-lg text-white/70 leading-relaxed">
+            {t('heroSubtitle')}
+          </p>
         </FadeIn>
+        
         <FadeIn direction="up" delay={0.4}>
-          <Link
-            href="/#plans"
-            className="mt-10 inline-block rounded-xl bg-galaxy-primary px-8 py-3 font-medium shadow-lg shadow-galaxy-primary/30 transition hover:opacity-90"
-          >
-            {t('cta')}
-          </Link>
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/login"
+              className="flex items-center gap-2 rounded-xl bg-galaxy-primary px-8 py-3.5 font-bold text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all hover:bg-white hover:shadow-[0_0_25px_rgba(255,255,255,0.5)] hover:-translate-y-0.5"
+            >
+              Start Now / Login <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link
+              href="#why"
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-3.5 font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10"
+            >
+              Learn More
+            </Link>
+          </div>
+        </FadeIn>
+
+        <FadeIn direction="up" delay={0.6}>
+          <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm font-medium text-white/60">
+            <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom1')}</div>
+            <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom2')}</div>
+            <div className="flex items-center gap-2"><Lock className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom3')}</div>
+          </div>
         </FadeIn>
       </section>
 
-      {/* Features */}
-      <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {features.map((f, i) => (
-          <FadeIn key={f} delay={i * 0.1} direction="up" className="h-full">
-            <div className="glass p-6 h-full flex flex-col">
-              <h3 className="text-lg font-semibold">{t(`features.${f}Title`)}</h3>
-              <p className="mt-2 text-sm text-white/70 flex-grow">{t(`features.${f}Desc`)}</p>
-            </div>
-          </FadeIn>
-        ))}
+      {/* Why GalaxyVPN */}
+      <section id="why" className="px-4 max-w-6xl mx-auto w-full scroll-mt-24">
+        <FadeIn direction="up" className="text-center mb-12">
+          <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('whyLabel')}</p>
+          <h2 className="text-3xl md:text-5xl font-bold">{t('whyTitle')}</h2>
+          <p className="mt-4 text-white/60 max-w-2xl mx-auto">{t('whySubtitle')}</p>
+        </FadeIn>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {[
+            { icon: Zap, title: 'whyLightning', desc: 'whyLightningDesc' },
+            { icon: Lock, title: 'whySecurity', desc: 'whySecurityDesc' },
+            { icon: Globe, title: 'whyDevices', desc: 'whyDevicesDesc' }
+          ].map((item, i) => (
+            <FadeIn key={i} delay={i * 0.1} direction="up" className="h-full">
+              <div className="glass p-8 h-full flex flex-col rounded-2xl hover:border-galaxy-primary/30 transition-colors group">
+                <div className="w-12 h-12 rounded-xl bg-galaxy-primary/10 flex items-center justify-center text-galaxy-primary mb-6 group-hover:scale-110 transition-transform">
+                  <item.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{t(item.title)}</h3>
+                <p className="text-white/60 leading-relaxed flex-grow">{t(item.desc)}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
       </section>
 
-      {/* Plans */}
-      <section id="plans" className="scroll-mt-24">
+      {/* How it works */}
+      <section className="px-4 max-w-5xl mx-auto w-full">
+        <FadeIn direction="up" className="text-center mb-12">
+          <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('stepsLabel')}</p>
+          <h2 className="text-3xl md:text-5xl font-bold">{t('stepsTitle')}</h2>
+          <p className="mt-4 text-white/60">{t('stepsSubtitle')}</p>
+        </FadeIn>
+
+        <div className="grid gap-6 md:grid-cols-3 relative">
+          {[
+            { num: '1', title: 'step1', desc: 'step1Desc' },
+            { num: '2', title: 'step2', desc: 'step2Desc' },
+            { num: '3', title: 'step3', desc: 'step3Desc' }
+          ].map((item, i) => (
+            <FadeIn key={i} delay={i * 0.15} direction="up" className="h-full relative z-10">
+              <div className="glass p-8 h-full flex flex-col rounded-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-galaxy-primary/5 rounded-bl-full -z-10 group-hover:bg-galaxy-primary/10 transition-colors"></div>
+                <div className="w-10 h-10 rounded-full bg-galaxy-primary/20 text-galaxy-primary font-bold flex items-center justify-center mb-6">
+                  {item.num}
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{t(item.title)}</h3>
+                <p className="text-white/60 leading-relaxed">{t(item.desc)}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </section>
+
+      {/* Specialized Servers */}
+      <section className="px-4 max-w-6xl mx-auto w-full">
+        <FadeIn direction="up" className="text-center mb-12">
+          <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('serversLabel')}</p>
+          <h2 className="text-3xl md:text-5xl font-bold">{t('serversTitle')}</h2>
+          <p className="mt-4 text-white/60 max-w-2xl mx-auto">{t('serversSubtitle')}</p>
+        </FadeIn>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            { icon: PlaySquare, title: 'serverYoutube', desc: 'serverYoutubeDesc', color: 'text-red-400', border: 'hover:border-red-400/50' },
+            { icon: Zap, title: 'serverGemini', desc: 'serverGeminiDesc', color: 'text-blue-400', border: 'hover:border-blue-400/50' },
+            { icon: Smartphone, title: 'serverLTE', desc: 'serverLTEDesc', color: 'text-orange-400', border: 'hover:border-orange-400/50' },
+            { icon: ShieldCheck, title: 'serverRussia', desc: 'serverRussiaDesc', color: 'text-red-500', border: 'hover:border-red-500/50' },
+            { icon: Download, title: 'serverTorrent', desc: 'serverTorrentDesc', color: 'text-emerald-400', border: 'hover:border-emerald-400/50' }
+          ].map((item, i) => (
+            <FadeIn key={i} delay={i * 0.1} direction="up" className="h-full">
+              <div className={`glass p-6 h-full flex flex-col rounded-2xl transition-all ${item.border}`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <item.icon className={`w-5 h-5 ${item.color}`} />
+                  <h3 className="text-lg font-bold text-white">{t(item.title)}</h3>
+                </div>
+                <p className="text-sm text-white/60 leading-relaxed">{t(item.desc)}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </section>
+
+      {/* No More Blocks */}
+      <section className="px-4 max-w-4xl mx-auto w-full text-center">
+        <FadeIn direction="up">
+          <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('blocksLabel')}</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-8">{t('blocksTitle')}</h2>
+          <div className="flex flex-wrap justify-center gap-3">
+            {['Spotify', 'ChatGPT', 'Gemini', 'Claude', 'Discord', 'Instagram', 'Telegram', 'YouTube'].map((app, i) => (
+              <div key={app} className="glass px-6 py-3 rounded-full flex items-center gap-2 text-sm font-medium hover:bg-white/5 transition-colors">
+                <CheckCircle className="w-4 h-4 text-galaxy-primary" /> {app}
+              </div>
+            ))}
+          </div>
+        </FadeIn>
+      </section>
+
+      {/* Global Network */}
+      <section className="px-4 max-w-5xl mx-auto w-full text-center">
+        <FadeIn direction="up">
+          <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('networkLabel')}</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-8">{t('networkTitle')}</h2>
+          <div className="flex flex-wrap justify-center gap-4">
+            {['Netherlands', 'Turkey', 'Russia', 'Finland', 'Germany', 'France', 'USA'].map((country, i) => (
+              <div key={country} className="glass px-6 py-3 rounded-full flex items-center gap-2 text-sm font-medium hover:border-galaxy-primary/30 transition-colors">
+                <MapPin className="w-4 h-4 text-galaxy-primary" /> {country}
+              </div>
+            ))}
+          </div>
+        </FadeIn>
+      </section>
+
+      {/* Plans Section */}
+      <section id="plans" className="scroll-mt-24 px-4 max-w-6xl mx-auto w-full">
         <FadeIn direction="up">
           <PlansHeader />
         </FadeIn>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {/* Showcase only — the button sends visitors to sign in; the actual
-              plan selection + payment happens in their account (profile). */}
           {PLANS.map((p, i) => (
             <FadeIn key={p.id} delay={i * 0.15} direction="up" className="h-full">
               <PlanCard plan={p} featured={p.id === 3} href="/login" />
