@@ -33,10 +33,8 @@ export default async function HomePage({
             interactive={true}
             parallax={true}
           />
-          {/* Dark overlays to ensure text readability */}
-          <div className="absolute inset-0 bg-[#0a0a1a]/30" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(10,10,26,0.8)_0%,_transparent_70%)]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a1a] via-transparent to-[#0a0a1a]" />
+          {/* Original gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a1a]/80 via-transparent to-[#0a0a1a]" />
         </div>
 
         <FadeIn direction="up">
@@ -44,13 +42,13 @@ export default async function HomePage({
             <span className="w-1.5 h-1.5 rounded-full bg-galaxy-primary animate-pulse"></span>
             {t('heroPill')}
           </div>
-          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-[#0a0a1a]" style={{ textShadow: '0 0 40px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8)' }}>
+          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white" style={{ WebkitTextStroke: '1px rgba(0,0,0,0.8)', textShadow: '0 4px 30px rgba(0,0,0,0.8)' }}>
             {t('heroTitle')}
           </h1>
         </FadeIn>
         
         <FadeIn direction="up" delay={0.2}>
-          <p className="mx-auto mt-8 max-w-2xl text-lg text-[#0a0a1a] font-medium leading-relaxed" style={{ textShadow: '0 0 20px rgba(255,255,255,1), 0 0 10px rgba(255,255,255,0.8)' }}>
+          <p className="mx-auto mt-8 max-w-2xl text-lg text-white font-medium leading-relaxed" style={{ WebkitTextStroke: '0.5px rgba(0,0,0,0.6)', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>
             {t('heroSubtitle')}
           </p>
         </FadeIn>

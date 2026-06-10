@@ -3,6 +3,7 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing, rtlLocales, type Locale } from '@/i18n/routing';
+import NextTopLoader from 'nextjs-toploader';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import '../globals.css';
@@ -32,6 +33,7 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir}>
       <body className="flex min-h-screen flex-col">
+        <NextTopLoader color="#22d3ee" showSpinner={false} />
         <NextIntlClientProvider>
           <Navbar />
           <main className="mx-auto w-full flex-1 max-w-6xl px-4 pb-24">{children}</main>
