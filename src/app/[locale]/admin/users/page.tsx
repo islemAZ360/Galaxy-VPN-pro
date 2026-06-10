@@ -16,7 +16,9 @@ export default async function AdminUsersPage({
 
   const { data: payments } = await admin
     .from('payments')
-    .select('id, amount_rub, plan, receipt_base64, user_id, users(email)')
+    // disambiguate the embed: payments has TWO FKs to users (user_id + reviewed_by);
+    // we need the owner's email here, so name the FK explicitly.
+    .select('id, amount_rub, plan, receipt_base64, user_id, users!payments_user_id_fkey(email)')
     .eq('status', 'pending')
     .order('created_at', { ascending: true });
 
