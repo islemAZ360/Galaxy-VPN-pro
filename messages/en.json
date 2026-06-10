@@ -146,7 +146,11 @@
       "hint": "Add repos whose .txt files hold server links. The scheduled worker tests them and updates the live pool.",
       "add": "Add",
       "delete": "Delete",
-      "none": "No repositories yet."
+      "none": "No repositories yet.",
+      "recheck": "Re-check all",
+      "recheckHint": "Re-fetch every repo, retest all servers, drop the ones that no longer work.",
+      "syncRequested": "✓ Re-check started — the local worker will refresh the server list shortly.",
+      "syncFailed": "Could not start the re-check."
     },
     "support": {
       "title": "Conversations",

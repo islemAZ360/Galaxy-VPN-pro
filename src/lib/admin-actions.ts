@@ -142,3 +142,18 @@ export async function deleteRepo(id: string) {
   await admin.from('repos').delete().eq('id', id);
   revalidatePath('/', 'layout');
 }
+
+// Request a fresh sync — inserts a row into sync_requests; the local Tester
+// Worker picks it up over Supabase Realtime, runs the real test, and updates
+// the live server pool.
+export async function requestSync() {
+  const adminId = await assertAdmin();
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('sync_requests')
+    .insert({ requested_by: adminId })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return { id: data.id };
+}

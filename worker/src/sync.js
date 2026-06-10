@@ -4,6 +4,7 @@ import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
 import { flagEmoji, renameConfig } from './uri.js';
 import { testAll } from './test.js';
 import { lookupCountries } from './geoip.js';
+import { log } from './log.js';
 
 let running = false;
 
@@ -37,26 +38,32 @@ function chunk(arr, n) {
 export async function runSync() {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
-  const log = { startedAt: new Date().toISOString() };
+  const stats = { startedAt: new Date().toISOString() };
+  console.log(''); // visual gap between runs
+  log.step('Starting a sync cycle…');
   try {
     // 1. enabled repos
     const { data: repos, error: repoErr } = await supa.from('repos').select('repo_url').eq('enabled', true);
     if (repoErr) throw repoErr;
-    log.repos = repos?.length ?? 0;
+    stats.repos = repos?.length ?? 0;
+    log.info(`Reading repos from Supabase  ·  ${stats.repos} enabled`);
 
     // 2. gather unique configs across all repos (hash -> { uri, source })
+    log.info('Pulling .txt files from GitHub…');
     const configs = new Map();
     for (const r of repos ?? []) {
       try {
-        const { text } = await fetchRepoTexts(r.repo_url);
+        const { text, fileCount } = await fetchRepoTexts(r.repo_url);
+        log.info(`  · ${r.repo_url}  →  ${fileCount} files`);
         for (const uri of extractConfigs(text)) {
           configs.set(hashConfig(uri), { uri, source: r.repo_url });
         }
       } catch (e) {
-        console.error(`[sync] repo failed ${r.repo_url}:`, e.message);
+        log.err(`repo failed ${r.repo_url}: ${e.message}`);
       }
     }
-    log.discovered = configs.size;
+    stats.discovered = configs.size;
+    log.ok(`Discovered ${stats.discovered} unique server configs`);
 
     // 3. test a bounded, evenly-spread sample of candidates.
     // Testing thousands of hosts exhausts OS sockets (esp. on Windows) and
@@ -69,16 +76,19 @@ export async function runSync() {
       const stride = allUris.length / MAX;
       candidates = Array.from({ length: MAX }, (_, k) => allUris[Math.floor(k * stride)]);
     }
-    log.candidates = candidates.length;
+    stats.candidates = candidates.length;
     const CONC = Number(process.env.TEST_CONCURRENCY || 40);
+    log.info(`Testing ${stats.candidates} candidates via xray-knife (concurrency ${CONC})…`);
     const results = await testAll(candidates, { concurrency: CONC, timeoutMs: 4000 });
     const working = results.filter((r) => r.ok);
-    log.working = working.length;
+    stats.working = working.length;
+    log.ok(`${stats.working} / ${stats.candidates} servers passed the real test`);
 
     // let lingering sockets drain before HTTP fetch calls (Windows TIME_WAIT)
     await sleep(Number(process.env.DRAIN_MS || 2000));
 
     // 4. geoip for working hosts
+    log.info('Looking up country / flag for each working host…');
     const geo = await lookupCountries(working.map((w) => w.host));
 
     // 5. Smart rename: sort by country (then latency), number per country, and
@@ -113,6 +123,7 @@ export async function runSync() {
       };
     });
     // upsert in chunks (resilient to transient network errors)
+    log.info(`Renaming + uploading ${rows.length} working servers to Supabase…`);
     for (const part of chunk(rows, 500)) {
       await withRetry(async () => {
         const { error } = await supa.from('servers').upsert(part, { onConflict: 'config_hash' });
@@ -128,20 +139,23 @@ export async function runSync() {
       return data ?? [];
     }, { label: 'select-existing' });
     const toDelete = existing.filter((s) => !keep.has(s.config_hash)).map((s) => s.id);
-    log.deleted = toDelete.length;
-    for (const batch of chunk(toDelete, 100)) {
-      await withRetry(async () => {
-        const { error } = await supa.from('servers').delete().in('id', batch);
-        if (error) throw new Error(error.message);
-      }, { label: 'delete' });
+    stats.deleted = toDelete.length;
+    if (stats.deleted) {
+      log.info(`Deleting ${stats.deleted} stale servers…`);
+      for (const batch of chunk(toDelete, 100)) {
+        await withRetry(async () => {
+          const { error } = await supa.from('servers').delete().in('id', batch);
+          if (error) throw new Error(error.message);
+        }, { label: 'delete' });
+      }
     }
 
-    log.finishedAt = new Date().toISOString();
-    console.log('[sync] done', log);
-    return log;
+    stats.finishedAt = new Date().toISOString();
+    log.done(`Done — ${stats.working} live · ${stats.deleted} removed · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt))/1000)}s`);
+    return stats;
   } catch (e) {
-    console.error('[sync] error', e);
-    return { error: e.message, ...log };
+    log.err(`Sync failed: ${e.message}`);
+    return { error: e.message, ...stats };
   } finally {
     running = false;
   }
