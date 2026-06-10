@@ -277,5 +277,9 @@
       "q": "What should I do if my VPN is not connecting?",
       "a": "First, try switching to a different server from your subscription. If the issue persists, our servers are automatically tested and refreshed — try again in a few minutes. You can also reach out via our Support chat for immediate help."
     }
+  },
+  "footer": {
+    "rights": "© 2026 GalaxyVPN. All rights reserved.",
+    "contact": "Contact Us"
   }
 }
