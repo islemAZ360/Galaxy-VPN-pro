@@ -4,6 +4,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { writeFile, readFile, mkdtemp, rm } from 'node:fs/promises';
 import { parseConfig } from './uri.js';
+import { log } from './log.js';
 
 // ---------------------------------------------------------------------------
 // REAL protocol testing via xray-knife (https://github.com/lilendian0x00/xray-knife)
@@ -113,15 +114,15 @@ export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } 
       .split(/\r?\n/)
       .map((s) => s.trim())
       .filter((s) => /:\/\//.test(s));
-    console.log(`[test] xray-knife: ${workingUris.length}/${uris.length} configs passed the real test`);
+    log.ok(`xray-knife: ${workingUris.length}/${uris.length} configs passed the real test`);
   } catch (e) {
     if (e.enoent) {
-      console.warn(
-        '[test] xray-knife not found — falling back to TCP reachability (weaker). ' +
-          'Install xray-knife and set XRAY_KNIFE_PATH for real, Russia-accurate testing.',
+      log.warn(
+        'xray-knife not found — falling back to TCP reachability (weaker). ' +
+          'Install xray-knife and set XRAY_KNIFE_PATH for real, Russia-accurate testing.'
       );
     } else {
-      console.error('[test] xray-knife failed, falling back to TCP:', e.message);
+      log.err(`xray-knife failed, falling back to TCP: ${e.message}`);
     }
     workingUris = null;
   } finally {

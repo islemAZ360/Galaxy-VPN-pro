@@ -22,8 +22,8 @@ async function withRetry(fn, { attempts = 4, baseMs = 1000, label = 'op' } = {})
       return await fn();
     } catch (e) {
       lastErr = e;
-      console.error(`[sync] ${label} attempt ${i + 1}/${attempts} failed:`, e.message);
-      if (i < attempts - 1) await sleep(baseMs * 2 ** i);
+      log.warn(`${label} attempt ${i + 1}/${attempts} failed: ${e.message}`);
+      if (i < attempts - 1) await sleep(baseMs * Math.pow(2, i));
     }
   }
   throw lastErr;
@@ -241,7 +241,7 @@ export async function runLteRecheck() {
 
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
-      const { data: current } = await supa.from('servers').select('id, name, config_uri').in('id', ids);
+      const { data: current } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
       if (!current) return;
       
       const updates = current.map(c => {
@@ -250,6 +250,7 @@ export async function runLteRecheck() {
           id: c.id,
           name: newName,
           config_uri: renameConfig(c.config_uri, newName),
+          config_hash: c.config_hash,
           network_type: type,
           last_checked_at: now
         };
@@ -318,7 +319,7 @@ export async function runGeminiRecheck() {
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
       // First, fetch existing names to retag them
-      const { data: current } = await supa.from('servers').select('id, name, config_uri').in('id', ids);
+      const { data: current } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
       if (!current) return;
       
       const updates = current.map(c => {
@@ -327,6 +328,7 @@ export async function runGeminiRecheck() {
           id: c.id,
           name: newName,
           config_uri: renameConfig(c.config_uri, newName),
+          config_hash: c.config_hash,
           network_type: type,
           last_checked_at: now
         };
