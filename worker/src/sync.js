@@ -160,3 +160,65 @@ export async function runSync() {
     running = false;
   }
 }
+
+// LTE re-check: retest the servers ALREADY in the pool over the worker's current
+// (LTE) connection. Those that still pass become 'lte' (work on mobile + Wi-Fi);
+// the rest are demoted to 'wifi' only. Nothing is deleted here.
+// Run this while the machine is on LTE / a phone hotspot.
+export async function runLteRecheck() {
+  if (running) return { skipped: true, reason: 'already running' };
+  running = true;
+  const stats = { startedAt: new Date().toISOString(), mode: 'lte' };
+  // name-independent key so xray-knife's output matches our (renamed) DB rows
+  const keyOf = (u) => renameConfig(u, '');
+  console.log('');
+  log.step('LTE re-check — testing the live pool over THIS connection…');
+  try {
+    const existing = await withRetry(async () => {
+      const { data, error } = await supa.from('servers').select('id, config_uri');
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }, { label: 'select-pool' });
+    stats.total = existing.length;
+    if (!stats.total) {
+      log.warn('No servers in the pool to re-check yet — run a normal sync first.');
+      stats.finishedAt = new Date().toISOString();
+      return stats;
+    }
+    log.info(`Re-testing ${stats.total} servers over the current network…`);
+    const CONC = Number(process.env.TEST_CONCURRENCY || 40);
+    const results = await testAll(existing.map((s) => s.config_uri), { concurrency: CONC, timeoutMs: 4000 });
+    const workingKeys = new Set(results.filter((r) => r.ok).map((r) => keyOf(r.uri)));
+
+    const lteIds = [];
+    const wifiIds = [];
+    for (const s of existing) (workingKeys.has(keyOf(s.config_uri)) ? lteIds : wifiIds).push(s.id);
+    stats.lte = lteIds.length;
+    stats.wifi = wifiIds.length;
+    log.ok(`${stats.lte} work on LTE  ·  ${stats.wifi} are Wi-Fi only`);
+
+    const now = new Date().toISOString();
+    const classify = async (ids, type) => {
+      for (const batch of chunk(ids, 200)) {
+        await withRetry(async () => {
+          const { error } = await supa
+            .from('servers')
+            .update({ network_type: type, last_checked_at: now })
+            .in('id', batch);
+          if (error) throw new Error(error.message);
+        }, { label: `classify-${type}` });
+      }
+    };
+    await classify(lteIds, 'lte');
+    await classify(wifiIds, 'wifi');
+
+    stats.finishedAt = new Date().toISOString();
+    log.done(`LTE re-check done — ${stats.lte} LTE · ${stats.wifi} Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
+    return stats;
+  } catch (e) {
+    log.err(`LTE re-check failed: ${e.message}`);
+    return { error: e.message, ...stats };
+  } finally {
+    running = false;
+  }
+}

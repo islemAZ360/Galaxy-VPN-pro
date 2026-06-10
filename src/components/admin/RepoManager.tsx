@@ -30,16 +30,18 @@ export function RepoManager({ repos }: { repos: Repo[] }) {
     });
 
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
-  const recheck = () =>
+  const requestKind = (kind: 'full' | 'lte') =>
     startTransition(async () => {
       setSyncMsg(null);
       try {
-        await requestSync();
-        setSyncMsg(t('syncRequested'));
+        await requestSync(kind);
+        setSyncMsg(kind === 'lte' ? t('lteRequested') : t('syncRequested'));
       } catch (e) {
         setSyncMsg(t('syncFailed') + ' ' + (e instanceof Error ? e.message : ''));
       }
     });
+  const recheck = () => requestKind('full');
+  const lteRecheck = () => requestKind('lte');
 
   return (
     <div className="glass p-5">
@@ -48,14 +50,24 @@ export function RepoManager({ repos }: { repos: Repo[] }) {
           <h2 className="text-lg font-semibold">{t('title')}</h2>
           <p className="mt-1 text-sm text-white/60">{t('hint')}</p>
         </div>
-        <button
-          onClick={recheck}
-          disabled={isPending}
-          title={t('recheckHint')}
-          className="shrink-0 rounded-lg border border-galaxy-accent/40 bg-galaxy-accent/10 px-3 py-2 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 disabled:opacity-60"
-        >
-          ↻ {t('recheck')}
-        </button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            onClick={lteRecheck}
+            disabled={isPending}
+            title={t('lteRecheckHint')}
+            className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/20 disabled:opacity-60"
+          >
+            📶 {t('lteRecheck')}
+          </button>
+          <button
+            onClick={recheck}
+            disabled={isPending}
+            title={t('recheckHint')}
+            className="rounded-lg border border-galaxy-accent/40 bg-galaxy-accent/10 px-3 py-2 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 disabled:opacity-60"
+          >
+            ↻ {t('recheck')}
+          </button>
+        </div>
       </div>
       {syncMsg && (
         <p className="mt-3 rounded-lg border border-galaxy-accent/30 bg-galaxy-accent/10 px-3 py-2 text-sm">

@@ -3,6 +3,10 @@ import { requireAdmin } from '@/lib/admin';
 import { PaymentReview } from '@/components/admin/PaymentReview';
 import { UserRow } from '@/components/admin/UserRow';
 
+export const dynamic = 'force-dynamic';
+
+type LatestSub = { end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | null };
+
 export default async function AdminUsersPage({
   params,
 }: {
@@ -16,8 +20,6 @@ export default async function AdminUsersPage({
 
   const { data: payments } = await admin
     .from('payments')
-    // disambiguate the embed: payments has TWO FKs to users (user_id + reviewed_by);
-    // we need the owner's email here, so name the FK explicitly.
     .select('id, amount_rub, plan, receipt_base64, user_id, users!payments_user_id_fkey(email)')
     .eq('status', 'pending')
     .order('created_at', { ascending: true });
@@ -29,12 +31,18 @@ export default async function AdminUsersPage({
 
   const { data: subs } = await admin
     .from('subscriptions')
-    .select('user_id, end_at, created_at')
+    .select('user_id, end_at, plan, network_type, created_at, status')
     .order('created_at', { ascending: false });
 
-  const latestEnd = new Map<string, string | null>();
+  // Latest subscription per user (any status).
+  const latest = new Map<string, LatestSub>();
   for (const s of subs ?? []) {
-    if (!latestEnd.has(s.user_id)) latestEnd.set(s.user_id, s.end_at);
+    if (latest.has(s.user_id)) continue;
+    latest.set(s.user_id, {
+      end_at: s.end_at,
+      plan: s.plan,
+      network: (s.network_type as 'wifi' | 'lte' | null) ?? null,
+    });
   }
 
   return (
@@ -60,33 +68,25 @@ export default async function AdminUsersPage({
         )}
       </section>
 
-      {/* Users */}
+      {/* Users — one card per user with all admin tools inline */}
       <section>
         <h2 className="mb-4 text-lg font-semibold">{tu('title')}</h2>
-        <div className="glass overflow-x-auto p-5">
-          <table className="w-full text-sm">
-            <thead className="text-white/50">
-              <tr>
-                <th className="py-2 text-start">{tu('email')}</th>
-                <th className="py-2 text-start">{tu('role')}</th>
-                <th className="py-2 text-start">{tu('subEnds')}</th>
-                <th className="py-2 text-start">{tu('status')}</th>
-                <th className="py-2 text-end"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(users ?? []).map((u) => (
-                <UserRow
-                  key={u.id}
-                  userId={u.id}
-                  email={u.email}
-                  role={u.role}
-                  bannedUntil={u.banned_until}
-                  subEnd={latestEnd.get(u.id) ?? null}
-                />
-              ))}
-            </tbody>
-          </table>
+        <div className="grid gap-3 md:grid-cols-2">
+          {(users ?? []).map((u) => {
+            const sub = latest.get(u.id);
+            return (
+              <UserRow
+                key={u.id}
+                userId={u.id}
+                email={u.email}
+                role={u.role}
+                bannedUntil={u.banned_until}
+                subEnd={sub?.end_at ?? null}
+                plan={sub?.plan ?? null}
+                network={sub?.network ?? null}
+              />
+            );
+          })}
         </div>
       </section>
     </div>

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getPlan } from '@/lib/plans';
 
 const DAY = 86_400_000;
 
@@ -118,6 +119,64 @@ export async function extendSubscription(userId: string, days = 30) {
   revalidatePath('/', 'layout');
 }
 
+// Set or add remaining time on the user's subscription. `ms` is the total
+// duration the admin entered (any unit, converted to ms client-side).
+// mode 'set' → ends at now + ms;  mode 'add' → extends from the later of now/end.
+export async function setSubscriptionTime(userId: string, ms: number, mode: 'set' | 'add') {
+  await assertAdmin();
+  if (!Number.isFinite(ms) || ms <= 0) throw new Error('invalid duration');
+  const admin = createAdminClient();
+  const now = Date.now();
+
+  const { data: sub } = await admin
+    .from('subscriptions')
+    .select('id, end_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (sub) {
+    const base =
+      mode === 'add' && sub.end_at && new Date(sub.end_at).getTime() > now
+        ? new Date(sub.end_at).getTime()
+        : now;
+    await admin
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        start_at: new Date(now).toISOString(),
+        end_at: new Date(base + ms).toISOString(),
+      })
+      .eq('id', sub.id);
+  } else {
+    // No subscription yet → create an admin-granted one (top LTE/Wi-Fi plan).
+    const plan = getPlan(4)!;
+    await admin.from('subscriptions').insert({
+      user_id: userId,
+      plan: plan.id,
+      server_count: plan.lte.serverCount, // grant the LTE pool by default
+      price_rub: 0,
+      duration_days: Math.max(1, Math.round(ms / DAY)),
+      status: 'active',
+      network_type: 'lte',
+      start_at: new Date(now).toISOString(),
+      end_at: new Date(now + ms).toISOString(),
+    });
+  }
+  revalidatePath('/', 'layout');
+}
+
+// Send a message to a user — appears in their Support chat (sender = admin).
+export async function sendUserMessage(userId: string, text: string) {
+  await assertAdmin();
+  const body = text.trim();
+  if (!body) return;
+  const admin = createAdminClient();
+  await admin.from('support_messages').insert({ user_id: userId, sender: 'admin', body });
+  revalidatePath('/', 'layout');
+}
+
 export async function deleteUser(userId: string) {
   await assertAdmin();
   const admin = createAdminClient();
@@ -146,12 +205,12 @@ export async function deleteRepo(id: string) {
 // Request a fresh sync — inserts a row into sync_requests; the local Tester
 // Worker picks it up over Supabase Realtime, runs the real test, and updates
 // the live server pool.
-export async function requestSync() {
+export async function requestSync(kind: 'full' | 'lte' = 'full') {
   const adminId = await assertAdmin();
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('sync_requests')
-    .insert({ requested_by: adminId })
+    .insert({ requested_by: adminId, kind })
     .select('id')
     .single();
   if (error) throw new Error(error.message);
