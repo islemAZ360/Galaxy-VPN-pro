@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { PLANS } from '@/lib/plans';
+import { COUNTRIES } from '@/lib/countries';
 import { PlanCard } from '@/components/PlanCard';
 import Image from 'next/image';
 import { FadeIn } from '@/components/FadeIn';
@@ -236,27 +237,8 @@ export default async function HomePage({
 
         <FadeIn direction="up" delay={0.2}>
           <Marquee speed={50} direction="left">
-            {[
-              { name: 'Russia', code: 'ru' },
-              { name: 'United States', code: 'us' },
-              { name: 'Germany', code: 'de' },
-              { name: 'France', code: 'fr' },
-              { name: 'Netherlands', code: 'nl' },
-              { name: 'United Kingdom', code: 'gb' },
-              { name: 'Turkey', code: 'tr' },
-              { name: 'Japan', code: 'jp' },
-              { name: 'Canada', code: 'ca' },
-              { name: 'Australia', code: 'au' },
-              { name: 'Brazil', code: 'br' },
-              { name: 'India', code: 'in' },
-              { name: 'South Korea', code: 'kr' },
-              { name: 'Singapore', code: 'sg' },
-              { name: 'Sweden', code: 'se' },
-              { name: 'Switzerland', code: 'ch' },
-              { name: 'Finland', code: 'fi' },
-              { name: 'Poland', code: 'pl' },
-            ].map((c) => (
-              <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
+            {COUNTRIES.slice(0, Math.ceil(COUNTRIES.length / 2)).map((c) => (
+              <div key={c.code} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
                 <img src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width="20" height="15" className="rounded-[2px]" loading="eager" decoding="async" />
                 {c.name}
               </div>
@@ -268,27 +250,8 @@ export default async function HomePage({
 
         <FadeIn direction="up" delay={0.3}>
           <Marquee speed={55} direction="right">
-            {[
-              { name: 'Italy', code: 'it' },
-              { name: 'Spain', code: 'es' },
-              { name: 'Mexico', code: 'mx' },
-              { name: 'Argentina', code: 'ar' },
-              { name: 'Egypt', code: 'eg' },
-              { name: 'South Africa', code: 'za' },
-              { name: 'UAE', code: 'ae' },
-              { name: 'Saudi Arabia', code: 'sa' },
-              { name: 'Algeria', code: 'dz' },
-              { name: 'Morocco', code: 'ma' },
-              { name: 'Nigeria', code: 'ng' },
-              { name: 'Kenya', code: 'ke' },
-              { name: 'Vietnam', code: 'vn' },
-              { name: 'Thailand', code: 'th' },
-              { name: 'Malaysia', code: 'my' },
-              { name: 'Indonesia', code: 'id' },
-              { name: 'Philippines', code: 'ph' },
-              { name: 'Taiwan', code: 'tw' },
-            ].map((c) => (
-              <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
+            {COUNTRIES.slice(Math.ceil(COUNTRIES.length / 2)).map((c) => (
+              <div key={c.code} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
                 <img src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width="20" height="15" className="rounded-[2px]" loading="eager" decoding="async" />
                 {c.name}
               </div>
