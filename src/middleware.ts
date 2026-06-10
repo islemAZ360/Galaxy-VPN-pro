@@ -9,6 +9,11 @@ export async function middleware(request: NextRequest) {
   // 1. locale routing
   const response = intlMiddleware(request);
 
+  // Skip Supabase session refresh on prefetch requests to prevent network queue saturation
+  if (request.headers.get('Next-Router-Prefetch')) {
+    return response;
+  }
+
   // 2. refresh the Supabase auth session and sync cookies onto the response
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,7 +31,10 @@ export async function middleware(request: NextRequest) {
       },
     },
   );
-  await supabase.auth.getUser();
+  
+  // Use getSession() instead of getUser() to avoid a slow network round-trip 
+  // to Supabase on every single page load. Server components still use getUser() for security.
+  await supabase.auth.getSession();
 
   return response;
 }
