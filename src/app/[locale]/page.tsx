@@ -37,46 +37,48 @@ export default async function HomePage({
           <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a1a]/80 via-transparent to-[#0a0a1a]" />
         </div>
 
-        <FadeIn direction="up">
-          <div className="inline-flex items-center gap-2 rounded-full border border-galaxy-primary/30 bg-galaxy-primary/10 px-4 py-2 text-sm font-medium text-galaxy-primary shadow-[0_0_15px_rgba(34,211,238,0.2)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-galaxy-primary animate-pulse"></span>
-            {t('heroPill')}
-          </div>
-          <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white" style={{ textShadow: '1px 1px 0 #0f172a, -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 0 4px 30px rgba(0,0,0,0.8)' }}>
-            {t('heroTitle')}
-          </h1>
-        </FadeIn>
-        
-        <FadeIn direction="up" delay={0.2}>
-          <p className="mx-auto mt-8 max-w-2xl text-lg text-white font-medium leading-relaxed" style={{ textShadow: '1px 1px 0 #0f172a, -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 0 2px 20px rgba(0,0,0,0.8)' }}>
-            {t('heroSubtitle')}
-          </p>
-        </FadeIn>
-        
-        <FadeIn direction="up" delay={0.4}>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/login"
-              className="flex items-center gap-2 rounded-xl bg-galaxy-primary px-8 py-3.5 font-bold text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all hover:bg-white hover:shadow-[0_0_25px_rgba(255,255,255,0.5)] hover:-translate-y-0.5"
-            >
-              Start Now / Login <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              href="#why"
-              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-8 py-3.5 font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20"
-            >
-              Learn More
-            </Link>
-          </div>
-        </FadeIn>
+        <div className="relative z-10">
+          <FadeIn direction="up">
+            <div className="inline-flex items-center gap-2 rounded-full border border-galaxy-primary/30 bg-galaxy-primary/10 px-4 py-2 text-sm font-medium text-galaxy-primary shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-galaxy-primary animate-pulse"></span>
+              {t('heroPill')}
+            </div>
+            <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white" style={{ textShadow: '1px 1px 0 #0f172a, -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 0 4px 30px rgba(0,0,0,0.8)' }}>
+              {t('heroTitle')}
+            </h1>
+          </FadeIn>
+          
+          <FadeIn direction="up" delay={0.2}>
+            <p className="mx-auto mt-8 max-w-2xl text-lg text-white font-medium leading-relaxed" style={{ textShadow: '1px 1px 0 #0f172a, -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 0 2px 20px rgba(0,0,0,0.8)' }}>
+              {t('heroSubtitle')}
+            </p>
+          </FadeIn>
+          
+          <FadeIn direction="up" delay={0.4}>
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/login"
+                className="flex items-center gap-2 rounded-xl bg-galaxy-primary px-8 py-3.5 font-bold text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all hover:bg-white hover:shadow-[0_0_25px_rgba(255,255,255,0.5)] hover:-translate-y-0.5"
+              >
+                Start Now / Login <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="#why"
+                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-8 py-3.5 font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20"
+              >
+                Learn More
+              </Link>
+            </div>
+          </FadeIn>
 
-        <FadeIn direction="up" delay={0.6}>
-          <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm font-medium text-white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>
-            <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom1')}</div>
-            <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom2')}</div>
-            <div className="flex items-center gap-2"><Lock className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom3')}</div>
-          </div>
-        </FadeIn>
+          <FadeIn direction="up" delay={0.6}>
+            <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm font-medium text-white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>
+              <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom1')}</div>
+              <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom2')}</div>
+              <div className="flex items-center gap-2"><Lock className="w-4 h-4 text-galaxy-primary" /> {t('heroBottom3')}</div>
+            </div>
+          </FadeIn>
+        </div>
       </section>
 
       {/* Why GalaxyVPN */}
@@ -189,7 +191,7 @@ export default async function HomePage({
               { name: 'TikTok', icon: 'tiktok', color: '#ffffff' },
             ].map((app) => (
               <div key={app.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <Image unoptimized={true} src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width={20} height={20} />
+                <img src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width="20" height="20" loading="eager" decoding="async" />
                 {app.name}
               </div>
             ))}
@@ -217,7 +219,7 @@ export default async function HomePage({
               { name: 'Viber', icon: 'viber', color: '#7360F2' },
             ].map((app) => (
               <div key={app.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <Image unoptimized={true} src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width={20} height={20} />
+                <img src={`https://cdn.simpleicons.org/${app.icon}/${app.color.replace('#', '')}`} alt={app.name} width="20" height="20" loading="eager" decoding="async" />
                 {app.name}
               </div>
             ))}
@@ -255,7 +257,7 @@ export default async function HomePage({
               { name: 'Poland', code: 'pl' },
             ].map((c) => (
               <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <Image unoptimized={true} src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width={20} height={15} className="rounded-[2px]" />
+                <img src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width="20" height="15" className="rounded-[2px]" loading="eager" decoding="async" />
                 {c.name}
               </div>
             ))}
@@ -276,18 +278,18 @@ export default async function HomePage({
               { name: 'UAE', code: 'ae' },
               { name: 'Saudi Arabia', code: 'sa' },
               { name: 'Algeria', code: 'dz' },
-              { name: 'Norway', code: 'no' },
-              { name: 'Denmark', code: 'dk' },
-              { name: 'Austria', code: 'at' },
-              { name: 'Belgium', code: 'be' },
-              { name: 'Ireland', code: 'ie' },
-              { name: 'Portugal', code: 'pt' },
-              { name: 'Romania', code: 'ro' },
-              { name: 'Ukraine', code: 'ua' },
+              { name: 'Morocco', code: 'ma' },
+              { name: 'Nigeria', code: 'ng' },
+              { name: 'Kenya', code: 'ke' },
+              { name: 'Vietnam', code: 'vn' },
+              { name: 'Thailand', code: 'th' },
+              { name: 'Malaysia', code: 'my' },
               { name: 'Indonesia', code: 'id' },
+              { name: 'Philippines', code: 'ph' },
+              { name: 'Taiwan', code: 'tw' },
             ].map((c) => (
               <div key={c.name} className="glass px-5 py-3 rounded-full flex items-center gap-3 text-sm font-medium whitespace-nowrap hover:bg-white/10 transition-colors shrink-0">
-                <Image unoptimized={true} src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width={20} height={15} className="rounded-[2px]" />
+                <img src={`https://flagcdn.com/${c.code}.svg`} alt={c.name} width="20" height="15" className="rounded-[2px]" loading="eager" decoding="async" />
                 {c.name}
               </div>
             ))}
