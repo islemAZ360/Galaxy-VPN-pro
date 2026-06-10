@@ -1,7 +1,6 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { redirect } from '@/i18n/routing';
-import { createClient } from '@/lib/supabase/server';
 import { AdminTabs } from '@/components/admin/AdminTabs';
+import { requireAdmin } from '@/lib/admin';
 
 // admin area is per-user auth-gated — force dynamic for all nested pages
 export const dynamic = 'force-dynamic';
@@ -16,14 +15,7 @@ export default async function AdminLayout({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  // guard: admin only
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect({ href: '/login', locale });
-  const { data: me } = await supabase.from('users').select('role').eq('id', user!.id).maybeSingle();
-  if (me?.role !== 'admin') redirect({ href: '/', locale });
+  await requireAdmin(locale);
 
   const t = await getTranslations('admin');
 
