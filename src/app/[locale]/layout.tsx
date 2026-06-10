@@ -6,6 +6,8 @@ import { routing, rtlLocales, type Locale } from '@/i18n/routing';
 import { Navbar } from '@/components/Navbar';
 import '../globals.css';
 
+import Galaxy from '@/components/Galaxy';
+
 export const metadata: Metadata = {
   title: 'GalaxyVPN',
   description: 'Fast, private internet across the galaxy.',
@@ -31,6 +33,16 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir}>
       <body>
+        <div className="fixed inset-0 -z-10 bg-[#0a0a1a]">
+          <Galaxy
+            transparent={true}
+            density={1.5}
+            glowIntensity={0.5}
+            starSpeed={0.5}
+            mouseInteraction={true}
+            hueShift={220} /* Adjust hue to match galaxy VPN theme (blues/purples) */
+          />
+        </div>
         <NextIntlClientProvider>
           <Navbar />
           <main className="mx-auto w-full max-w-6xl px-4 pb-24">{children}</main>
