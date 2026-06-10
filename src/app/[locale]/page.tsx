@@ -16,42 +16,7 @@ export default async function HomePage({
 
   return (
     <div className="flex flex-col gap-32 pt-16 pb-24 overflow-x-hidden">
-      {/* Decorative Space Art (Persistent Background) */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 select-none overflow-hidden">
-        {/* eslint-disable @next/next/no-img-element */}
-        <img
-          src="/planets/galaxy.png"
-          alt=""
-          className="animate-spin-slow absolute left-1/2 top-1/2 w-[680px] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-40 blur-[1px]"
-        />
-        <img
-          src="/planets/nebula_cloud.png"
-          alt=""
-          className="absolute -right-24 top-0 w-80 opacity-30 blur-sm"
-        />
-        {/* eslint-enable @next/next/no-img-element */}
-      </div>
 
-      <img
-        aria-hidden
-        src="/planets/astronaut.png"
-        alt=""
-        className="animate-float pointer-events-none absolute top-40 right-[10%] hidden w-40 select-none drop-shadow-[0_0_30px_rgba(34,211,238,0.25)] xl:block z-10"
-      />
-      <img
-        aria-hidden
-        src="/planets/astronaut.png"
-        alt=""
-        className="animate-float pointer-events-none absolute top-[2500px] right-[25%] hidden w-32 select-none drop-shadow-[0_0_30px_rgba(34,211,238,0.25)] xl:block z-10 opacity-80"
-        style={{ animationDelay: '2s' }}
-      />
-      <img
-        aria-hidden
-        src="/planets/planet_3.png"
-        alt=""
-        className="animate-float pointer-events-none absolute top-[800px] left-[5%] hidden w-28 select-none opacity-90 xl:block z-10"
-        style={{ animationDelay: '1.5s' }}
-      />
 
       {/* Hero Section */}
       <section className="relative text-center mt-12 px-4">
