@@ -4,6 +4,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing, rtlLocales, type Locale } from '@/i18n/routing';
 import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -30,10 +31,11 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={dir}>
-      <body>
+      <body className="flex min-h-screen flex-col">
         <NextIntlClientProvider>
           <Navbar />
-          <main className="mx-auto w-full max-w-6xl px-4 pb-24">{children}</main>
+          <main className="mx-auto w-full flex-1 max-w-6xl px-4 pb-24">{children}</main>
+          <Footer />
         </NextIntlClientProvider>
       </body>
     </html>
