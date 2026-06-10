@@ -4,7 +4,7 @@ import { PLANS } from '@/lib/plans';
 import { PlanCard } from '@/components/PlanCard';
 import { FadeIn } from '@/components/FadeIn';
 import { Zap, Lock, Globe, CheckCircle, ShieldCheck, ArrowRight, PlaySquare, Smartphone, Download, MapPin } from 'lucide-react';
-import Galaxy from '@/components/Galaxy';
+import FloatingLines from '@/components/FloatingLines';
 
 export default async function HomePage({
   params,
@@ -16,15 +16,16 @@ export default async function HomePage({
   const t = await getTranslations('home');
 
   return (
-    <div className="flex flex-col gap-32 pt-16 pb-24 overflow-x-hidden">
-      <div className="fixed inset-0 -z-10 bg-[#0a0a1a]" style={{ width: '100vw', height: '100vh', position: 'fixed' }}>
-        <Galaxy
-          mouseRepulsion={true}
-          mouseInteraction={true}
-          density={1.5}
-          glowIntensity={0.5}
-          saturation={0.8}
-          hueShift={240}
+    <div className="flex flex-col gap-32 pt-16 pb-24 overflow-x-hidden relative">
+      <div className="absolute top-0 left-0 w-full h-[100vh] -z-10 bg-[#0a0a1a]">
+        <FloatingLines
+          enabledWaves={['top', 'middle', 'bottom']}
+          lineCount={[10, 15, 20]}
+          lineDistance={[8, 6, 4]}
+          bendRadius={5.0}
+          bendStrength={-0.5}
+          interactive={true}
+          parallax={true}
         />
       </div>
 
