@@ -28,6 +28,7 @@ export function RepoManager({
   const t = useTranslations('admin.repos');
   const router = useRouter();
   const [url, setUrl] = useState('');
+  const [showInstructions, setShowInstructions] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { online: isLive, syncing: isBusy } = useWorkerPresence();
 
@@ -88,7 +89,8 @@ export function RepoManager({
   };
   const recheck = () => requestKind('full');
   const lteRecheck = () => requestKind('lte');
-  const geminiRecheck = () => requestKind('gemini');
+  const geminiWifiRecheck = () => requestKind('gemini_wifi');
+  const geminiLteRecheck = () => requestKind('gemini_lte');
 
   return (
     <div className="glass p-5">
@@ -99,12 +101,20 @@ export function RepoManager({
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <button
-            onClick={geminiRecheck}
+            onClick={geminiLteRecheck}
             disabled={isPending}
-            title={t('geminiRecheckHint')}
+            title={t('geminiLteRecheckHint')}
+            className="rounded-lg border border-purple-400/40 bg-purple-400/10 px-3 py-2 text-sm font-medium text-purple-300 hover:bg-purple-400/20 disabled:opacity-60"
+          >
+            ✨ {t('geminiLteRecheck')}
+          </button>
+          <button
+            onClick={geminiWifiRecheck}
+            disabled={isPending}
+            title={t('geminiWifiRecheckHint')}
             className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 px-3 py-2 text-sm font-medium text-fuchsia-300 hover:bg-fuchsia-400/20 disabled:opacity-60"
           >
-            ✨ {t('geminiRecheck')}
+            ✨ {t('geminiWifiRecheck')}
           </button>
           <button
             onClick={lteRecheck}
@@ -122,8 +132,40 @@ export function RepoManager({
           >
             ↻ {t('recheck')}
           </button>
+          <button
+            onClick={() => setShowInstructions(!showInstructions)}
+            className="rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-400/20"
+          >
+            ❓ {t('instructionsBtn')}
+          </button>
         </div>
       </div>
+      
+      {showInstructions && (
+        <div className="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 text-sm text-sky-100 leading-relaxed space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sky-300 text-base">{t('instructionsTitle')}</h3>
+            <button onClick={() => setShowInstructions(false)} className="opacity-50 hover:opacity-100 text-lg">✕</button>
+          </div>
+          <p>
+            {t('instructionsIntro')}
+          </p>
+          <div className="bg-sky-950/40 p-3 rounded-lg border border-sky-500/20">
+            <h4 className="font-semibold text-sky-200 mb-2">{t('instructionsStepsTitle')}</h4>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>{t('instructionsStep1')}</li>
+              <li>{t('instructionsStep2')}</li>
+              <li>{t('instructionsStep3')}</li>
+              <li>{t.rich('instructionsStep4', { code: (chunks) => <code className="bg-black/30 px-1.5 py-0.5 rounded text-sky-200" dir="ltr">{chunks}</code> })}</li>
+              <li>{t('instructionsStep5')}</li>
+              <li>{t.rich('instructionsStep6', { code: (chunks) => <code className="bg-black/30 px-1.5 py-0.5 rounded text-sky-200" dir="ltr">{chunks}</code> })}</li>
+            </ol>
+          </div>
+          <p className="text-xs opacity-70 mt-2">
+            {t('instructionsNote')}
+          </p>
+        </div>
+      )}
       {/* Messages */}
       {syncMsg && (
         <div className={`mt-4 rounded-md border p-3 text-sm flex items-start gap-2 ${
