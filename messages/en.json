@@ -232,7 +232,20 @@
       "lteRequested": "✓ LTE re-check started — make sure you're on mobile data right now.",
       "geminiRecheck": "Gemini re-check",
       "geminiRecheckHint": "Run on LTE. Servers that can reach Gemini become Gemini-tier; the rest drop to LTE.",
-      "geminiRequested": "✓ Gemini re-check started — testing which servers can reach Gemini."
+      "geminiRequested": "✓ Gemini re-check started — testing which servers can reach Gemini.",
+      "duplicateWarning": "This repository is already added! Please use a different URL.",
+      "files": "files",
+      "extracted": "extracted",
+      "working": "working",
+      "filesHint": "Number of text files found in the repository",
+      "extractedHint": "Number of VPN configs extracted from all files",
+      "workingHint": "Number of configs that passed the connectivity test",
+      "lastSyncHint": "Last time this repo was synced",
+      "neverSynced": "Not synced yet — run a check to see stats.",
+      "totalRepos": "Repos",
+      "totalFiles": "Files",
+      "totalExtracted": "Extracted",
+      "totalWorking": "Working"
     },
     "support": {
       "title": "Conversations",

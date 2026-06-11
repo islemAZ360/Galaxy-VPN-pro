@@ -19,6 +19,10 @@ export default async function AdminReposPage({
     .select('id, repo_url, enabled')
     .order('created_at', { ascending: true });
 
+  const { data: repoStats } = await admin
+    .from('repo_stats')
+    .select('repo_url, files_found, configs_extracted, configs_working, wifi_count, lte_count, gemini_count, last_sync_at');
+
   const { data: status } = await admin
     .from('worker_status')
     .select('state, last_seen, last_sync_at, last_result')
@@ -28,7 +32,8 @@ export default async function AdminReposPage({
   return (
     <div className="space-y-4">
       <WorkerStatus initial={status ?? null} />
-      <RepoManager repos={repos ?? []} />
+      <RepoManager repos={repos ?? []} repoStats={repoStats ?? []} />
     </div>
   );
 }
+
