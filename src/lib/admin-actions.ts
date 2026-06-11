@@ -155,8 +155,15 @@ export async function setSubscriptionTime(
       .eq('id', sub.id);
     }
   } else {
-    // No subscription yet → create an admin-granted one (top plan).
-    const plan = getPlan(4)!;
+    // No subscription yet → create an admin-granted one matching the duration.
+    const days = ms / DAY;
+    let planId = 1;
+    if (days >= 365) planId = 4;
+    else if (days >= 180) planId = 3;
+    else if (days >= 90) planId = 2;
+    else planId = 1;
+
+    const plan = getPlan(planId)!;
     await admin.from('subscriptions').insert({
       user_id: userId,
       plan: plan.id,
