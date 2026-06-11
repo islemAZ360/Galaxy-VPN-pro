@@ -505,6 +505,8 @@ export async function runGeminiLteRecheck() {
   } finally {
     running = false;
   }
+}
+
 // Latency re-check: Just pings servers via TCP to update their latency_ms
 export async function runLatencyCheck() {
   if (running) return { skipped: true, reason: 'already running' };
