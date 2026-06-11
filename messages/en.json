@@ -245,7 +245,7 @@
       "recheckHint": "Re-fetch every repo, retest all servers, drop the ones that no longer work.",
       "syncRequested": "✓ Re-check started — the local worker will refresh the server list shortly.",
       "syncFailed": "Could not start the re-check.",
-      "lteRecheck": "LTE re-check",
+      "lteRecheck": "LTE / Wi-Fi",
       "lteRecheckHint": "Run on LTE to test the live pool over the mobile network. Working servers become LTE-tier.",
       "lteRequested": "📶 LTE re-check started — testing the pool over the mobile network.",
       "geminiWifiRecheck": "Gemini / Wi-Fi",
