@@ -32,17 +32,19 @@ export default async function AdminServersPage({
     .eq('id', 'worker')
     .single();
 
-  const geminiCount = servers?.filter((s) => s.network_type === 'gemini').length ?? 0;
+  const geminiLteCount = servers?.filter((s) => s.network_type === 'gemini_lte').length ?? 0;
+  const geminiWifiCount = servers?.filter((s) => s.network_type === 'gemini_wifi').length ?? 0;
   const lteCount = servers?.filter((s) => s.network_type === 'lte').length ?? 0;
-  const wifiCount = (servers?.length ?? 0) - lteCount - geminiCount;
+  const wifiCount = servers?.filter((s) => s.network_type === 'wifi').length ?? 0;
 
   return (
     <div className="glass p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{t('title')}</h2>
         <div className="flex gap-2 text-xs">
-          <span className="rounded-md border border-fuchsia-400/40 bg-fuchsia-400/10 px-2 py-1 text-fuchsia-300">✨ Gemini · {geminiCount}</span>
-          <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE · {lteCount}</span>
+          <span className="rounded-md border border-fuchsia-500/50 bg-fuchsia-500/10 px-2 py-1 text-fuchsia-300">✨ Gemini / LTE · {geminiLteCount}</span>
+          <span className="rounded-md border border-fuchsia-400/40 bg-fuchsia-400/10 px-2 py-1 text-fuchsia-300">✨ Gemini / Wi-Fi · {geminiWifiCount}</span>
+          <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE / Wi-Fi · {lteCount}</span>
           <span className="rounded-md border border-galaxy-accent/40 bg-galaxy-accent/10 px-2 py-1 text-galaxy-accent">📡 Wi-Fi · {wifiCount}</span>
           <TestLatencyButton 
             label={t('test_latency', { fallback: 'Test Latency' })} 

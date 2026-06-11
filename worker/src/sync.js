@@ -271,54 +271,8 @@ export async function runSync() {
     }
 
     // 7. Compute per-repo stats and save to repo_stats table
-    log.info('Computing per-repo statistics…');
-    try {
-      const { data: liveServers } = await supa
-        .from('servers')
-        .select('source_repo, network_type')
-        .eq('is_working', true)
-        .eq('is_deleted', false);
+    await updateRepoStats();
 
-      // Build per-repo working/wifi/lte/gemini counts from live DB data
-      const liveByRepo = new Map();
-      for (const s of liveServers ?? []) {
-        const repo = s.source_repo;
-        if (!repo) continue;
-        if (!liveByRepo.has(repo)) liveByRepo.set(repo, { working: 0, wifi: 0, lte: 0, gemini: 0 });
-        const r = liveByRepo.get(repo);
-        r.working++;
-        if (s.network_type === 'wifi') r.wifi++;
-        else if (s.network_type === 'lte') r.lte++;
-        else if (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte') r.gemini++;
-      }
-
-      const syncTime = new Date().toISOString();
-      const statRows = [];
-      for (const [repoUrl, rs] of repoStats) {
-        const live = liveByRepo.get(repoUrl) || { working: 0, wifi: 0, lte: 0, gemini: 0 };
-        statRows.push({
-          repo_url: repoUrl,
-          files_found: rs.files,
-          configs_extracted: rs.extracted,
-          configs_working: live.working,
-          wifi_count: live.wifi,
-          lte_count: live.lte,
-          gemini_count: live.gemini,
-          last_sync_at: syncTime,
-          updated_at: syncTime,
-        });
-      }
-
-      if (statRows.length > 0) {
-        await withRetry(async () => {
-          const { error } = await supa.from('repo_stats').upsert(statRows, { onConflict: 'repo_url' });
-          if (error) throw new Error(error.message);
-        }, { label: 'upsert-repo-stats' });
-        log.ok(`Saved stats for ${statRows.length} repos`);
-      }
-    } catch (e) {
-      log.warn(`repo_stats save failed (non-fatal): ${e.message}`);
-    }
 
     stats.finishedAt = new Date().toISOString();
     log.done(`Done — ${stats.working} live · ${stats.deleted} removed · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt))/1000)}s`);
@@ -462,6 +416,8 @@ export async function runLteRecheck() {
     await classifyWithRetry(lteIds, 'lte');
     await classifyWithRetry(wifiIds, 'wifi');
 
+    await updateRepoStats();
+
     stats.finishedAt = new Date().toISOString();
     log.done(`LTE re-check done — ${stats.gemini} Gemini (${stats.gemini_lte} on LTE) · ${stats.lte} LTE · ${stats.wifi} Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
     return stats;
@@ -583,6 +539,8 @@ export async function runGeminiWifiRecheck() {
     await classify(geminiIds, 'gemini_wifi');
     await classify(wifiIds, 'wifi');
 
+    await updateRepoStats();
+
     stats.finishedAt = new Date().toISOString();
     log.done(`Gemini / Wi-Fi re-check done — ${stats.gemini} Gemini / Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
     return stats;
@@ -703,6 +661,8 @@ export async function runGeminiLteRecheck() {
     await classifyWithRetry(geminiIds, 'gemini_lte');
     await classifyWithRetry(lteIds, 'lte');
 
+    await updateRepoStats();
+
     stats.finishedAt = new Date().toISOString();
     log.done(`Gemini / LTE re-check done — ${stats.gemini} Gemini / LTE · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
     return stats;
@@ -771,5 +731,55 @@ export async function runLatencyCheck() {
     return { error: e.message, ...stats };
   } finally {
     running = false;
+  }
+}
+
+// Recalculates repo_stats based on the live database server states
+export async function updateRepoStats() {
+  log.info('Recomputing per-repo statistics…');
+  try {
+    const { data: liveServers } = await supa
+      .from('servers')
+      .select('source_repo, network_type')
+      .eq('is_working', true)
+      .eq('is_deleted', false);
+
+    const liveByRepo = new Map();
+    for (const s of liveServers ?? []) {
+      const repo = s.source_repo;
+      if (!repo) continue;
+      if (!liveByRepo.has(repo)) liveByRepo.set(repo, { working: 0, wifi: 0, lte: 0, gemini: 0 });
+      const r = liveByRepo.get(repo);
+      r.working++;
+      if (s.network_type === 'wifi') r.wifi++;
+      else if (s.network_type === 'lte') r.lte++;
+      else if (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte') r.gemini++;
+    }
+
+    const { data: existingStats } = await supa.from('repo_stats').select('*');
+    const syncTime = new Date().toISOString();
+    const statRows = [];
+    
+    for (const st of existingStats ?? []) {
+      const live = liveByRepo.get(st.repo_url) || { working: 0, wifi: 0, lte: 0, gemini: 0 };
+      statRows.push({
+        ...st,
+        configs_working: live.working,
+        wifi_count: live.wifi,
+        lte_count: live.lte,
+        gemini_count: live.gemini,
+        updated_at: syncTime,
+      });
+    }
+
+    if (statRows.length > 0) {
+      await withRetry(async () => {
+        const { error } = await supa.from('repo_stats').upsert(statRows, { onConflict: 'repo_url' });
+        if (error) throw new Error(error.message);
+      }, { label: 'upsert-repo-stats' });
+      log.ok(`Updated stats for ${statRows.length} repos`);
+    }
+  } catch (e) {
+    log.warn(`repo_stats update failed (non-fatal): ${e.message}`);
   }
 }
