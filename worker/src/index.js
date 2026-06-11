@@ -106,6 +106,7 @@ setInterval(() => drainPending('poll'), POLL_MS);
 (async () => {
   log.step('Clearing stale requests on startup…');
   try {
+    await setStatus({ state: 'idle', last_seen: new Date().toISOString() });
     await supa
       .from('sync_requests')
       .update({ processed_at: new Date().toISOString(), result: { aborted: 'startup-cleared' } })
