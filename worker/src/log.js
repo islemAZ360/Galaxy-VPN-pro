@@ -29,6 +29,16 @@ export const log = {
   step: (m) => out('▸', C.magenta, m),
   bell: (m) => out('🔔', C.yellow, m),
   done: (m) => out('✨', C.green, m),
+  // Progress bar that overwrites the current line
+  progress: (pct, msg) => {
+    const w = 40;
+    const filled = Math.round((pct / 100) * w);
+    const bar = '█'.repeat(filled) + '░'.repeat(w - filled);
+    process.stdout.write(`\r${C.dim}${ts()}${C.reset} ${C.cyan}⏳${C.reset}  [${C.cyan}${bar}${C.reset}] ${pct.toFixed(1)}% — ${msg}`);
+  },
+  clearProgress: () => {
+    process.stdout.write('\r\x1b[K'); // clear line
+  }
 };
 
 export function banner() {
