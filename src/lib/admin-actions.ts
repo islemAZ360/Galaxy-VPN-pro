@@ -121,7 +121,13 @@ export async function extendSubscription(userId: string, days = 30) {
 
 // Set or add remaining time on a specific subscription.
 // If subscriptionId is null, creates a new admin-granted subscription.
-export async function setSubscriptionTime(subscriptionId: string | null, userId: string, ms: number, mode: 'set' | 'add') {
+export async function setSubscriptionTime(
+  subscriptionId: string | null, 
+  userId: string, 
+  ms: number, 
+  mode: 'set' | 'add',
+  networkType: 'wifi' | 'lte' | 'gemini' = 'lte'
+) {
   await assertAdmin();
   if (!Number.isFinite(ms) || ms <= 0) throw new Error('invalid duration');
   const admin = createAdminClient();
@@ -149,21 +155,21 @@ export async function setSubscriptionTime(subscriptionId: string | null, userId:
       .eq('id', sub.id);
     }
   } else {
-    // No subscription yet → create an admin-granted one (top LTE/Wi-Fi plan).
+    // No subscription yet → create an admin-granted one (top plan).
     const plan = getPlan(4)!;
     await admin.from('subscriptions').insert({
       user_id: userId,
       plan: plan.id,
-      server_count: plan.lte.serverCount, // grant the LTE pool by default
+      network: networkType,
+      server_count: plan[networkType].serverCount,
       price_rub: 0,
       duration_days: Math.max(1, Math.round(ms / DAY)),
       status: 'active',
-      network_type: 'lte',
       start_at: new Date(now).toISOString(),
       end_at: new Date(now + ms).toISOString(),
     });
+    revalidatePath('/', 'layout');
   }
-  revalidatePath('/', 'layout');
 }
 
 // Delete a specific subscription
