@@ -13,6 +13,14 @@ function initPresence() {
   isSubscribed = true;
 
   const supabase = createClient();
+  
+  // Clean up any existing channel with this name to avoid "already subscribed" errors
+  // which happen when Next.js re-evaluates this module but the Supabase client is cached.
+  const existing = supabase.getChannels().find(c => c.topic === 'realtime:worker_presence');
+  if (existing) {
+    supabase.removeChannel(existing);
+  }
+
   const channel = supabase.channel('worker_presence');
 
   channel
