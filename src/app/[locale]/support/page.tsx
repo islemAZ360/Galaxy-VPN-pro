@@ -24,7 +24,10 @@ export default async function SupportPage({
 
   return (
     <div className="mx-auto max-w-3xl pt-12">
-      <h1 className="text-3xl font-bold">{t('title')}</h1>
+      <div className="flex items-center gap-3">
+        <span className="h-8 w-1 rounded-full bg-gradient-to-b from-galaxy-primary to-galaxy-accent" />
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+      </div>
       <div className="glass mt-6 p-4">
         <ChatThread threadUserId={user!.id} sender="user" />
       </div>

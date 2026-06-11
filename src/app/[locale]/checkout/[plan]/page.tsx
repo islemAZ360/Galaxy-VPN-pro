@@ -30,24 +30,38 @@ export default async function CheckoutPage({
   const t = await getTranslations('checkout');
   const tp = await getTranslations('plans');
 
+  const netLabel = net === 'gemini' ? '✨ LTE / Wi-Fi / Gemini' : net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi';
+
   return (
     <div className="mx-auto max-w-4xl pt-12">
-      <h1 className="text-3xl font-bold">{t('title')}</h1>
+      <div className="flex items-center gap-3">
+        <span className="h-8 w-1 rounded-full bg-gradient-to-b from-galaxy-primary to-galaxy-accent" />
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+      </div>
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         {/* Order summary */}
-        <div className="glass p-6">
-          <h2 className="text-sm uppercase tracking-wide text-white/60">{t('summary')}</h2>
-          <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-lg font-medium">{tp(`duration.${plan.durationKey}`)}</span>
-            <span className="text-2xl font-bold">
-              {variant.priceRub} <span className="text-base text-white/70">₽</span>
+        <div className="glass relative h-fit overflow-hidden p-6">
+          <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-galaxy-primary/10 blur-3xl" />
+          <h2 className="relative text-xs font-bold uppercase tracking-widest text-white/50">{t('summary')}</h2>
+
+          <div className="relative mt-4 flex items-baseline justify-between border-b border-white/10 pb-4">
+            <span className="text-lg font-semibold">{tp(`duration.${plan.durationKey}`)}</span>
+            <span className="text-3xl font-extrabold tracking-tight">
+              {variant.priceRub}
+              <span className="ms-1 text-base font-normal text-white/60">₽</span>
             </span>
           </div>
-          <ul className="mt-4 space-y-2 text-sm text-white/80">
-            <li>{net === 'gemini' ? '✨ LTE / Wi-Fi / Gemini' : net === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}</li>
-            <li>✦ {tp('servers', { count: variant.serverCount })}</li>
-            <li>✦ {tp('share')}</li>
+
+          <div className="relative mt-4">
+            <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm font-medium">
+              {netLabel}
+            </span>
+          </div>
+
+          <ul className="relative mt-4 space-y-2.5 text-sm text-white/80">
+            <li className="flex items-center gap-2"><span className="text-galaxy-accent">✦</span> {tp('servers', { count: variant.serverCount })}</li>
+            <li className="flex items-center gap-2"><span className="text-galaxy-accent">✦</span> {tp('share')}</li>
           </ul>
         </div>
 
