@@ -11,6 +11,7 @@ import {
   setSubscriptionTime,
   deleteSubscription,
   sendUserMessage,
+  changeSubscriptionNetwork,
 } from '@/lib/admin-actions';
 
 const UNIT_MS: Record<string, number> = {
@@ -162,6 +163,17 @@ export function UserRow({
                   </select>
                   <button onClick={() => applyTime(sub.id, 'set')} disabled={isPending} className={btnCls}>{t('setTime')}</button>
                   <button onClick={() => applyTime(sub.id, 'add')} disabled={isPending} className={btnCls}>{t('addTime')}</button>
+                  <div className="mx-2 w-px h-6 bg-white/10" />
+                  <select
+                    value={sub.network || 'wifi'}
+                    onChange={(e) => run(() => changeSubscriptionNetwork(sub.id, e.target.value as any))}
+                    disabled={isPending}
+                    className={inputCls}
+                  >
+                    <option value="wifi">Wi-Fi</option>
+                    <option value="lte">LTE</option>
+                    <option value="gemini">Gemini</option>
+                  </select>
                   <button
                     onClick={() => confirm(t('confirmDelete') || 'Delete this sub?') && run(() => deleteSubscription(sub.id))}
                     disabled={isPending}
