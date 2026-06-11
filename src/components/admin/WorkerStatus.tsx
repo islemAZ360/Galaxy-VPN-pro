@@ -39,7 +39,7 @@ export function WorkerStatus({ initial }: { initial: Status }) {
 
   const timeDiff = status?.last_seen ? Date.now() - new Date(status.last_seen).getTime() : Infinity;
   const sinceSeen = Math.abs(timeDiff);
-  const online = sinceSeen < 300_000; // 5 minutes tolerance for severe clock drift
+  const online = sinceSeen < 25_000; // 25 seconds tolerance (heartbeat is every 10s)
   const syncing = online && status?.state === 'syncing';
   const r = status?.last_result;
 
