@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   description: 'Fast, private internet across the galaxy.',
 };
 
+export const viewport = {
+  themeColor: '#020617',
+};
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }

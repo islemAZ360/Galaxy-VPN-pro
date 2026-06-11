@@ -85,9 +85,9 @@ export default async function ProfilePage({
 
   return (
     <div className="mx-auto max-w-3xl pt-12">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h1 className="text-3xl font-bold">{t('title')}</h1>
-        <span className="text-sm text-white/60">{user!.email}</span>
+        <span className="text-sm text-white/60 break-all">{user!.email}</span>
       </div>
 
       <div className="mt-8 space-y-8">
