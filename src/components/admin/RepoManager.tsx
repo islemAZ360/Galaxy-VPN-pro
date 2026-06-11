@@ -349,15 +349,26 @@ export function RepoManager({
                   </span>
                   {s.configs_working > 0 && (
                     <>
-                      <span className="rounded bg-galaxy-accent/10 px-2 py-0.5 text-galaxy-accent">
-                        📡 {s.wifi_count} WiFi
-                      </span>
-                      <span className="rounded bg-amber-400/10 px-2 py-0.5 text-amber-300">
-                        📶 {s.lte_count} LTE
-                      </span>
-                      <span className="rounded bg-fuchsia-400/10 px-2 py-0.5 text-fuchsia-300">
-                        ✨ {s.gemini_count} Gemini
-                      </span>
+                      {s.wifi_count > 0 && (
+                        <span className="rounded bg-galaxy-accent/10 px-2 py-0.5 text-galaxy-accent">
+                          📡 {s.wifi_count} Wi-Fi
+                        </span>
+                      )}
+                      {s.lte_count > 0 && (
+                        <span className="rounded bg-amber-400/10 px-2 py-0.5 text-amber-300">
+                          📶 {s.lte_count} LTE / Wi-Fi
+                        </span>
+                      )}
+                      {(s.gemini_wifi_count as number) > 0 && (
+                        <span className="rounded bg-fuchsia-400/10 px-2 py-0.5 text-fuchsia-300">
+                          ✨ {s.gemini_wifi_count as number} Gemini / Wi-Fi
+                        </span>
+                      )}
+                      {(s.gemini_lte_count as number) > 0 && (
+                        <span className="rounded bg-fuchsia-500/10 px-2 py-0.5 text-fuchsia-400">
+                          ✨ {s.gemini_lte_count as number} Gemini / LTE
+                        </span>
+                      )}
                     </>
                   )}
                   {s.last_sync_at && (
