@@ -15,6 +15,8 @@ type RepoStat = {
   wifi_count: number;
   lte_count: number;
   gemini_count: number;
+  gemini_lte_count?: number;
+  gemini_wifi_count?: number;
   last_sync_at: string | null;
 };
 type ScanEntry = {
