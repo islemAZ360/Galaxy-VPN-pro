@@ -93,15 +93,28 @@ supa
 setInterval(() => drainPending('poll'), POLL_MS);
 
 // --- Scheduled background sync ----------------------------------------------
-cron.schedule(CRON, () => {
-  if (isRunning()) return;
-  log.info('Cron tick — running scheduled sync');
-  syncWithStatus('cron');
-});
+// Disabled per user request - scans only run manually now.
+// cron.schedule(CRON, () => {
+//   if (isRunning()) return;
+//   log.info('Cron tick — running scheduled sync');
+//   syncWithStatus('cron');
+// });
 
 // --- Initial sync on boot ----------------------------------------------------
-log.step('Running initial sync on startup…');
-syncWithStatus('startup').then(() => drainPending('startup'));
+// On boot, we clear any pending/stale requests left over from a previous crash 
+// so they don't unexpectedly run on the wrong network (e.g. LTE vs WIFI).
+(async () => {
+  log.step('Clearing stale requests on startup…');
+  try {
+    await supa
+      .from('sync_requests')
+      .update({ processed_at: new Date().toISOString(), result: { aborted: 'startup-cleared' } })
+      .is('processed_at', null);
+  } catch (e) {
+    log.err('Failed to clear stale requests on startup');
+  }
+  log.ok('Ready! Waiting for manual trigger from admin dashboard...');
+})();
 
 process.on('SIGINT', () => {
   log.warn('Shutting down…');
