@@ -120,7 +120,7 @@ export function UserRow({
                 {p && <span className="text-white/80">· {tp(`duration.${p.durationKey}`)}</span>}
                 {network && (
                   <span className={network === 'gemini' ? 'text-fuchsia-300' : network === 'lte' ? 'text-amber-300' : 'text-galaxy-accent'}>
-                    · {network === 'gemini' ? '✨ Gemini' : network === 'lte' ? '📶 LTE' : '📡 Wi-Fi'}
+                    · {network === 'gemini' ? '✨ Gemini (LTE & Wi-Fi)' : network === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}
                   </span>
                 )}
                 <span className="text-white/50 ml-auto">
@@ -173,9 +173,9 @@ export function UserRow({
                     disabled={isPending}
                     className={inputCls}
                   >
-                    <option value="wifi">Wi-Fi</option>
-                    <option value="lte">LTE</option>
-                    <option value="gemini">Gemini</option>
+                    <option value="wifi">📡 Wi-Fi</option>
+                    <option value="lte">📶 LTE / Wi-Fi</option>
+                    <option value="gemini">✨ Gemini (LTE & Wi-Fi)</option>
                   </select>
                   <button
                     onClick={() => confirm(t('confirmDelete') || 'Delete this sub?') && run(() => deleteSubscription(sub.id))}
@@ -220,9 +220,9 @@ export function UserRow({
                 onChange={(e) => setNewNetwork(e.target.value as any)}
                 className={inputCls}
               >
-                <option value="wifi">Wi-Fi</option>
-                <option value="lte">LTE</option>
-                <option value="gemini">Gemini</option>
+                <option value="wifi">📡 Wi-Fi</option>
+                <option value="lte">📶 LTE / Wi-Fi</option>
+                <option value="gemini">✨ Gemini (LTE & Wi-Fi)</option>
               </select>
               <button onClick={() => applyTime(null, 'add')} disabled={isPending} className={btnCls}>Grant</button>
             </div>
