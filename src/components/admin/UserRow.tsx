@@ -9,6 +9,7 @@ import {
   unbanUser,
   deleteUser,
   setSubscriptionTime,
+  deleteSubscription,
   sendUserMessage,
 } from '@/lib/admin-actions';
 
@@ -20,37 +21,51 @@ const UNIT_MS: Record<string, number> = {
   months: 30 * 86_400_000,
 };
 
+type SubData = {
+  id: string;
+  end_at: string | null;
+  plan: number | null;
+  network: 'wifi' | 'lte' | 'gemini' | null;
+  status: string;
+  created_at: string;
+};
+
+type Device = {
+  subscription_id: string;
+  ip_address: string;
+  device_type: string;
+  last_seen_at: string;
+};
+
 export function UserRow({
   userId,
   email,
   role,
   bannedUntil,
-  subEnd,
-  plan,
-  network,
+  subscriptions,
+  allDevices,
 }: {
   userId: string;
   email: string;
   role: string;
   bannedUntil: string | null;
-  subEnd: string | null;
-  plan: number | null;
-  network: 'wifi' | 'lte' | 'gemini' | null;
-  devices?: { ip_address: string; device_type: string; last_seen_at: string }[];
+  subscriptions: SubData[];
+  allDevices: Device[];
 }) {
   const t = useTranslations('admin.users');
   const tp = useTranslations('plans');
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [amount, setAmount] = useState('30');
-  const [unit, setUnit] = useState<keyof typeof UNIT_MS>('days');
   const [banDays, setBanDays] = useState('30');
   const [msg, setMsg] = useState('');
 
+  // Per-subscription state
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [units, setUnits] = useState<Record<string, keyof typeof UNIT_MS>>({});
+
   const banned = bannedUntil ? new Date(bannedUntil).getTime() > Date.now() : false;
   const isAdmin = role === 'admin';
-  const p = plan ? getPlan(plan) : null;
 
   const run = (fn: () => Promise<unknown>) =>
     startTransition(async () => {
@@ -58,87 +73,138 @@ export function UserRow({
       router.refresh();
     });
 
-  const applyTime = (mode: 'set' | 'add') => {
-    const ms = Number(amount) * UNIT_MS[unit];
+  const applyTime = (subId: string | null, mode: 'set' | 'add') => {
+    const amt = amounts[subId ?? 'new'] || '30';
+    const u = units[subId ?? 'new'] || 'days';
+    const ms = Number(amt) * UNIT_MS[u];
     if (!ms || ms <= 0) return;
-    run(() => setSubscriptionTime(userId, ms, mode));
+    run(() => setSubscriptionTime(subId, userId, ms, mode));
   };
 
   const inputCls = 'rounded-md border border-white/15 bg-galaxy-surface px-2 py-1 text-xs';
   const btnCls = 'rounded-md border border-white/15 px-2 py-1 text-xs hover:bg-white/5 disabled:opacity-50';
 
   return (
-    <div className="glass p-4">
+    <div className="glass p-4 flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate font-medium" dir="ltr">{email}</div>
+          <div className="truncate font-medium text-lg" dir="ltr">{email}</div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/60">
             <span className="rounded bg-white/10 px-1.5 py-0.5">{role}</span>
             <span className={banned ? 'text-red-400' : 'text-emerald-400'}>
               {banned ? t('banned') : t('active')}
             </span>
-            {p && <span>· {tp(`duration.${p.durationKey}`)}</span>}
-            {network && (
-              <span
-                className={
-                  network === 'gemini'
-                    ? 'rounded bg-fuchsia-400/15 px-1.5 py-0.5 text-fuchsia-300'
-                    : network === 'lte'
-                      ? 'rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-300'
-                      : 'rounded bg-galaxy-accent/15 px-1.5 py-0.5 text-galaxy-accent'
-                }
-              >
-                {network === 'gemini' ? '✨ Gemini' : network === 'lte' ? '📶 LTE' : '📡 Wi-Fi'}
-              </span>
+            {bannedUntil && banned && (
+              <span>Until: {new Date(bannedUntil).toLocaleDateString()}</span>
             )}
           </div>
-          <div className="mt-1 text-xs text-white/50">
-            {t('subEnds')}: {subEnd ? new Date(subEnd).toLocaleString() : t('none')}
-          </div>
-          {devices && devices.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="text-white/50 w-full mb-1">Devices ({devices.length}):</span>
-              {devices.map((d, i) => (
-                <div key={i} className="flex flex-col rounded bg-white/5 px-2 py-1 border border-white/10">
-                  <span className="text-galaxy-accent font-mono">{d.ip_address}</span>
-                  <div className="flex items-center gap-1 mt-0.5 text-white/50">
-                    <span>{d.device_type}</span>
-                    <span>·</span>
-                    <span>{new Date(d.last_seen_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {!isAdmin && (
-        <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-white/50">{t('time')}:</span>
-            <input
-              type="number"
-              min="1"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className={`${inputCls} w-20`}
-            />
-            <select
-              value={unit}
-              onChange={(e) => setUnit(e.target.value as keyof typeof UNIT_MS)}
-              className={inputCls}
-            >
-              <option value="seconds">{t('seconds')}</option>
-              <option value="minutes">{t('minutes')}</option>
-              <option value="hours">{t('hours')}</option>
-              <option value="days">{t('days')}</option>
-              <option value="months">{t('months')}</option>
-            </select>
-            <button onClick={() => applyTime('set')} disabled={isPending} className={btnCls}>{t('setTime')}</button>
-            <button onClick={() => applyTime('add')} disabled={isPending} className={btnCls}>{t('addTime')}</button>
-          </div>
+      <div className="space-y-3">
+        {subscriptions.map((sub) => {
+          const p = sub.plan ? getPlan(sub.plan) : null;
+          const network = sub.network;
+          const devices = allDevices.filter(d => d.subscription_id === sub.id);
+          const isExpired = sub.status === 'expired' || (sub.end_at && new Date(sub.end_at).getTime() < Date.now());
 
+          return (
+            <div key={sub.id} className="rounded-lg bg-white/5 border border-white/10 p-3">
+              <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
+                <span className={`px-1.5 py-0.5 rounded ${isExpired || sub.status === 'rejected' ? 'bg-red-400/20 text-red-300' : 'bg-emerald-400/20 text-emerald-300'}`}>
+                  {sub.status.toUpperCase()}
+                </span>
+                {p && <span className="text-white/80">· {tp(`duration.${p.durationKey}`)}</span>}
+                {network && (
+                  <span className={network === 'gemini' ? 'text-fuchsia-300' : network === 'lte' ? 'text-amber-300' : 'text-galaxy-accent'}>
+                    · {network === 'gemini' ? '✨ Gemini' : network === 'lte' ? '📶 LTE' : '📡 Wi-Fi'}
+                  </span>
+                )}
+                <span className="text-white/50 ml-auto">
+                  {t('subEnds')}: {sub.end_at ? new Date(sub.end_at).toLocaleString() : t('none')}
+                </span>
+              </div>
+
+              {devices.length > 0 && (
+                <div className="mt-2 mb-3 flex flex-wrap gap-2 text-xs">
+                  <span className="text-white/50 w-full mb-1">Devices ({devices.length}):</span>
+                  {devices.map((d, i) => (
+                    <div key={i} className="flex flex-col rounded bg-black/20 px-2 py-1 border border-white/5">
+                      <span className="text-galaxy-accent font-mono">{d.ip_address}</span>
+                      <div className="flex items-center gap-1 mt-0.5 text-white/50">
+                        <span>{d.device_type}</span>
+                        <span>·</span>
+                        <span>{new Date(d.last_seen_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!isAdmin && (
+                <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-white/5">
+                  <input
+                    type="number"
+                    min="1"
+                    value={amounts[sub.id] || '30'}
+                    onChange={(e) => setAmounts({ ...amounts, [sub.id]: e.target.value })}
+                    className={`${inputCls} w-16`}
+                  />
+                  <select
+                    value={units[sub.id] || 'days'}
+                    onChange={(e) => setUnits({ ...units, [sub.id]: e.target.value as keyof typeof UNIT_MS })}
+                    className={inputCls}
+                  >
+                    <option value="days">{t('days')}</option>
+                    <option value="hours">{t('hours')}</option>
+                    <option value="months">{t('months')}</option>
+                  </select>
+                  <button onClick={() => applyTime(sub.id, 'set')} disabled={isPending} className={btnCls}>{t('setTime')}</button>
+                  <button onClick={() => applyTime(sub.id, 'add')} disabled={isPending} className={btnCls}>{t('addTime')}</button>
+                  <button
+                    onClick={() => confirm(t('confirmDelete') || 'Delete this sub?') && run(() => deleteSubscription(sub.id))}
+                    disabled={isPending}
+                    className="ms-auto rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    Delete Sub
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {!isAdmin && subscriptions.length === 0 && (
+          <div className="text-sm text-white/50 italic">{t('none') || 'No subscriptions'}</div>
+        )}
+        
+        {!isAdmin && (
+          <div className="rounded-lg bg-white/5 border border-white/10 p-3 mt-2">
+            <div className="text-xs text-white/60 mb-2">Grant New Subscription</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="number" min="1"
+                value={amounts['new'] || '30'}
+                onChange={(e) => setAmounts({ ...amounts, ['new']: e.target.value })}
+                className={`${inputCls} w-16`}
+              />
+              <select
+                value={units['new'] || 'days'}
+                onChange={(e) => setUnits({ ...units, ['new']: e.target.value as keyof typeof UNIT_MS })}
+                className={inputCls}
+              >
+                <option value="days">{t('days')}</option>
+                <option value="hours">{t('hours')}</option>
+                <option value="months">{t('months')}</option>
+              </select>
+              <button onClick={() => applyTime(null, 'add')} disabled={isPending} className={btnCls}>Grant (LTE)</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {!isAdmin && (
+        <div className="mt-2 space-y-2 border-t border-white/5 pt-3">
           <div className="flex flex-wrap items-center gap-2">
             {banned ? (
               <button onClick={() => run(() => unbanUser(userId))} disabled={isPending} className={btnCls}>
@@ -148,8 +214,7 @@ export function UserRow({
               <>
                 <span className="text-xs text-white/50">{t('banFor')}:</span>
                 <input
-                  type="number"
-                  min="1"
+                  type="number" min="1"
                   value={banDays}
                   onChange={(e) => setBanDays(e.target.value)}
                   className={`${inputCls} w-16`}
@@ -169,11 +234,11 @@ export function UserRow({
               disabled={isPending}
               className="ms-auto rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-50"
             >
-              {t('delete')}
+              {t('delete')} User
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 mt-2">
             <input
               value={msg}
               onChange={(e) => setMsg(e.target.value)}

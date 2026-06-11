@@ -119,24 +119,22 @@ export async function extendSubscription(userId: string, days = 30) {
   revalidatePath('/', 'layout');
 }
 
-// Set or add remaining time on the user's subscription. `ms` is the total
-// duration the admin entered (any unit, converted to ms client-side).
-// mode 'set' → ends at now + ms;  mode 'add' → extends from the later of now/end.
-export async function setSubscriptionTime(userId: string, ms: number, mode: 'set' | 'add') {
+// Set or add remaining time on a specific subscription.
+// If subscriptionId is null, creates a new admin-granted subscription.
+export async function setSubscriptionTime(subscriptionId: string | null, userId: string, ms: number, mode: 'set' | 'add') {
   await assertAdmin();
   if (!Number.isFinite(ms) || ms <= 0) throw new Error('invalid duration');
   const admin = createAdminClient();
   const now = Date.now();
 
-  const { data: sub } = await admin
-    .from('subscriptions')
-    .select('id, end_at')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  if (subscriptionId) {
+    const { data: sub } = await admin
+      .from('subscriptions')
+      .select('id, end_at')
+      .eq('id', subscriptionId)
+      .maybeSingle();
 
-  if (sub) {
+    if (sub) {
     const base =
       mode === 'add' && sub.end_at && new Date(sub.end_at).getTime() > now
         ? new Date(sub.end_at).getTime()
@@ -163,7 +161,16 @@ export async function setSubscriptionTime(userId: string, ms: number, mode: 'set
       start_at: new Date(now).toISOString(),
       end_at: new Date(now + ms).toISOString(),
     });
+    });
   }
+  revalidatePath('/', 'layout');
+}
+
+// Delete a specific subscription
+export async function deleteSubscription(subscriptionId: string) {
+  await assertAdmin();
+  const admin = createAdminClient();
+  await admin.from('subscriptions').delete().eq('id', subscriptionId);
   revalidatePath('/', 'layout');
 }
 
