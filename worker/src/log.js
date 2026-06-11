@@ -18,8 +18,10 @@ const ts = () => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
 };
 
-const out = (icon, color, msg) =>
+const out = (icon, color, msg) => {
+  process.stdout.write('\r\x1b[K'); // clear line in case progress bar is active
   console.log(`${C.dim}${ts()}${C.reset} ${color}${icon}${C.reset}  ${msg}`);
+};
 
 export const log = {
   info: (m) => out('ℹ', C.cyan, m),
