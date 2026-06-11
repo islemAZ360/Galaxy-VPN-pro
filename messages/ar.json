@@ -131,7 +131,7 @@
     "routingGuideTitle": "⚡ نصيحة احترافية: زيادة السرعة ومنع الحظر",
     "routingGuideDesc": "لضمان أقصى سرعة وحماية السيرفرات من الحظر، قم بضبط إعدادات Hupp لتخطي المواقع المحلية (مثل المواقع والتطبيقات الروسية) بحيث تفتح مباشرة دون استخدام الـ VPN.",
     "routingStep1": "افتح تطبيق Hupp واذهب إلى الإعدادات (Settings).",
-    "routingStep2": "اضغط على التوجيه (Routing).",
+    "routingStep2": "انقر على Routing profiles (أو Routing Options).",
     "routingStep3": "ابحث عن خيار المنطقة (Region) واضبطه على RU (روسيا) أو بلدك.",
     "routingStep4": "قم بتفعيل تجاوز الشبكة المحلية (Bypass LAN).",
     "routingStep5": "قم بتفعيل تجاوز المواقع الروسية (Bypass Russia) إن وجد.",
