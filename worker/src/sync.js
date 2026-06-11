@@ -372,14 +372,16 @@ export async function runLteRecheck() {
     process.stdout.write('\r\x1b[K'); // clear line
     log.ok('Starting testing now!');
 
-    // Lower default concurrency for raw network tests to prevent router/adapter crashes
-    const CONC = Number(process.env.TEST_CONCURRENCY || 20);
+    // Force concurrency to 20 for raw network tests. Do not use TEST_CONCURRENCY from .env
+    // because 50 is too high for raw Wi-Fi/LTE adapters and will cause the driver to crash.
+    const CONC = 20;
     log.info(`Re-testing ${stats.total} servers over the current network (concurrency ${CONC})…`);
     
     const working = [];
-    const BATCH_SIZE = 500;
+    const BATCH_SIZE = 150; // smaller batch size so progress bar updates frequently
     const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
     let testedCount = 0;
+    log.progress(0, `Xray: 0 passed`);
 
     for (let i = 0; i < candidateBatches.length; i++) {
       const b = candidateBatches[i];
@@ -502,13 +504,14 @@ export async function runGeminiWifiRecheck() {
     process.stdout.write('\r\x1b[K');
     log.ok('Starting testing now!');
 
-    // Home Wi-Fi can handle high concurrency, so we use 50
+    // Home Wi-Fi can handle high concurrency
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     
     const working = [];
-    const BATCH_SIZE = 500;
+    const BATCH_SIZE = 200; // smaller batch for frequent updates
     const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
     let testedCount = 0;
+    log.progress(0, `Gemini: 0 passed`);
 
     for (let i = 0; i < candidateBatches.length; i++) {
       const b = candidateBatches[i];
@@ -611,14 +614,15 @@ export async function runGeminiLteRecheck() {
     process.stdout.write('\r\x1b[K');
     log.ok('Starting testing now!');
 
-    // Lower default concurrency for raw network tests to prevent router/adapter crashes
-    const CONC = Number(process.env.TEST_CONCURRENCY || 20);
+    // Force concurrency to 20 for raw network tests to prevent adapter crashes
+    const CONC = 20;
     log.info(`Testing ${stats.total} LTE servers for Gemini reachability (concurrency ${CONC})…`);
     
     const working = [];
-    const BATCH_SIZE = 500;
+    const BATCH_SIZE = 150;
     const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
     let testedCount = 0;
+    log.progress(0, `Gemini: 0 passed`);
 
     for (let i = 0; i < candidateBatches.length; i++) {
       const b = candidateBatches[i];
