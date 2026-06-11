@@ -40,8 +40,18 @@ export async function deleteAllServers() {
     .not('id', 'is', null);
 
   if (error) throw new Error(error.message);
+
+  // Also zero out the stats in repo_stats to reflect the deleted servers
+  await admin.from('repo_stats').update({
+    configs_working: 0,
+    wifi_count: 0,
+    lte_count: 0,
+    gemini_count: 0,
+  }).not('repo_url', 'is', null);
+
   revalidatePath(`/${locale}/admin/servers`);
   revalidatePath(`/${locale}/admin/servers/deleted`);
+  revalidatePath(`/${locale}/admin/repos`);
 }
 
 export async function testLatency() {
