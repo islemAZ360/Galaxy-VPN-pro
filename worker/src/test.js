@@ -1,10 +1,22 @@
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, exec } from 'node:child_process';
 import { writeFile, readFile, mkdtemp, rm } from 'node:fs/promises';
+import { promisify } from 'node:util';
 import { parseConfig } from './uri.js';
 import { log } from './log.js';
+
+const execAsync = promisify(exec);
+
+async function cleanupNetwork() {
+  if (process.platform === 'win32') {
+    try {
+      await execAsync('taskkill /F /IM xray-knife.exe /IM xray.exe /IM sing-box.exe /IM v2ray.exe /T').catch(() => {});
+      await execAsync('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f').catch(() => {});
+    } catch (e) {}
+  }
+}
 
 // ---------------------------------------------------------------------------
 // REAL protocol testing via xray-knife (https://github.com/lilendian0x00/xray-knife)
@@ -127,6 +139,7 @@ export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } 
     workingUris = null;
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
+    await cleanupNetwork();
   }
 
   // Fallback path

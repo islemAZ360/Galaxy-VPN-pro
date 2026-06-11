@@ -101,7 +101,7 @@ export async function runSync() {
       candidates = Array.from({ length: MAX }, (_, k) => allUris[Math.floor(k * stride)]);
     }
     stats.candidates = candidates.length;
-    const CONC = Number(process.env.TEST_CONCURRENCY || 40);
+    const CONC = Number(process.env.TEST_CONCURRENCY || 15);
     log.info(`Testing ${stats.candidates} candidates via xray-knife (concurrency ${CONC})…`);
     const results = await testAll(candidates, { concurrency: CONC, timeoutMs: 4000 });
     const working = results.filter((r) => r.ok);
@@ -231,7 +231,7 @@ export async function runLteRecheck() {
       return stats;
     }
     log.info(`Re-testing ${stats.total} servers over the current network…`);
-    const CONC = Number(process.env.TEST_CONCURRENCY || 40);
+    const CONC = Number(process.env.TEST_CONCURRENCY || 15);
     const results = await testAll(existing.map((s) => s.config_uri), { concurrency: CONC, timeoutMs: 4000 });
     const workingKeys = new Set(results.filter((r) => r.ok).map((r) => keyOf(r.uri)));
 
@@ -314,7 +314,7 @@ export async function runGeminiRecheck() {
       return stats;
     }
     log.info(`Testing ${stats.total} servers for Gemini reachability…`);
-    const CONC = Number(process.env.TEST_CONCURRENCY || 40);
+    const CONC = Number(process.env.TEST_CONCURRENCY || 15);
     const results = await testAll(existing.map((s) => s.config_uri), {
       concurrency: CONC,
       timeoutMs: 4000,
