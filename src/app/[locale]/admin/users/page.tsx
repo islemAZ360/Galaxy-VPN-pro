@@ -5,7 +5,7 @@ import { UserRow } from '@/components/admin/UserRow';
 
 export const dynamic = 'force-dynamic';
 
-type LatestSub = { id: string; end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null };
+export type SubData = { id: string; end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null; status: string; created_at: string; };
 
 type Device = {
   subscription_id: string;
@@ -48,15 +48,17 @@ export default async function AdminUsersPage({
   
   const allDevices: Device[] = devicesData ?? [];
 
-  // Latest subscription per user (any status).
-  const latest = new Map<string, LatestSub>();
+  // All subscriptions per user
+  const userSubs = new Map<string, SubData[]>();
   for (const s of subs ?? []) {
-    if (latest.has(s.user_id)) continue;
-    latest.set(s.user_id, {
+    if (!userSubs.has(s.user_id)) userSubs.set(s.user_id, []);
+    userSubs.get(s.user_id)!.push({
       id: s.id,
       end_at: s.end_at,
       plan: s.plan,
       network: (s.network_type as 'wifi' | 'lte' | 'gemini' | null) ?? null,
+      status: s.status,
+      created_at: s.created_at,
     });
   }
 
@@ -88,18 +90,14 @@ export default async function AdminUsersPage({
         <h2 className="mb-4 text-lg font-semibold">{tu('title')}</h2>
         <div className="grid gap-3 md:grid-cols-2">
           {(users ?? []).map((u) => {
-            const sub = latest.get(u.id);
-            return (
               <UserRow
                 key={u.id}
                 userId={u.id}
                 email={u.email}
                 role={u.role}
                 bannedUntil={u.banned_until}
-                subEnd={sub?.end_at ?? null}
-                plan={sub?.plan ?? null}
-                network={sub?.network ?? null}
-                devices={sub ? allDevices.filter(d => d.subscription_id === sub.id) : []}
+                subscriptions={userSubs.get(u.id) ?? []}
+                allDevices={allDevices}
               />
             );
           })}
