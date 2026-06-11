@@ -32,7 +32,8 @@ export default async function AdminServersPage({
     .eq('id', 'worker')
     .single();
 
-  const isLive = status && status.last_seen && Date.now() - Date.parse(status.last_seen) < 30_000;
+  const timeDiff = status?.last_seen ? Math.abs(Date.now() - Date.parse(status.last_seen)) : Infinity;
+  const isLive = timeDiff < 180_000; // 3 minutes tolerance for clock drift
   const isBusy = status?.state === 'syncing';
 
   const geminiCount = servers?.filter((s) => s.network_type === 'gemini').length ?? 0;
