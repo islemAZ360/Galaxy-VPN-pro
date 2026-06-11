@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { redirect } from '@/i18n/routing';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { SubLink } from '@/components/SubLink';
 import { PlanCard } from '@/components/PlanCard';
@@ -60,6 +61,17 @@ export default async function ProfilePage({
       .limit(1)
       .maybeSingle();
     adminMessage = pay?.admin_message ?? null;
+  }
+
+  let devices: any[] = [];
+  if (sub) {
+    const adminClient = createAdminClient();
+    const { data: devs } = await adminClient
+      .from('sub_devices')
+      .select('ip_address, device_type, last_seen_at')
+      .eq('subscription_id', sub.id)
+      .order('last_seen_at', { ascending: false });
+    devices = devs ?? [];
   }
 
   const now = Date.now();
@@ -138,6 +150,26 @@ export default async function ProfilePage({
               <CountdownTimer endAt={sub.end_at as string} />
             </div>
             <SubLink url={subUrl} />
+            
+            {devices.length > 0 && (
+              <div className="mt-4 border-t border-white/5 pt-6">
+                <h3 className="text-lg font-semibold mb-3">{t('connectedDevices')}</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {devices.map((d, i) => (
+                    <div key={i} className="rounded-lg bg-white/5 p-4 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-galaxy-accent font-mono text-sm">{d.ip_address}</div>
+                        <div className="text-xs text-white/50 mt-1">{d.device_type}</div>
+                      </div>
+                      <div className="text-xs text-white/40 text-right">
+                        <div>{t('lastSeen')}</div>
+                        <div>{new Date(d.last_seen_at).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
