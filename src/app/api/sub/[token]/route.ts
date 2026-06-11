@@ -71,15 +71,16 @@ export async function GET(
     return toSubscription([noticeConfig(reason)]);
   }
 
-  // Active: hand out the best (lowest-latency) working servers FROM THE POOL the
-  // customer paid for. wifi plan → Wi-Fi servers; lte plan → LTE servers (which
-  // also work on Wi-Fi). Default to 'wifi' for older rows.
-  const pool = ['wifi', 'lte', 'gemini'].includes(sub.network_type) ? sub.network_type : 'wifi';
+  let pools = ['wifi']; // fallback
+  if (sub.network_type === 'wifi') pools = ['wifi'];
+  else if (sub.network_type === 'lte') pools = ['lte'];
+  else if (sub.network_type === 'gemini') pools = ['gemini_wifi', 'gemini_lte'];
+
   const { data: servers } = await supa
     .from('servers')
     .select('config_uri')
     .eq('is_working', true)
-    .eq('network_type', pool)
+    .in('network_type', pools)
     .order('latency_ms', { ascending: true, nullsFirst: false })
     .limit(sub.server_count);
 

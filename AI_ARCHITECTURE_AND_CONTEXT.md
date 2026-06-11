@@ -224,6 +224,10 @@ per-sub subscription URL (`SubLink.tsx`), connected devices, and a plan picker.
 ## 8. Changelog (recent, load-bearing)
 - **Worker `supa.js` rewritten** — see §4.3. The old `Connection: close` custom
   fetch was dropping auth headers and was based on a misdiagnosis.
+- **DPI Blocking & Split Tunneling Analysis** — Discovered that the "TypeError: terminated" issue in the worker was caused by Russian ISP DPI (specifically on LTE networks) blocking new outbound TCP connections to the Supabase domain. 
+  - *Solution:* The worker MUST be run locally with a VPN (e.g., Happ) active to allow Node.js to reach Supabase. 
+  - *Split-Tunneling:* To ensure `xray-knife` still tests servers over the real Russian LTE connection (not through the VPN tunnel), users must use "Per-App Proxy Settings" (Direct connection for selected applications) in Happ and add both `xray-knife.exe` and `xray.exe` to the bypass list. If `xray.exe` is omitted, the 50 concurrent tests route through the VPN, causing the VPN server to disconnect due to network flood/abuse.
+  - *Admin UI:* Added a "Local Tester Guide" button in the Repos section to document these steps for admins.
 - **Site-wide design + motion pass** — design tokens, professional motion system
   with reduced-motion support, WebGL hero performance gating, cosmic backdrop,
   and redesigned home/admin/login/profile/checkout/support surfaces (§6).
