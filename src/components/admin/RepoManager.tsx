@@ -64,7 +64,7 @@ export function RepoManager({
     });
 
   const [syncMsg, setSyncMsg] = useState<{ type: 'error' | 'success' | 'warning', text: string } | null>(null);
-  const requestKind = (kind: 'full' | 'lte' | 'gemini') => {
+  const requestKind = (kind: 'full' | 'lte' | 'gemini_wifi' | 'gemini_lte') => {
     if (!isLive) {
       setSyncMsg({ type: 'error', text: 'Worker is offline! Please start the Python worker script first.' });
       return;
@@ -80,7 +80,7 @@ export function RepoManager({
         await requestSync(kind);
         setSyncMsg({
           type: 'success',
-          text: kind === 'gemini' ? t('geminiRequested') : kind === 'lte' ? t('lteRequested') : t('syncRequested')
+          text: (kind === 'gemini_wifi' || kind === 'gemini_lte') ? t('geminiRequested') : kind === 'lte' ? t('lteRequested') : t('syncRequested')
         });
       } catch (e) {
         setSyncMsg({ type: 'error', text: t('syncFailed') + ' ' + (e instanceof Error ? e.message : '') });
