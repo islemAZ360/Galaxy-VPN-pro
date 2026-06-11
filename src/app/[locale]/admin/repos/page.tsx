@@ -29,8 +29,8 @@ export default async function AdminReposPage({
     .eq('id', 'worker')
     .maybeSingle();
 
-  const timeDiff = status?.last_seen ? Math.abs(Date.now() - Date.parse(status.last_seen)) : Infinity;
-  const isLive = timeDiff < 300_000; // 5 minutes tolerance
+  const timeDiff = status?.last_seen ? Date.now() - new Date(status.last_seen).getTime() : Infinity;
+  const isLive = timeDiff < 25_000; // 25 seconds tolerance
   const isBusy = status?.state === 'syncing';
 
   return (
