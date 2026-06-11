@@ -6,9 +6,9 @@ import type { Plan, NetworkType } from '@/lib/plans';
 import { Wifi, Signal, Sparkles, Infinity } from 'lucide-react';
 
 const TIERS: { net: NetworkType; icon: typeof Wifi; title: string; ring: string; chip: string; price: string }[] = [
-  { net: 'wifi',   icon: Wifi,      title: 'Wi-Fi',                ring: 'hover:border-galaxy-accent/70', chip: 'bg-galaxy-accent/15 text-galaxy-accent', price: 'text-white' },
-  { net: 'lte',    icon: Signal,    title: 'LTE / Wi-Fi',          ring: 'hover:border-amber-400/70',     chip: 'bg-amber-400/15 text-amber-300',         price: 'text-white' },
-  { net: 'gemini', icon: Sparkles,  title: 'LTE / Wi-Fi / Gemini', ring: 'hover:border-fuchsia-400/70',   chip: 'bg-fuchsia-400/15 text-fuchsia-300',     price: 'text-white' },
+  { net: 'wifi',   icon: Wifi,      title: 'Wi-Fi',                 ring: 'hover:border-galaxy-accent/70', chip: 'bg-galaxy-accent/15 text-galaxy-accent', price: 'text-white' },
+  { net: 'lte',    icon: Signal,    title: 'LTE / Wi-Fi',           ring: 'hover:border-amber-400/70',     chip: 'bg-amber-400/15 text-amber-300',         price: 'text-white' },
+  { net: 'gemini', icon: Sparkles,  title: 'Gemini (LTE & Wi-Fi)',  ring: 'hover:border-fuchsia-400/70',   chip: 'bg-fuchsia-400/15 text-fuchsia-300',     price: 'text-white' },
 ];
 
 export function PlanCard({
@@ -24,21 +24,21 @@ export function PlanCard({
 
   return (
     <div
-      className={`group/card card-lift relative flex h-full flex-col rounded-2xl border p-5 ${
+      className={`group/card card-lift relative flex h-full flex-col rounded-2xl border p-4 lg:p-5 ${
         featured
           ? 'border-galaxy-accent/50 bg-gradient-to-b from-galaxy-accent/[0.08] to-white/[0.04] shadow-xl shadow-galaxy-accent/15'
           : 'border-white/10 bg-white/[0.03]'
       }`}
     >
       {featured && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-galaxy-accent to-cyan-300 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wide text-galaxy-bg shadow-[0_2px_12px_rgba(34,211,238,0.5)]">
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-galaxy-accent to-cyan-300 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wide text-galaxy-bg shadow-[0_2px_12px_rgba(34,211,238,0.5)] whitespace-nowrap">
           {t('popular')}
         </span>
       )}
 
       {/* Header */}
       <div className="border-b border-white/10 pb-4">
-        <div className="text-xl font-bold">{t(`duration.${plan.durationKey}`)}</div>
+        <div className="text-lg lg:text-xl font-bold">{t(`duration.${plan.durationKey}`)}</div>
         <div className="mt-1 flex items-center gap-1.5 text-xs text-white/50">
           <Infinity className="w-4 h-4" /> {t('share')}
         </div>
@@ -54,22 +54,22 @@ export function PlanCard({
               key={net}
               href={url}
               aria-label={`${t(`duration.${plan.durationKey}`)} — ${title} — ${v.priceRub}₽`}
-              className={`flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3 transition hover:bg-white/[0.04] ${ring}`}
+              className={`flex items-center gap-2 lg:gap-3 rounded-xl border border-white/10 bg-black/20 p-2 lg:p-3 transition hover:bg-white/[0.04] ${ring}`}
             >
-              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${chip}`}>
-                <Icon className="w-[18px] h-[18px]" />
+              <span className={`grid h-8 w-8 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg ${chip}`}>
+                <Icon className="w-4 h-4 lg:w-[18px] lg:h-[18px]" />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] font-semibold leading-tight">{title}</div>
-                <div className="text-[11px] text-white/55">{t('servers', { count: v.serverCount })}</div>
+                <div className="truncate text-xs lg:text-[13px] font-semibold leading-tight" title={title}>{title}</div>
+                <div className="truncate text-[10px] lg:text-[11px] text-white/55 mt-0.5">{t('servers', { count: v.serverCount })}</div>
               </div>
-              <div className="text-end">
-                <div className={`text-lg font-extrabold leading-none ${price}`}>
+              <div className="text-end shrink-0 whitespace-nowrap">
+                <div className={`text-base lg:text-lg font-extrabold leading-none ${price}`}>
                   {v.priceRub}
-                  <span className="ms-0.5 text-xs font-normal text-white/60">₽</span>
+                  <span className="ms-0.5 text-[10px] lg:text-xs font-normal text-white/60">₽</span>
                 </div>
-                <div className="mt-0.5 text-[11px] font-medium text-galaxy-accent opacity-70 transition group-hover/card:opacity-100">
-                  {t('buy')} →
+                <div className="mt-1 text-[10px] lg:text-[11px] font-medium text-galaxy-accent opacity-70 transition group-hover/card:opacity-100">
+                  {t('buy')} &rarr;
                 </div>
               </div>
             </Link>
