@@ -3,6 +3,7 @@ import { Link } from '@/i18n/routing';
 import { createClient } from '@/lib/supabase/server';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { SignOutButton } from './SignOutButton';
+import { MobileMenu } from './MobileMenu';
 
 const ADMIN_EMAIL = 'islamazaizia360@gmail.com';
 
@@ -36,15 +37,31 @@ export async function Navbar() {
         <div className="ms-auto flex items-center gap-3">
           <LocaleSwitcher />
           {user ? (
-            <SignOutButton label={t('logout')} />
+            <div className="hidden md:block">
+              <SignOutButton label={t('logout')} />
+            </div>
           ) : (
             <Link
               href="/login"
-              className="rounded-lg bg-galaxy-primary px-4 py-2 text-sm font-medium hover:opacity-90"
+              className="hidden md:inline-flex rounded-lg bg-galaxy-primary px-4 py-2 text-sm font-medium hover:opacity-90"
             >
               {t('login')}
             </Link>
           )}
+          
+          <MobileMenu 
+            links={[
+              { href: '/', label: t('home') },
+              ...(!isAdmin ? [{ href: '/#why', label: t('features') }] : []),
+              ...(!isAdmin ? [{ href: '/#plans', label: t('plans') }] : []),
+              ...(!isAdmin ? [{ href: '/#faq', label: t('faq') }] : []),
+              ...(user && !isAdmin ? [{ href: '/profile', label: t('profile') }] : []),
+              ...(user ? [{ href: '/support', label: t('support') }] : []),
+              ...(isAdmin ? [{ href: '/admin', label: t('admin'), accent: true }] : []),
+              ...(user ? [] : [{ href: '/login', label: t('login'), accent: true }]),
+            ]} 
+            signOutNode={user ? <SignOutButton label={t('logout')} /> : undefined}
+          />
         </div>
       </nav>
     </header>
