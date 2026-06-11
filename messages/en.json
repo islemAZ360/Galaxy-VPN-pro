@@ -131,7 +131,7 @@
     "routingGuideTitle": "⚡ Pro Tip: Optimize Speed & Prevent Blocking",
     "routingGuideDesc": "To ensure maximum speed and keep servers from getting blocked, configure Hupp to bypass local websites (like Russian sites or local apps) so they open directly without using the VPN.",
     "routingStep1": "Open the Hupp app and go to Settings.",
-    "routingStep2": "Tap on Routing.",
+    "routingStep2": "Tap on Routing profiles (or Routing Options).",
     "routingStep3": "Find the Region option and set it to RU (Russia) or your country.",
     "routingStep4": "Enable Bypass LAN (Bypass local network).",
     "routingStep5": "Enable Bypass Russia (if available).",
