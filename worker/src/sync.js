@@ -63,17 +63,22 @@ export async function runSync() {
     log.info(`Reading repos from Supabase  ·  ${stats.repos} enabled`);
 
     // 2. gather unique configs across all repos (hash -> { uri, source })
+    //    Also track per-repo stats for the admin dashboard.
     log.info('Pulling .txt files from GitHub…');
     const configs = new Map();
+    const repoStats = new Map(); // repo_url -> { files, extracted }
     for (const r of repos ?? []) {
       try {
         const { text, fileCount } = await fetchRepoTexts(r.repo_url);
-        log.info(`  · ${r.repo_url}  →  ${fileCount} files`);
-        for (const uri of extractConfigs(text)) {
+        const repoConfigs = extractConfigs(text);
+        log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${repoConfigs.length} configs`);
+        repoStats.set(r.repo_url, { files: fileCount, extracted: repoConfigs.length });
+        for (const uri of repoConfigs) {
           configs.set(hashConfig(uri), { uri, source: r.repo_url });
         }
       } catch (e) {
         log.err(`repo failed ${r.repo_url}: ${e.message}`);
+        repoStats.set(r.repo_url, { files: 0, extracted: 0, error: e.message });
       }
     }
     stats.discovered = configs.size;
@@ -194,6 +199,56 @@ export async function runSync() {
           if (error) throw new Error(error.message);
         }, { label: 'delete' });
       }
+    }
+
+    // 7. Compute per-repo stats and save to repo_stats table
+    log.info('Computing per-repo statistics…');
+    try {
+      const { data: liveServers } = await supa
+        .from('servers')
+        .select('source_repo, network_type')
+        .eq('is_working', true)
+        .eq('is_deleted', false);
+
+      // Build per-repo working/wifi/lte/gemini counts from live DB data
+      const liveByRepo = new Map();
+      for (const s of liveServers ?? []) {
+        const repo = s.source_repo;
+        if (!repo) continue;
+        if (!liveByRepo.has(repo)) liveByRepo.set(repo, { working: 0, wifi: 0, lte: 0, gemini: 0 });
+        const r = liveByRepo.get(repo);
+        r.working++;
+        if (s.network_type === 'wifi') r.wifi++;
+        else if (s.network_type === 'lte') r.lte++;
+        else if (s.network_type === 'gemini') r.gemini++;
+      }
+
+      const syncTime = new Date().toISOString();
+      const statRows = [];
+      for (const [repoUrl, rs] of repoStats) {
+        const live = liveByRepo.get(repoUrl) || { working: 0, wifi: 0, lte: 0, gemini: 0 };
+        statRows.push({
+          repo_url: repoUrl,
+          files_found: rs.files,
+          configs_extracted: rs.extracted,
+          configs_working: live.working,
+          wifi_count: live.wifi,
+          lte_count: live.lte,
+          gemini_count: live.gemini,
+          last_sync_at: syncTime,
+          updated_at: syncTime,
+        });
+      }
+
+      if (statRows.length > 0) {
+        await withRetry(async () => {
+          const { error } = await supa.from('repo_stats').upsert(statRows, { onConflict: 'repo_url' });
+          if (error) throw new Error(error.message);
+        }, { label: 'upsert-repo-stats' });
+        log.ok(`Saved stats for ${statRows.length} repos`);
+      }
+    } catch (e) {
+      log.warn(`repo_stats save failed (non-fatal): ${e.message}`);
     }
 
     stats.finishedAt = new Date().toISOString();

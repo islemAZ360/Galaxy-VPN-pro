@@ -219,7 +219,20 @@
       "lteRequested": "✓ بدأ فحص LTE — تأكّد أنك على بيانات الجوال الآن.",
       "geminiRecheck": "فحص Gemini",
       "geminiRecheckHint": "شغّله على LTE. السيرفرات التي تصل إلى Gemini تُصنّف Gemini، والباقي ينزل إلى LTE.",
-      "geminiRequested": "✓ بدأ فحص Gemini — نختبر أي سيرفرات تصل إلى Gemini."
+      "geminiRequested": "✓ بدأ فحص Gemini — نختبر أي سيرفرات تصل إلى Gemini.",
+      "duplicateWarning": "هذا المستودع مضاف بالفعل! الرجاء استخدام رابط مختلف.",
+      "files": "ملف",
+      "extracted": "مستخرج",
+      "working": "شغّال",
+      "filesHint": "عدد ملفات النصوص الموجودة في المستودع",
+      "extractedHint": "عدد إعدادات VPN المستخرجة من جميع الملفات",
+      "workingHint": "عدد الإعدادات التي نجحت في اختبار الاتصال",
+      "lastSyncHint": "آخر مرة تم فيها مزامنة هذا المستودع",
+      "neverSynced": "لم يتم الفحص بعد — شغّل فحصاً لرؤية الإحصائيات.",
+      "totalRepos": "المستودعات",
+      "totalFiles": "الملفات",
+      "totalExtracted": "المستخرجة",
+      "totalWorking": "الشغّالة"
     },
     "support": {
       "title": "المحادثات",
