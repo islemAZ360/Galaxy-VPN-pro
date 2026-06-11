@@ -205,7 +205,17 @@ export async function addRepo(repoUrl: string) {
 export async function deleteRepo(id: string) {
   await assertAdmin();
   const admin = createAdminClient();
+  
+  // Get the repo_url first so we can delete its stats
+  const { data } = await admin.from('repos').select('repo_url').eq('id', id).single();
+  
   await admin.from('repos').delete().eq('id', id);
+  
+  // Clean up ghost stats
+  if (data?.repo_url) {
+    await admin.from('repo_stats').delete().eq('repo_url', data.repo_url);
+  }
+  
   revalidatePath('/', 'layout');
 }
 

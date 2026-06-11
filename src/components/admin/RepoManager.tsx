@@ -23,12 +23,15 @@ export function RepoManager({ repos, repoStats }: { repos: Repo[]; repoStats: Re
   const [url, setUrl] = useState('');
   const [isPending, startTransition] = useTransition();
 
-  // Build a map for quick lookup
+  // Build a map for quick lookup and filter out ghost stats
   const statsMap = useMemo(() => {
     const m = new Map<string, RepoStat>();
     for (const s of repoStats) m.set(s.repo_url, s);
     return m;
   }, [repoStats]);
+
+  const activeUrls = useMemo(() => new Set(repos.map((r) => r.repo_url)), [repos]);
+  const activeStats = useMemo(() => repoStats.filter(s => activeUrls.has(s.repo_url)), [repoStats, activeUrls]);
 
   // Duplicate detection
   const existingUrls = useMemo(() => new Set(repos.map((r) => r.repo_url.trim().toLowerCase().replace(/\.git\/?$/, ''))), [repos]);
@@ -134,19 +137,19 @@ export function RepoManager({ repos, repoStats }: { repos: Repo[]; repoStats: Re
       )}
 
       {/* Total stats summary */}
-      {repoStats.length > 0 && (
+      {repos.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-3 text-xs">
           <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-white/70">
             📦 {t('totalRepos')}: {repos.length}
           </span>
           <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-white/70">
-            📄 {t('totalFiles')}: {repoStats.reduce((s, r) => s + r.files_found, 0)}
+            📄 {t('totalFiles')}: {activeStats.reduce((s, r) => s + r.files_found, 0)}
           </span>
           <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-white/70">
-            🔍 {t('totalExtracted')}: {repoStats.reduce((s, r) => s + r.configs_extracted, 0).toLocaleString()}
+            🔍 {t('totalExtracted')}: {activeStats.reduce((s, r) => s + r.configs_extracted, 0).toLocaleString()}
           </span>
           <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-emerald-300">
-            ✅ {t('totalWorking')}: {repoStats.reduce((s, r) => s + r.configs_working, 0)}
+            ✅ {t('totalWorking')}: {activeStats.reduce((s, r) => s + r.configs_working, 0)}
           </span>
         </div>
       )}
