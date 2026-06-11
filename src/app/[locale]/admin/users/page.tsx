@@ -90,6 +90,7 @@ export default async function AdminUsersPage({
         <h2 className="mb-4 text-lg font-semibold">{tu('title')}</h2>
         <div className="grid gap-3 md:grid-cols-2">
           {(users ?? []).map((u) => {
+            return (
               <UserRow
                 key={u.id}
                 userId={u.id}
