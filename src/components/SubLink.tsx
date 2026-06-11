@@ -34,7 +34,7 @@ export function SubLink({ url }: { url: string }) {
 
       <div className="mt-6 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
         <div className="bg-white/5 px-4 py-3 border-b border-white/5">
-          <h3 className="font-medium text-sm text-white/90">How to connect with Hiddify</h3>
+          <h3 className="font-medium text-sm text-white/90">How to connect with Hupp</h3>
         </div>
         
         <div className="p-4">
@@ -50,7 +50,7 @@ export function SubLink({ url }: { url: string }) {
                 <p className="text-sm text-white/80 mb-3">{t('step2')}</p>
                 <div className="flex flex-wrap gap-2">
                   <a
-                    href="https://play.google.com/store/apps/details?id=app.hiddify.com"
+                    href="#"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs hover:bg-white/20 transition-colors border border-white/5"
@@ -59,7 +59,7 @@ export function SubLink({ url }: { url: string }) {
                     {t('downloadMobile')}
                   </a>
                   <a
-                    href="https://github.com/hiddify/hiddify-next/releases/latest/download/Hiddify-Windows-Setup-x64.exe"
+                    href="#"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs hover:bg-white/20 transition-colors border border-white/5"
