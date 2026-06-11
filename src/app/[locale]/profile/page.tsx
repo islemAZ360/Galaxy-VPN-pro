@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { SubLink } from '@/components/SubLink';
+import { HuppInstructions } from '@/components/HuppInstructions';
 import { PlanCard } from '@/components/PlanCard';
 import { PLANS } from '@/lib/plans';
 import { ProfileRealtime } from '@/components/ProfileRealtime';
@@ -83,6 +84,7 @@ export default async function ProfilePage({
   const base = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_SITE_URL ?? '');
 
   const now = Date.now();
+  const hasActiveSub = subsList.some(sub => sub.status === 'active' && sub.end_at && new Date(sub.end_at).getTime() > now);
 
   return (
     <div className="mx-auto max-w-3xl pt-12">
@@ -230,6 +232,10 @@ export default async function ProfilePage({
             </div>
           );
         })}
+
+        {hasActiveSub && (
+          <HuppInstructions />
+        )}
 
         <div className="pt-8 border-t border-white/10">
           <p className="mb-3 text-xs font-bold uppercase tracking-widest text-galaxy-primary">{t('choosePlan')}</p>
