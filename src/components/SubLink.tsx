@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Smartphone, Monitor, Copy, CheckCircle2, Download, PlusCircle, Power } from 'lucide-react';
+import { Smartphone, Monitor, Copy, CheckCircle2, Download, PlusCircle, Power, AlertTriangle } from 'lucide-react';
 
 export function SubLink({ url }: { url: string }) {
   const t = useTranslations('profile');
@@ -79,6 +79,48 @@ export function SubLink({ url }: { url: string }) {
             <div className="flex items-start gap-3">
               <div className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-emerald-400/20 flex items-center justify-center text-emerald-400 font-bold text-xs">4</div>
               <p className="text-sm text-white/80">{t('step4')}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-xl bg-red-500/10 border border-red-500/30 overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
+        <div className="p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-bold text-red-400 text-lg mb-1">{t('routingGuideTitle')}</h3>
+              <p className="text-sm text-red-200/90 mb-4 leading-relaxed">
+                {t('routingGuideDesc')}
+              </p>
+              
+              <ul className="space-y-2 text-sm text-red-200/80">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  {t('routingStep1')}
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  {t('routingStep2')}
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  {t('routingStep3')}
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  {t('routingStep4')}
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  {t('routingStep5')}
+                </li>
+                <li className="flex items-center gap-2 font-medium text-red-300 mt-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  {t('routingStep6')}
+                </li>
+              </ul>
             </div>
           </div>
         </div>
