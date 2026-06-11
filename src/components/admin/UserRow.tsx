@@ -63,6 +63,7 @@ export function UserRow({
   // Per-subscription state
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [units, setUnits] = useState<Record<string, keyof typeof UNIT_MS>>({});
+  const [newNetwork, setNewNetwork] = useState<'wifi' | 'lte' | 'gemini'>('lte');
 
   const banned = bannedUntil ? new Date(bannedUntil).getTime() > Date.now() : false;
   const isAdmin = role === 'admin';
@@ -78,7 +79,7 @@ export function UserRow({
     const u = units[subId ?? 'new'] || 'days';
     const ms = Number(amt) * UNIT_MS[u];
     if (!ms || ms <= 0) return;
-    run(() => setSubscriptionTime(subId, userId, ms, mode));
+    run(() => setSubscriptionTime(subId, userId, ms, mode, newNetwork));
   };
 
   const inputCls = 'rounded-md border border-white/15 bg-galaxy-surface px-2 py-1 text-xs';
@@ -197,7 +198,16 @@ export function UserRow({
                 <option value="hours">{t('hours')}</option>
                 <option value="months">{t('months')}</option>
               </select>
-              <button onClick={() => applyTime(null, 'add')} disabled={isPending} className={btnCls}>Grant (LTE)</button>
+              <select
+                value={newNetwork}
+                onChange={(e) => setNewNetwork(e.target.value as any)}
+                className={inputCls}
+              >
+                <option value="wifi">Wi-Fi</option>
+                <option value="lte">LTE</option>
+                <option value="gemini">Gemini</option>
+              </select>
+              <button onClick={() => applyTime(null, 'add')} disabled={isPending} className={btnCls}>Grant</button>
             </div>
           </div>
         )}
