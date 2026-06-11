@@ -2,7 +2,7 @@ import { supa } from './supa.js';
 import { fetchRepoTexts } from './github.js';
 import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
 import { flagEmoji, renameConfig } from './uri.js';
-import { testAll } from './test.js';
+import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
 import { log } from './log.js';
 
@@ -373,6 +373,66 @@ export async function runGeminiRecheck() {
     return stats;
   } catch (e) {
     log.err(`Gemini re-check failed: ${e.message}`);
+    return { error: e.message, ...stats };
+  } finally {
+    running = false;
+  }
+}
+
+// Latency re-check: Just pings servers via TCP to update their latency_ms
+export async function runLatencyCheck() {
+  if (running) return { skipped: true, reason: 'already running' };
+  running = true;
+  const stats = { startedAt: new Date().toISOString(), mode: 'latency' };
+  console.log('');
+  log.step('Latency check — Ping testing all live servers…');
+  try {
+    const existing = await withRetry(async () => {
+      const { data, error } = await supa.from('servers').select('id, config_uri');
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }, { label: 'select-pool' });
+    
+    stats.total = existing.length;
+    if (!stats.total) {
+      log.warn('No servers to check latency.');
+      stats.finishedAt = new Date().toISOString();
+      return stats;
+    }
+    
+    log.info(`Pinging ${stats.total} servers for latency…`);
+    const CONC = 100; // TCP pings are lightweight, can go higher
+    const results = await tcpTestAll(existing.map((s) => s.config_uri), {
+      concurrency: CONC,
+      timeoutMs: 4000,
+    });
+    
+    const idToUri = new Map(existing.map((s) => [s.config_uri, s.id]));
+    const updates = [];
+    
+    for (const r of results) {
+      const id = idToUri.get(r.uri);
+      if (id && r.latencyMs !== null) {
+        updates.push({ id, latency_ms: r.latencyMs, updated_at: new Date().toISOString() });
+      }
+    }
+    
+    stats.updated = updates.length;
+    if (updates.length > 0) {
+      log.info(`Updating latency for ${updates.length} servers…`);
+      for (const batch of chunk(updates, 500)) {
+        await withRetry(async () => {
+          const { error } = await supa.from('servers').upsert(batch);
+          if (error) throw new Error(error.message);
+        }, { label: 'update-latency' });
+      }
+    }
+
+    stats.finishedAt = new Date().toISOString();
+    log.done(`Done — updated latencies for ${stats.updated} servers · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt))/1000)}s`);
+    return stats;
+  } catch (e) {
+    log.err(`Latency check failed: ${e.message}`);
     return { error: e.message, ...stats };
   } finally {
     running = false;

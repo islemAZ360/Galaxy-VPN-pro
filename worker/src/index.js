@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { supa } from './supa.js';
-import { runSync, runLteRecheck, runGeminiRecheck, isRunning } from './sync.js';
+import { runSync, runLteRecheck, runGeminiRecheck, runLatencyCheck, isRunning } from './sync.js';
 import { banner, log } from './log.js';
 
 const CRON = process.env.SYNC_CRON || '*/30 * * * *'; // every 30 min
@@ -36,6 +36,7 @@ async function runWithStatus(reason, fn) {
 const syncWithStatus = (reason) => runWithStatus(reason, runSync);
 const lteWithStatus = (reason) => runWithStatus(reason, runLteRecheck);
 const geminiWithStatus = (reason) => runWithStatus(reason, runGeminiRecheck);
+const latencyWithStatus = (reason) => runWithStatus(reason, runLatencyCheck);
 
 // --- Process admin sync requests --------------------------------------------
 // Realtime gives an instant trigger; a poll loop guarantees nothing is missed
@@ -52,16 +53,18 @@ async function drainPending(source) {
 
     const geminiReqs = pending.filter((p) => p.kind === 'gemini');
     const lteReqs = pending.filter((p) => p.kind === 'lte');
-    const fullReqs = pending.filter((p) => p.kind !== 'lte' && p.kind !== 'gemini');
-    log.bell(`${pending.length} request(s) pending (${source}) — full:${fullReqs.length} lte:${lteReqs.length} gemini:${geminiReqs.length}`);
+    const latencyReqs = pending.filter((p) => p.kind === 'latency');
+    const fullReqs = pending.filter((p) => p.kind !== 'lte' && p.kind !== 'gemini' && p.kind !== 'latency');
+    log.bell(`${pending.length} request(s) pending (${source}) — full:${fullReqs.length} lte:${lteReqs.length} gemini:${geminiReqs.length} latency:${latencyReqs.length}`);
 
     const markDone = (ids, result) =>
       supa.from('sync_requests').update({ processed_at: new Date().toISOString(), result }).in('id', ids);
 
-    // Order: full → lte → gemini (each refines the previous classification).
+    // Order: full → lte → gemini → latency
     if (fullReqs.length) await markDone(fullReqs.map((p) => p.id), await syncWithStatus('admin'));
     if (lteReqs.length) await markDone(lteReqs.map((p) => p.id), await lteWithStatus('admin-lte'));
     if (geminiReqs.length) await markDone(geminiReqs.map((p) => p.id), await geminiWithStatus('admin-gemini'));
+    if (latencyReqs.length) await markDone(latencyReqs.map((p) => p.id), await latencyWithStatus('admin-latency'));
   } catch (e) {
     log.err(`drain failed: ${e.message}`);
   } finally {

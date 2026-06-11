@@ -43,3 +43,14 @@ export async function deleteAllServers() {
   revalidatePath(`/${locale}/admin/servers`);
   revalidatePath(`/${locale}/admin/servers/deleted`);
 }
+
+export async function testLatency() {
+  const locale = await getLocale();
+  const { admin } = await requireAdmin(locale);
+  
+  const { error } = await admin
+    .from('sync_requests')
+    .insert({ kind: 'latency' });
+
+  if (error) throw new Error(error.message);
+}
