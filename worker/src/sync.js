@@ -343,7 +343,9 @@ export async function runLteRecheck() {
   console.log('');
   log.step('LTE re-check — testing the live pool over THIS connection…');
   try {
-    const existing = await withRetry(async () => {
+    // Phase 1: Download pool (Needs VPN)
+    log.info('Downloading pool from Supabase (Ensure VPN is ON)…');
+    const existing = await withVpnRetry(async () => {
       const { data, error } = await supa.from('servers').select('id, config_uri, network_type');
       if (error) throw new Error(error.message);
       return data ?? [];
@@ -354,11 +356,42 @@ export async function runLteRecheck() {
       stats.finishedAt = new Date().toISOString();
       return stats;
     }
-    // ──────── PHASE 1: Test servers (heavy network, may drop VPN) ────────
+
+    // Phase 2: Wait for user to turn off VPN
+    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+    log.bell(`║  🛑 STOP! TURN OFF YOUR VPN NOW!                        ║`);
+    log.bell(`║  We need to test the servers on your REAL connection.   ║`);
+    log.bell(`║  Testing will begin automatically in 15 seconds...      ║`);
+    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    
+    // Countdown
+    for (let i = 15; i > 0; i--) {
+      process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
+      await sleep(1000);
+    }
+    process.stdout.write('\r\x1b[K'); // clear line
+    log.ok('Starting testing now!');
+
+    // Phase 3: Test servers (Heavy network, VPN should be OFF)
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
-    log.info(`Phase 1 — Re-testing ${stats.total} servers over the current network (concurrency ${CONC})…`);
-    const results = await testAll(existing.map((s) => s.config_uri), { concurrency: CONC, timeoutMs: 4000 });
-    const workingKeys = new Set(results.filter((r) => r.ok).map((r) => keyOf(r.uri)));
+    log.info(`Re-testing ${stats.total} servers over the current network (concurrency ${CONC})…`);
+    
+    const working = [];
+    const BATCH_SIZE = 500;
+    const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
+    let testedCount = 0;
+
+    for (let i = 0; i < candidateBatches.length; i++) {
+      const b = candidateBatches[i];
+      const results = await testAll(b, { concurrency: CONC, timeoutMs: 4000 });
+      const batchWorking = results.filter((r) => r.ok);
+      working.push(...batchWorking);
+      testedCount += b.length;
+      log.progress((testedCount / stats.total) * 100, `Xray: ${working.length} passed`);
+    }
+    log.clearProgress();
+    
+    const workingKeys = new Set(working.map((r) => keyOf(r.uri)));
 
     const geminiWifiIds = [];
     const geminiLteIds = [];
@@ -380,9 +413,13 @@ export async function runLteRecheck() {
     stats.lte = lteIds.length;
     stats.wifi = wifiIds.length;
     stats.gemini = stats.gemini_lte + stats.gemini_wifi;
+    
     // ──────── PHASE 2: Upload results to Supabase ────────
-    // VPN may have dropped during the heavy xray-knife phase above.
-    // withVpnRetry keeps trying until Supabase is reachable again.
+    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+    log.bell(`║  ✅ TESTING FINISHED!                                   ║`);
+    log.bell(`║  Please TURN YOUR VPN BACK ON now!                      ║`);
+    log.bell(`║  We need the VPN to upload the results to Supabase.     ║`);
+    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
     log.step('Phase 2 — Uploading results to Supabase…');
 
     const now = new Date().toISOString();
@@ -437,7 +474,9 @@ export async function runGeminiWifiRecheck() {
   console.log('');
   log.step(`Gemini / Wi-Fi re-check — testing against ${GEMINI_URL}…`);
   try {
-    const existing = await withRetry(async () => {
+    // Phase 1: Download pool (Needs VPN)
+    log.info('Downloading pool from Supabase (Ensure VPN is ON)…');
+    const existing = await withVpnRetry(async () => {
       const { data, error } = await supa.from('servers').select('id, config_uri').eq('network_type', 'wifi');
       if (error) throw new Error(error.message);
       return data ?? [];
@@ -448,14 +487,39 @@ export async function runGeminiWifiRecheck() {
       stats.finishedAt = new Date().toISOString();
       return stats;
     }
+
+    // Phase 2: Wait for user to turn off VPN
+    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+    log.bell(`║  🛑 STOP! TURN OFF YOUR VPN NOW!                        ║`);
+    log.bell(`║  We need to test the servers on your REAL connection.   ║`);
+    log.bell(`║  Testing will begin automatically in 15 seconds...      ║`);
+    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    
+    for (let i = 15; i > 0; i--) {
+      process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
+      await sleep(1000);
+    }
+    process.stdout.write('\r\x1b[K');
+    log.ok('Starting testing now!');
+
     log.info(`Testing ${stats.total} Wi-Fi servers for Gemini reachability…`);
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
-    const results = await testAll(existing.map((s) => s.config_uri), {
-      concurrency: CONC,
-      timeoutMs: 4000,
-      url: GEMINI_URL,
-    });
-    const okKeys = new Set(results.filter((r) => r.ok).map((r) => keyOf(r.uri)));
+    
+    const working = [];
+    const BATCH_SIZE = 500;
+    const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
+    let testedCount = 0;
+
+    for (let i = 0; i < candidateBatches.length; i++) {
+      const b = candidateBatches[i];
+      const results = await testAll(b, { concurrency: CONC, timeoutMs: 4000, url: GEMINI_URL });
+      working.push(...results.filter((r) => r.ok));
+      testedCount += b.length;
+      log.progress((testedCount / stats.total) * 100, `Gemini: ${working.length} passed`);
+    }
+    log.clearProgress();
+    
+    const okKeys = new Set(working.map((r) => keyOf(r.uri)));
 
     const geminiIds = [];
     const wifiIds = [];
@@ -466,11 +530,20 @@ export async function runGeminiWifiRecheck() {
     stats.gemini = geminiIds.length;
     log.ok(`${stats.gemini} reach Gemini over Wi-Fi  ·  ${wifiIds.length} are Wi-Fi only`);
 
+    // ──────── PHASE 2: Upload results to Supabase ────────
+    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+    log.bell(`║  ✅ TESTING FINISHED!                                   ║`);
+    log.bell(`║  Please TURN YOUR VPN BACK ON now!                      ║`);
+    log.bell(`║  We need the VPN to upload the results to Supabase.     ║`);
+    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    log.step('Phase 2 — Uploading results to Supabase…');
+
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
-      const { data: current } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
-      if (!current) return;
-      const updates = current.map(c => {
+      await withVpnRetry(async () => {
+        const { data: current } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
+        if (!current) return;
+        const updates = current.map(c => {
         const newName = retag(c.name, type);
         return {
           id: c.id,
@@ -481,12 +554,11 @@ export async function runGeminiWifiRecheck() {
           last_checked_at: now
         };
       });
-      for (const batch of chunk(updates, 200)) {
-        await withRetry(async () => {
+        for (const batch of chunk(updates, 200)) {
           const { error } = await supa.from('servers').upsert(batch, { onConflict: 'id' });
           if (error) throw new Error(error.message);
-        }, { label: `classify-${type}` });
-      }
+        }
+      }, { label: `classify-${type}` });
     };
     await classify(geminiIds, 'gemini_wifi');
     await classify(wifiIds, 'wifi');
@@ -511,7 +583,9 @@ export async function runGeminiLteRecheck() {
   console.log('');
   log.step(`Gemini / LTE re-check — testing against ${GEMINI_URL}…`);
   try {
-    const existing = await withRetry(async () => {
+    // Phase 1: Download pool (Needs VPN)
+    log.info('Downloading pool from Supabase (Ensure VPN is ON)…');
+    const existing = await withVpnRetry(async () => {
       const { data, error } = await supa.from('servers').select('id, config_uri').eq('network_type', 'lte');
       if (error) throw new Error(error.message);
       return data ?? [];
@@ -522,15 +596,39 @@ export async function runGeminiLteRecheck() {
       stats.finishedAt = new Date().toISOString();
       return stats;
     }
-    // ──────── PHASE 1: Test servers (heavy network, may drop VPN) ────────
+
+    // Phase 2: Wait for user to turn off VPN
+    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+    log.bell(`║  🛑 STOP! TURN OFF YOUR VPN NOW!                        ║`);
+    log.bell(`║  We need to test the servers on your REAL connection.   ║`);
+    log.bell(`║  Testing will begin automatically in 15 seconds...      ║`);
+    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    
+    for (let i = 15; i > 0; i--) {
+      process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
+      await sleep(1000);
+    }
+    process.stdout.write('\r\x1b[K');
+    log.ok('Starting testing now!');
+
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
-    log.info(`Phase 1 — Testing ${stats.total} LTE servers for Gemini reachability (concurrency ${CONC})…`);
-    const results = await testAll(existing.map((s) => s.config_uri), {
-      concurrency: CONC,
-      timeoutMs: 4000,
-      url: GEMINI_URL,
-    });
-    const okKeys = new Set(results.filter((r) => r.ok).map((r) => keyOf(r.uri)));
+    log.info(`Testing ${stats.total} LTE servers for Gemini reachability (concurrency ${CONC})…`);
+    
+    const working = [];
+    const BATCH_SIZE = 500;
+    const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
+    let testedCount = 0;
+
+    for (let i = 0; i < candidateBatches.length; i++) {
+      const b = candidateBatches[i];
+      const results = await testAll(b, { concurrency: CONC, timeoutMs: 4000, url: GEMINI_URL });
+      working.push(...results.filter((r) => r.ok));
+      testedCount += b.length;
+      log.progress((testedCount / stats.total) * 100, `Gemini: ${working.length} passed`);
+    }
+    log.clearProgress();
+    
+    const okKeys = new Set(working.map((r) => keyOf(r.uri)));
 
     const geminiIds = [];
     const lteIds = [];
@@ -542,6 +640,11 @@ export async function runGeminiLteRecheck() {
     log.ok(`${stats.gemini} reach Gemini over LTE  ·  ${lteIds.length} are LTE only`);
 
     // ──────── PHASE 2: Upload results to Supabase ────────
+    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+    log.bell(`║  ✅ TESTING FINISHED!                                   ║`);
+    log.bell(`║  Please TURN YOUR VPN BACK ON now!                      ║`);
+    log.bell(`║  We need the VPN to upload the results to Supabase.     ║`);
+    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
     log.step('Phase 2 — Uploading results to Supabase…');
 
     const now = new Date().toISOString();
