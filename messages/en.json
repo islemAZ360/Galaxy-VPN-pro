@@ -241,7 +241,7 @@
       "add": "Add",
       "delete": "Delete",
       "none": "No repositories yet.",
-      "recheck": "Re-check all",
+      "recheck": "Wi-Fi",
       "recheckHint": "Re-fetch every repo, retest all servers, drop the ones that no longer work.",
       "syncRequested": "✓ Re-check started — the local worker will refresh the server list shortly.",
       "syncFailed": "Could not start the re-check.",
