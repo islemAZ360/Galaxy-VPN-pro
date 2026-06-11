@@ -5,7 +5,14 @@ import { UserRow } from '@/components/admin/UserRow';
 
 export const dynamic = 'force-dynamic';
 
-type LatestSub = { end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null };
+type LatestSub = { id: string; end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null };
+
+type Device = {
+  subscription_id: string;
+  ip_address: string;
+  device_type: string;
+  last_seen_at: string;
+};
 
 export default async function AdminUsersPage({
   params,
@@ -31,14 +38,22 @@ export default async function AdminUsersPage({
 
   const { data: subs } = await admin
     .from('subscriptions')
-    .select('user_id, end_at, plan, network_type, created_at, status')
+    .select('id, user_id, end_at, plan, network_type, created_at, status')
     .order('created_at', { ascending: false });
+
+  const { data: devicesData } = await admin
+    .from('sub_devices')
+    .select('subscription_id, ip_address, device_type, last_seen_at')
+    .order('last_seen_at', { ascending: false });
+  
+  const allDevices: Device[] = devicesData ?? [];
 
   // Latest subscription per user (any status).
   const latest = new Map<string, LatestSub>();
   for (const s of subs ?? []) {
     if (latest.has(s.user_id)) continue;
     latest.set(s.user_id, {
+      id: s.id,
       end_at: s.end_at,
       plan: s.plan,
       network: (s.network_type as 'wifi' | 'lte' | 'gemini' | null) ?? null,
@@ -84,6 +99,7 @@ export default async function AdminUsersPage({
                 subEnd={sub?.end_at ?? null}
                 plan={sub?.plan ?? null}
                 network={sub?.network ?? null}
+                devices={sub ? allDevices.filter(d => d.subscription_id === sub.id) : []}
               />
             );
           })}

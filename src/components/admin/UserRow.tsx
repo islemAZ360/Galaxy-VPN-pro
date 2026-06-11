@@ -36,6 +36,7 @@ export function UserRow({
   subEnd: string | null;
   plan: number | null;
   network: 'wifi' | 'lte' | 'gemini' | null;
+  devices?: { ip_address: string; device_type: string; last_seen_at: string }[];
 }) {
   const t = useTranslations('admin.users');
   const tp = useTranslations('plans');
@@ -94,6 +95,21 @@ export function UserRow({
           <div className="mt-1 text-xs text-white/50">
             {t('subEnds')}: {subEnd ? new Date(subEnd).toLocaleString() : t('none')}
           </div>
+          {devices && devices.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="text-white/50 w-full mb-1">Devices ({devices.length}):</span>
+              {devices.map((d, i) => (
+                <div key={i} className="flex flex-col rounded bg-white/5 px-2 py-1 border border-white/10">
+                  <span className="text-galaxy-accent font-mono">{d.ip_address}</span>
+                  <div className="flex items-center gap-1 mt-0.5 text-white/50">
+                    <span>{d.device_type}</span>
+                    <span>·</span>
+                    <span>{new Date(d.last_seen_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

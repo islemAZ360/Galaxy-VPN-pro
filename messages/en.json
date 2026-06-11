@@ -113,6 +113,8 @@
     "remaining": "Time remaining",
     "expiredTitle": "Subscription expired",
     "renew": "Renew / change plan",
+    "connectedDevices": "Connected Devices",
+    "lastSeen": "Last seen",
     "subLinkLabel": "Your subscription link",
     "subLinkHint": "How to use: 1. Copy the link above. 2. Open Hiddify. 3. Add a new subscription (from clipboard). 4. Update and connect!",
     "downloadMobile": "Download for Mobile",

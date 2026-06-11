@@ -23,8 +23,18 @@ function toSubscription(lines: string[], expireUnix?: number) {
   return new Response(body, { headers });
 }
 
+function parseDeviceType(ua: string) {
+  const lower = ua.toLowerCase();
+  if (lower.includes('android')) return 'Android';
+  if (lower.includes('iphone') || lower.includes('ipad') || lower.includes('ios')) return 'iOS';
+  if (lower.includes('windows')) return 'Windows';
+  if (lower.includes('macintosh') || lower.includes('mac os')) return 'macOS';
+  if (lower.includes('linux')) return 'Linux';
+  return 'Unknown';
+}
+
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
@@ -79,5 +89,24 @@ export async function GET(
   }
 
   const expireUnix = Math.floor(new Date(sub.end_at as string).getTime() / 1000);
+
+  // Track the device accessing this link
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+  const ua = req.headers.get('user-agent') || 'unknown';
+  // Vercel comma separates IPs if there are proxies. Grab the first one.
+  const cleanIp = ip.split(',')[0].trim();
+  
+  // Non-blocking upsert to track devices
+  supa.from('sub_devices').upsert(
+    {
+      subscription_id: sub.id,
+      ip_address: cleanIp,
+      user_agent: ua,
+      device_type: parseDeviceType(ua),
+      last_seen_at: new Date().toISOString(),
+    },
+    { onConflict: 'subscription_id, ip_address, user_agent' }
+  ).then(() => {});
+
   return toSubscription(configs, expireUnix);
 }
