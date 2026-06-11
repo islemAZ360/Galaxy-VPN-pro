@@ -160,7 +160,7 @@ export async function setSubscriptionTime(
     await admin.from('subscriptions').insert({
       user_id: userId,
       plan: plan.id,
-      network: networkType,
+      network_type: networkType,
       server_count: plan[networkType].serverCount,
       price_rub: 0,
       duration_days: Math.max(1, Math.round(ms / DAY)),
@@ -189,7 +189,7 @@ export async function changeSubscriptionNetwork(subscriptionId: string, networkT
       await admin
         .from('subscriptions')
         .update({
-          network: networkType,
+          network_type: networkType,
           server_count: plan[networkType].serverCount,
         })
         .eq('id', sub.id);
