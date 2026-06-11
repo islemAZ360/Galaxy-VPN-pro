@@ -87,9 +87,15 @@ export default async function ProfilePage({
   return (
     <div className="mx-auto max-w-3xl pt-12">
       <ProfileRealtime userId={user!.id} />
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h1 className="text-3xl font-bold">{t('title')}</h1>
-        <span className="text-sm text-white/60 break-all">{user!.email}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="h-8 w-1 rounded-full bg-gradient-to-b from-galaxy-primary to-galaxy-accent" />
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        </div>
+        <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 break-all sm:self-auto">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          {user!.email}
+        </span>
       </div>
 
       <div className="mt-8 space-y-8">
@@ -135,11 +141,13 @@ export default async function ProfilePage({
 
               {/* Active */}
               {isActive && (
-                <div className="glass flex flex-col gap-6 p-8">
-                  <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="glass relative flex flex-col gap-6 overflow-hidden p-8">
+                  <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
+                  <div className="pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-emerald-400/80 to-galaxy-accent/40" />
+                  <div className="relative flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse" />
                         <h2 className="text-xl font-semibold">{t('activeTitle')}</h2>
                       </div>
                       <p className="mt-1 text-sm text-white/60">{t('serversIncluded', { count: sub.server_count })}</p>
@@ -194,6 +202,7 @@ export default async function ProfilePage({
         })}
 
         <div className="pt-8 border-t border-white/10">
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-galaxy-primary">{t('choosePlan')}</p>
           <h2 className="text-2xl font-bold mb-2">
             {subsList.length > 0 ? (t('renew') || 'Renew / Add Subscription') : t('choosePlan')}
           </h2>
