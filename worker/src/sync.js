@@ -162,6 +162,7 @@ export async function runSync() {
         config_hash: hash, // hash the ORIGINAL uri = stable identity
         latency_ms: w.latencyMs,
         is_working: true,
+        network_type: tier,
         source_repo: configs.get(hash)?.source ?? null,
         last_checked_at: now,
         updated_at: now,
