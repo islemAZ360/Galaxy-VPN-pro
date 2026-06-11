@@ -30,7 +30,13 @@ async function listTxtFiles(owner, repo, branch) {
   if (!res.ok) throw new Error(`tree ${owner}/${repo}@${branch}: ${res.status}`);
   const j = await res.json();
   return (j.tree || [])
-    .filter((n) => n.type === 'blob' && /\.txt$/i.test(n.path))
+    .filter((n) => {
+      if (n.type !== 'blob') return false;
+      // Accept .txt, .md, or files with no extension (e.g. config files)
+      if (/\.(txt|md)$/i.test(n.path)) return true;
+      if (!n.path.includes('.')) return true; // no extension
+      return false;
+    })
     .map((n) => n.path);
 }
 
