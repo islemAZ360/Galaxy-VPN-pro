@@ -1,10 +1,10 @@
 import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { requireAdmin } from '@/lib/admin';
-import { TrashIcon } from '@heroicons/react/24/outline';
-import { deleteServer, deleteAllServers } from './actions';
+import { ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
+import { restoreServer } from '../actions';
 
-export default async function AdminServersPage({
+export default async function AdminDeletedServersPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -17,10 +17,7 @@ export default async function AdminServersPage({
   const { data: servers } = await admin
     .from('servers')
     .select('id, name, country, country_code, protocol, latency_ms, network_type')
-    // premium first: 'gemini' < 'lte' < 'wifi' alphabetically, so ascending lists
-    // gemini → lte → wifi; then by latency
-    .eq('is_working', true)
-    .eq('is_deleted', false)
+    .eq('is_deleted', true)
     .order('network_type', { ascending: true })
     .order('latency_ms', { ascending: true, nullsFirst: false })
     .limit(1000);
@@ -32,27 +29,19 @@ export default async function AdminServersPage({
   return (
     <div className="glass p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{t('title')}</h2>
-        <div className="flex gap-2 text-xs">
+        <h2 className="text-lg font-semibold">{t('deleted_title', { fallback: 'Deleted Servers' })}</h2>
+        <div className="flex gap-2 text-xs opacity-50">
           <span className="rounded-md border border-fuchsia-400/40 bg-fuchsia-400/10 px-2 py-1 text-fuchsia-300">✨ Gemini · {geminiCount}</span>
           <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE · {lteCount}</span>
           <span className="rounded-md border border-galaxy-accent/40 bg-galaxy-accent/10 px-2 py-1 text-galaxy-accent">📡 Wi-Fi · {wifiCount}</span>
-          <form action={async () => {
-            'use server';
-            await deleteAllServers();
-          }}>
-            <button className="rounded-md border border-red-500/50 bg-red-500/20 px-2 py-1 text-red-400 hover:bg-red-500/30 transition">
-              {t('delete_all', { fallback: 'Delete All' })}
-            </button>
-          </form>
         </div>
       </div>
 
       {!servers || servers.length === 0 ? (
-        <p className="py-8 text-center text-sm text-white/50">{t('empty')}</p>
+        <p className="py-8 text-center text-sm text-white/50">{t('empty_deleted', { fallback: 'No deleted servers found.' })}</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm opacity-60 hover:opacity-100 transition-opacity">
             <thead className="text-white/50">
               <tr>
                 <th className="py-2 text-start">{t('name')}</th>
@@ -99,10 +88,10 @@ export default async function AdminServersPage({
                   <td className="py-2 text-end">
                     <form action={async () => {
                       'use server';
-                      await deleteServer(s.id);
+                      await restoreServer(s.id);
                     }}>
-                      <button className="rounded p-1 text-red-400 hover:bg-red-400/10 transition" title={t('delete')}>
-                        <TrashIcon className="h-4 w-4" />
+                      <button className="rounded p-1 text-green-400 hover:bg-green-400/10 transition" title={t('restore', { fallback: 'Restore' })}>
+                        <ArrowUturnLeftIcon className="h-4 w-4" />
                       </button>
                     </form>
                   </td>

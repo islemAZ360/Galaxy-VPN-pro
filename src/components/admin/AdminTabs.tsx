@@ -6,6 +6,7 @@ import { Link, usePathname } from '@/i18n/routing';
 const TABS = [
   { href: '/admin', key: 'tabStats' },
   { href: '/admin/servers', key: 'tabServers' },
+  { href: '/admin/servers/deleted', key: 'tabServersDeleted' },
   { href: '/admin/repos', key: 'tabRepos' },
   { href: '/admin/users', key: 'tabUsers' },
   { href: '/admin/support', key: 'tabSupport' },
@@ -18,7 +19,11 @@ export function AdminTabs() {
   return (
     <div className="flex flex-wrap gap-2 border-b border-white/10 pb-3">
       {TABS.map((tab) => {
-        const active = tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href);
+        const active = tab.href === '/admin' 
+          ? pathname === '/admin' 
+          : tab.href === '/admin/servers' 
+            ? pathname === '/admin/servers'
+            : pathname.startsWith(tab.href);
         return (
           <Link
             key={tab.href}

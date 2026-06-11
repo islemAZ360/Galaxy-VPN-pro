@@ -147,6 +147,7 @@
     },
     "tabStats": "Statistics",
     "tabServers": "Servers",
+    "tabServersDeleted": "Deleted servers",
     "tabRepos": "Repos",
     "tabUsers": "Users & Payments",
     "tabSupport": "Support",
@@ -168,7 +169,12 @@
       "country": "Country",
       "protocol": "Protocol",
       "latency": "Latency",
-      "empty": "No servers yet — run a check from the admin Repos page."
+      "empty": "No servers yet — run a check from the admin Repos page.",
+      "deleted_title": "Permanently deleted servers",
+      "empty_deleted": "No deleted servers found.",
+      "delete": "Delete permanently",
+      "delete_all": "Delete all",
+      "restore": "Restore server"
     },
     "payments": {
       "title": "Pending payments",
