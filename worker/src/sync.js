@@ -134,12 +134,38 @@ export async function runSync() {
     }
     stats.candidates = candidates.length;
     
+    const TCP_CONC = 300;
+    log.info(`Pre-filtering ${stats.candidates} configs via fast TCP ping (concurrency ${TCP_CONC})…`);
+    
+    let tcpWorking = [];
+    let tcpTestedCount = 0;
+    const tcpBatches = chunk(candidates, 5000);
+    
+    for (let i = 0; i < tcpBatches.length; i++) {
+      const b = tcpBatches[i];
+      // Quick 1.5s TCP ping to weed out totally dead IPs
+      const res = await tcpTestAll(b, { concurrency: TCP_CONC, timeoutMs: 1500 });
+      tcpWorking.push(...res.filter((r) => r.ok).map((r) => r.uri));
+      tcpTestedCount += b.length;
+      log.progress((tcpTestedCount / stats.candidates) * 100, `TCP: ${tcpWorking.length} alive`);
+    }
+    log.clearProgress();
+    log.ok(`TCP filter: ${tcpWorking.length}/${stats.candidates} configs are reachable`);
+
+    if (tcpWorking.length === 0) {
+      log.warn('0 reachable configs. Aborting sync.');
+      stats.working = 0;
+      stats.finishedAt = new Date().toISOString();
+      return stats;
+    }
+
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
-    log.info(`Testing ${stats.candidates} candidates via xray-knife (concurrency ${CONC})…`);
+    log.info(`Deep testing ${tcpWorking.length} candidates via xray-knife (concurrency ${CONC})…`);
     
     const working = [];
-    const BATCH_SIZE = 250; // chunk size for frequent progress updates
-    const candidateBatches = chunk(candidates, BATCH_SIZE);
+    // Larger batch size for xray-knife now that dead IPs are gone
+    const BATCH_SIZE = 500; 
+    const candidateBatches = chunk(tcpWorking, BATCH_SIZE);
     let testedCount = 0;
 
     for (let i = 0; i < candidateBatches.length; i++) {
@@ -148,9 +174,9 @@ export async function runSync() {
       const batchWorking = results.filter((r) => r.ok);
       working.push(...batchWorking);
       testedCount += b.length;
-      const percent = ((testedCount / stats.candidates) * 100).toFixed(1);
-      log.info(`  ⏳ Progress: ${testedCount} / ${stats.candidates} (${percent}%) — ${working.length} working so far...`);
+      log.progress((testedCount / tcpWorking.length) * 100, `Xray: ${working.length} passed`);
     }
+    log.clearProgress();
 
     stats.working = working.length;
     log.ok(`${stats.working} / ${stats.candidates} servers passed the real test`);
