@@ -37,8 +37,9 @@ export function WorkerStatus({ initial }: { initial: Status }) {
     };
   }, []);
 
-  const sinceSeen = status?.last_seen ? Date.now() - new Date(status.last_seen).getTime() : Infinity;
-  const online = sinceSeen < 30_000;
+  const timeDiff = status?.last_seen ? Date.now() - new Date(status.last_seen).getTime() : Infinity;
+  const sinceSeen = Math.abs(timeDiff);
+  const online = sinceSeen < 300_000; // 5 minutes tolerance for severe clock drift
   const syncing = online && status?.state === 'syncing';
   const r = status?.last_result;
 
