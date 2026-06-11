@@ -123,8 +123,11 @@ export default async function ProfilePage({
 
               {/* Pending */}
               {sub.status === 'pending' && (
-                <div className="glass p-8 text-center">
-                  <div className="text-2xl">⏳</div>
+                <div className="glass p-8 text-center relative">
+                  <div className="absolute top-4 left-4 text-xs font-mono text-white/40">
+                    {sub.network_type === 'gemini' ? '✨ Gemini (LTE & Wi-Fi)' : sub.network_type === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'} • {t('serversIncluded', { count: sub.server_count })}
+                  </div>
+                  <div className="text-2xl mt-4">⏳</div>
                   <h2 className="mt-3 text-xl font-semibold">{t('pendingTitle')}</h2>
                   <p className="mt-2 text-white/70">{t('pendingDesc')}</p>
                 </div>
@@ -132,8 +135,11 @@ export default async function ProfilePage({
 
               {/* Rejected */}
               {sub.status === 'rejected' && (
-                <div className="glass p-8 text-center border border-red-500/30">
-                  <div className="text-2xl">✖️</div>
+                <div className="glass p-8 text-center border border-red-500/30 relative">
+                  <div className="absolute top-4 left-4 text-xs font-mono text-white/40">
+                    {sub.network_type === 'gemini' ? '✨ Gemini (LTE & Wi-Fi)' : sub.network_type === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'} • {t('serversIncluded', { count: sub.server_count })}
+                  </div>
+                  <div className="text-2xl mt-4">✖️</div>
                   <h2 className="mt-3 text-xl font-semibold text-red-400">{t('rejectedTitle')}</h2>
                   <p className="mt-2 text-white/70">{t('rejectedDesc')}</p>
                 </div>
@@ -150,7 +156,12 @@ export default async function ProfilePage({
                         <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse" />
                         <h2 className="text-xl font-semibold">{t('activeTitle')}</h2>
                       </div>
-                      <p className="mt-1 text-sm text-white/60">{t('serversIncluded', { count: sub.server_count })}</p>
+                      <p className="mt-1 text-sm text-white/60">
+                        <span className="text-galaxy-accent/80 font-medium mr-2">
+                          {sub.network_type === 'gemini' ? '✨ Gemini (LTE & Wi-Fi)' : sub.network_type === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}
+                        </span>
+                        • {t('serversIncluded', { count: sub.server_count })}
+                      </p>
                     </div>
                   </div>
                   <div>
@@ -192,8 +203,11 @@ export default async function ProfilePage({
 
               {/* Expired */}
               {isExpired && (
-                <div className="glass p-8 text-center border border-white/10 opacity-75">
-                  <div className="text-2xl">⛔</div>
+                <div className="glass p-8 text-center border border-white/10 opacity-75 relative">
+                  <div className="absolute top-4 left-4 text-xs font-mono text-white/40">
+                    {sub.network_type === 'gemini' ? '✨ Gemini (LTE & Wi-Fi)' : sub.network_type === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'} • {t('serversIncluded', { count: sub.server_count })}
+                  </div>
+                  <div className="text-2xl mt-4">⛔</div>
                   <h2 className="mt-3 text-xl font-semibold">{t('expiredTitle')}</h2>
                 </div>
               )}
