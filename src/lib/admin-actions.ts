@@ -172,6 +172,32 @@ export async function setSubscriptionTime(
   }
 }
 
+// Change the network type of a specific subscription
+export async function changeSubscriptionNetwork(subscriptionId: string, networkType: 'wifi' | 'lte' | 'gemini') {
+  await assertAdmin();
+  const admin = createAdminClient();
+  
+  const { data: sub } = await admin
+    .from('subscriptions')
+    .select('id, plan')
+    .eq('id', subscriptionId)
+    .maybeSingle();
+    
+  if (sub && sub.plan) {
+    const plan = getPlan(sub.plan);
+    if (plan) {
+      await admin
+        .from('subscriptions')
+        .update({
+          network: networkType,
+          server_count: plan[networkType].serverCount,
+        })
+        .eq('id', sub.id);
+      revalidatePath('/', 'layout');
+    }
+  }
+}
+
 // Delete a specific subscription
 export async function deleteSubscription(subscriptionId: string) {
   await assertAdmin();
