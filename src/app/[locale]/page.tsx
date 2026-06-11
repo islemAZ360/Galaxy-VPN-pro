@@ -40,32 +40,29 @@ export default async function HomePage({
 
         <div className="relative z-10">
           <FadeIn direction="up">
-            <div className="inline-flex items-center gap-2 rounded-full border border-galaxy-primary/30 bg-galaxy-primary/10 px-4 py-2 text-sm font-medium text-galaxy-primary shadow-[0_0_15px_rgba(34,211,238,0.2)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-galaxy-primary animate-pulse"></span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-galaxy-primary/40 bg-galaxy-primary/10 px-4 py-2 text-sm font-medium text-violet-300 shadow-[0_0_18px_rgba(124,58,237,0.35)] backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-300 animate-pulse"></span>
               {t('heroPill')}
             </div>
-            <h1 className="mx-auto max-w-4xl text-6xl font-bold leading-tight md:text-8xl tracking-tight text-white" style={{ textShadow: '1px 1px 0 #0f172a, -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 0 4px 30px rgba(0,0,0,0.8)' }}>
+            <h1 className="text-hero mx-auto mt-6 max-w-4xl text-6xl font-extrabold leading-[1.05] md:text-8xl tracking-tight pb-2">
               {t('heroTitle')}
             </h1>
           </FadeIn>
-          
+
           <FadeIn direction="up" delay={0.2}>
-            <p className="mx-auto mt-8 max-w-2xl text-lg text-white font-medium leading-relaxed" style={{ textShadow: '1px 1px 0 #0f172a, -1px -1px 0 #0f172a, 1px -1px 0 #0f172a, -1px 1px 0 #0f172a, 0 2px 20px rgba(0,0,0,0.8)' }}>
+            <p className="mx-auto mt-6 max-w-2xl text-lg md:text-xl text-white/85 font-medium leading-relaxed" style={{ textShadow: '0 2px 16px rgba(0,0,0,0.8)' }}>
               {t('heroSubtitle')}
             </p>
           </FadeIn>
-          
+
           <FadeIn direction="up" delay={0.4}>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/login"
-                className="flex items-center gap-2 rounded-xl bg-galaxy-primary px-8 py-3.5 font-bold text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all hover:bg-white hover:shadow-[0_0_25px_rgba(255,255,255,0.5)] hover:-translate-y-0.5"
-              >
+              <Link href="/login" className="btn-primary">
                 Start Now / Login <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
                 href="#why"
-                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-8 py-3.5 font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20"
+                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/[0.07] px-8 py-3.5 font-medium text-white backdrop-blur-sm transition-all hover:bg-white/15 hover:border-white/30"
               >
                 Learn More
               </Link>
@@ -97,8 +94,8 @@ export default async function HomePage({
             { icon: Globe, title: 'whyDevices', desc: 'whyDevicesDesc' }
           ].map((item, i) => (
             <FadeIn key={i} delay={i * 0.1} direction="up" className="h-full">
-              <div className="glass p-8 h-full flex flex-col rounded-2xl hover:border-galaxy-primary/30 transition-colors group">
-                <div className="w-12 h-12 rounded-xl bg-galaxy-primary/10 flex items-center justify-center text-galaxy-primary mb-6 group-hover:scale-110 transition-transform">
+              <div className="glass card-lift p-8 h-full flex flex-col rounded-2xl group">
+                <div className="w-12 h-12 rounded-xl bg-galaxy-primary/15 ring-1 ring-galaxy-primary/30 flex items-center justify-center text-violet-300 mb-6 group-hover:scale-110 group-hover:ring-galaxy-primary/60 transition-all">
                   <item.icon className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3">{t(item.title)}</h3>
@@ -124,9 +121,10 @@ export default async function HomePage({
             { num: '3', title: 'step3', desc: 'step3Desc' }
           ].map((item, i) => (
             <FadeIn key={i} delay={i * 0.15} direction="up" className="h-full relative z-10">
-              <div className="glass p-8 h-full flex flex-col rounded-2xl relative overflow-hidden group">
+              <div className="glass card-lift p-8 h-full flex flex-col rounded-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-galaxy-primary/5 rounded-bl-full -z-10 group-hover:bg-galaxy-primary/10 transition-colors"></div>
-                <div className="w-10 h-10 rounded-full bg-galaxy-primary/20 text-galaxy-primary font-bold flex items-center justify-center mb-6">
+                <span className="pointer-events-none absolute -top-3 end-2 text-[90px] font-extrabold leading-none text-white/[0.04] select-none">{item.num}</span>
+                <div className="w-10 h-10 rounded-full bg-galaxy-primary/20 ring-1 ring-galaxy-primary/40 text-violet-300 font-bold flex items-center justify-center mb-6">
                   {item.num}
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3">{t(item.title)}</h3>
@@ -154,9 +152,11 @@ export default async function HomePage({
             { icon: Download, title: 'serverTorrent', desc: 'serverTorrentDesc', color: 'text-emerald-400', border: 'hover:border-emerald-400/50' }
           ].map((item, i) => (
             <FadeIn key={i} delay={i * 0.1} direction="up" className="h-full">
-              <div className={`glass p-6 h-full flex flex-col rounded-2xl transition-all ${item.border}`}>
+              <div className={`glass card-lift p-6 h-full flex flex-col rounded-2xl transition-all ${item.border}`}>
                 <div className="flex items-center gap-3 mb-4">
-                  <item.icon className={`w-5 h-5 ${item.color}`} />
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 ring-1 ring-white/10">
+                    <item.icon className={`w-5 h-5 ${item.color}`} />
+                  </span>
                   <h3 className="text-lg font-bold text-white">{t(item.title)}</h3>
                 </div>
                 <p className="text-sm text-white/60 leading-relaxed">{t(item.desc)}</p>
@@ -291,8 +291,8 @@ async function PlansHeader() {
   const t = await getTranslations('plans');
   return (
     <div className="text-center">
-      <h2 className="text-3xl font-bold">{t('title')}</h2>
-      <p className="mt-3 text-white/70">{t('subtitle')}</p>
+      <h2 className="text-3xl md:text-5xl font-bold">{t('title')}</h2>
+      <p className="mt-4 text-white/60 max-w-2xl mx-auto">{t('subtitle')}</p>
     </div>
   );
 }

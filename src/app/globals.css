@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
 }
 
 html {
@@ -13,10 +13,83 @@ html {
 body {
   @apply bg-[#0a0a1a] text-white antialiased;
   min-height: 100vh;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+  text-rendering: optimizeLegibility;
+}
+
+/* Brand selection + focus — small details that read as "finished" */
+::selection {
+  background: rgba(124, 58, 237, 0.45);
+  color: #fff;
+}
+:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.7);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Slim, dark scrollbar that matches the theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .glass {
-  @apply bg-white/5 backdrop-blur border border-white/10 rounded-2xl;
+  @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* Card hover: gentle lift + brand glow, used across home + admin */
+.card-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  border-color: rgba(124, 58, 237, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 40px rgba(0, 0, 0, 0.35),
+    0 0 24px rgba(124, 58, 237, 0.12);
+}
+
+/* Headline gradient — replaces hard text-outline hacks */
+.text-hero {
+  @apply bg-gradient-to-b from-white via-white to-white/55 bg-clip-text text-transparent;
+  filter: drop-shadow(0 4px 24px rgba(0, 0, 0, 0.65));
+}
+
+/* Primary CTA */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-8 py-3.5 font-bold text-white transition-all;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 55%, #4f46e5 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 4px 20px rgba(124, 58, 237, 0.45);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 8px 30px rgba(124, 58, 237, 0.6);
+}
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 @keyframes float {
@@ -30,3 +103,79 @@ body {
   to { transform: rotate(360deg); }
 }
 .animate-spin-slow { animation: spin-slow 90s linear infinite; }
+
+/* ── Motion system ────────────────────────────────────────────────────────
+   Coordinated entrance for server-rendered sections (no JS needed). Put
+   `.stagger` on a parent and its direct children reveal one after another. */
+.stagger > * {
+  animation: fade-up 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.stagger > *:nth-child(1)  { animation-delay: 0.04s; }
+.stagger > *:nth-child(2)  { animation-delay: 0.10s; }
+.stagger > *:nth-child(3)  { animation-delay: 0.16s; }
+.stagger > *:nth-child(4)  { animation-delay: 0.22s; }
+.stagger > *:nth-child(5)  { animation-delay: 0.28s; }
+.stagger > *:nth-child(6)  { animation-delay: 0.34s; }
+.stagger > *:nth-child(7)  { animation-delay: 0.40s; }
+.stagger > *:nth-child(8)  { animation-delay: 0.46s; }
+
+@keyframes fade-up {
+  0%   { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+/* One-shot entrance for server-rendered blocks (plays on mount / navigation). */
+.animate-fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes grow-x {
+  0%   { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+/* Fill bars that grow from their start edge — pair with `origin-left`. */
+.animate-grow-x {
+  animation: grow-x 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Animated underline for nav / text links — grows from the start edge. */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: -2px;
+  height: 1.5px;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: inline-start;
+  background: linear-gradient(90deg, #22d3ee, #7c3aed);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.link-underline:hover::after {
+  transform: scaleX(1);
+}
+
+/* Pressable: subtle tactile feedback shared by buttons/cards. */
+.pressable {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pressable:active {
+  transform: scale(0.97);
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────
+   Honour the OS-level "reduce motion" setting. Near-instant transitions keep
+   transitionend handlers firing while removing the actual movement. The JS
+   (framer-motion / WebGL) checks this query too — see the components. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

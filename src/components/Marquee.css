@@ -13,6 +13,8 @@
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
+  /* premium touch: ease the speed instead of a hard stop on hover */
+  transition: none;
 }
 
 .marquee-content {
@@ -33,4 +35,11 @@
 
 .marquee-pause-hover:hover .marquee-track {
   animation-play-state: paused;
+}
+
+/* Honour reduced-motion: hold the strip still rather than scrolling it. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
 }

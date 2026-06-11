@@ -24,14 +24,14 @@ export function PlanCard({
 
   return (
     <div
-      className={`group/card relative flex h-full flex-col rounded-2xl border p-5 transition ${
+      className={`group/card card-lift relative flex h-full flex-col rounded-2xl border p-5 ${
         featured
-          ? 'border-galaxy-accent/50 bg-white/[0.06] shadow-xl shadow-galaxy-accent/10'
-          : 'border-white/10 bg-white/[0.03] hover:border-white/20'
+          ? 'border-galaxy-accent/50 bg-gradient-to-b from-galaxy-accent/[0.08] to-white/[0.04] shadow-xl shadow-galaxy-accent/15'
+          : 'border-white/10 bg-white/[0.03]'
       }`}
     >
       {featured && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-galaxy-accent px-3 py-0.5 text-[11px] font-bold uppercase tracking-wide text-galaxy-bg">
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-galaxy-accent to-cyan-300 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wide text-galaxy-bg shadow-[0_2px_12px_rgba(34,211,238,0.5)]">
           {t('popular')}
         </span>
       )}

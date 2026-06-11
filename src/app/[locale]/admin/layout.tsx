@@ -21,7 +21,10 @@ export default async function AdminLayout({
 
   return (
     <div className="pt-10">
-      <h1 className="mb-5 text-3xl font-bold">{t('title')}</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <span className="h-8 w-1 rounded-full bg-gradient-to-b from-galaxy-primary to-galaxy-accent" />
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+      </div>
       <AdminTabs />
       <div className="mt-6">{children}</div>
     </div>

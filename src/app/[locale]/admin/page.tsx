@@ -32,10 +32,10 @@ export default async function AdminStatsPage({
   const totalSales = byPlan?.reduce((acc, r) => acc + (r.sales ?? 0), 0) || 1;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-8">
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
-          <div key={c.label} className={`rounded-2xl border ${c.border} bg-white/[0.02] p-5 shadow-lg relative overflow-hidden group hover:bg-white/[0.04] transition-all`}>
+          <div key={c.label} className={`card-lift rounded-2xl border ${c.border} bg-white/[0.02] p-5 shadow-lg relative overflow-hidden group`}>
             <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${c.bg} blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
             <div className="relative flex items-start justify-between">
               <div>
@@ -50,7 +50,7 @@ export default async function AdminStatsPage({
         ))}
       </div>
 
-      <div className="glass rounded-2xl p-6 relative overflow-hidden">
+      <div className="glass animate-fade-up rounded-2xl p-6 relative overflow-hidden" style={{ animationDelay: '0.32s' }}>
         {/* Subtle background glow */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-galaxy-accent/5 blur-3xl rounded-full" />
         
@@ -94,8 +94,8 @@ export default async function AdminStatsPage({
                       <td className="py-4 px-2">
                         <div className="flex items-center gap-3">
                           <div className="flex-1 h-2 bg-black/40 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-galaxy-accent rounded-full transition-all duration-1000" 
+                            <div
+                              className="h-full origin-left animate-grow-x rounded-full bg-gradient-to-r from-galaxy-accent to-cyan-300"
                               style={{ width: `${Math.max(percentage, 2)}%` }}
                             />
                           </div>

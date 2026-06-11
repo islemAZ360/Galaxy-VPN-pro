@@ -8,19 +8,25 @@ export function Footer() {
   const t = useTranslations('footer');
 
   return (
-    <footer className="w-full border-t border-white/10 bg-[#06060c] py-6 px-8 mt-auto">
+    <footer className="relative w-full border-t border-white/10 bg-[#06060c] py-8 px-8 mt-auto overflow-hidden">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-galaxy-primary/50 to-transparent" />
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5">
-            <Shield className="h-4 w-4 text-white/70" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+            <Shield className="h-4 w-4 text-galaxy-accent" />
           </div>
-          <span className="text-xs font-medium tracking-widest text-white/40 uppercase">
-            {t('rights')}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-sm font-bold tracking-tight">
+              <span className="bg-gradient-to-r from-galaxy-accent to-violet-400 bg-clip-text text-transparent">Galaxy</span>VPN
+            </span>
+            <span className="text-[11px] font-medium tracking-widest text-white/35 uppercase">
+              {t('rights')}
+            </span>
+          </div>
         </div>
         <Link
           href="/support"
-          className="text-sm font-semibold tracking-wide text-galaxy-accent transition-colors hover:text-white"
+          className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold tracking-wide text-galaxy-accent transition-all hover:bg-white/10 hover:text-white"
         >
           {t('contact')}
         </Link>

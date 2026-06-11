@@ -35,7 +35,7 @@ export default async function LocaleLayout({
   const dir = rtlLocales.includes(locale as Locale) ? 'rtl' : 'ltr';
 
   return (
-    <html lang={locale} dir={dir}>
+    <html lang={locale} dir={dir} data-scroll-behavior="smooth">
       <body className="flex min-h-screen flex-col">
         <NextTopLoader color="#22d3ee" showSpinner={false} />
         <NextIntlClientProvider>

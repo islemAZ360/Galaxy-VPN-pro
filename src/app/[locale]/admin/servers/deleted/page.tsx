@@ -42,19 +42,19 @@ export default async function AdminDeletedServersPage({
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm opacity-60 hover:opacity-100 transition-opacity">
-            <thead className="text-white/50">
-              <tr>
-                <th className="py-2 text-start">{t('name')}</th>
-                <th className="py-2 text-start">{t('network')}</th>
-                <th className="py-2 text-start">{t('country')}</th>
-                <th className="py-2 text-start">{t('protocol')}</th>
-                <th className="py-2 text-start">{t('latency')}</th>
-                <th className="py-2 text-end"></th>
+            <thead className="text-[11px] uppercase tracking-wider text-white/40">
+              <tr className="border-b border-white/10">
+                <th className="py-3 text-start font-semibold">{t('name')}</th>
+                <th className="py-3 text-start font-semibold">{t('network')}</th>
+                <th className="py-3 text-start font-semibold">{t('country')}</th>
+                <th className="py-3 text-start font-semibold">{t('protocol')}</th>
+                <th className="py-3 text-start font-semibold">{t('latency')}</th>
+                <th className="py-3 text-end"></th>
               </tr>
             </thead>
             <tbody>
               {servers.map((s) => (
-                <tr key={s.id} className="border-t border-white/5">
+                <tr key={s.id} className="border-t border-white/5 transition-colors hover:bg-white/[0.03]">
                   <td className="max-w-xs truncate py-2">
                     {s.name.split(' | ')[0].replace(/^[\s\u{1F1E6}-\u{1F1FF}🌐🏳️]+/u, '').trim()}
                   </td>
