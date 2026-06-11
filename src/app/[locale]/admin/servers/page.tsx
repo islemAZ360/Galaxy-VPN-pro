@@ -82,12 +82,14 @@ export default async function AdminServersPage({
                     {s.name.split(' | ')[0].replace(/^[\s\u{1F1E6}-\u{1F1FF}🌐🏳️]+/u, '').trim()}
                   </td>
                   <td className="py-2">
-                    {s.network_type === 'gemini' ? (
-                      <span className="rounded bg-fuchsia-400/15 px-2 py-1 text-xs text-fuchsia-300">✨ WIFI / LTE / GEMINI</span>
+                    {s.network_type === 'gemini_lte' ? (
+                      <span className="rounded bg-fuchsia-500/15 px-2 py-1 text-xs text-fuchsia-400">✨ Gemini / LTE</span>
+                    ) : s.network_type === 'gemini_wifi' ? (
+                      <span className="rounded bg-fuchsia-400/15 px-2 py-1 text-xs text-fuchsia-300">✨ Gemini / Wi-Fi</span>
                     ) : s.network_type === 'lte' ? (
-                      <span className="rounded bg-amber-400/15 px-2 py-1 text-xs text-amber-300">📶 WIFI / LTE</span>
+                      <span className="rounded bg-amber-400/15 px-2 py-1 text-xs text-amber-300">📶 LTE / Wi-Fi</span>
                     ) : (
-                      <span className="rounded bg-galaxy-accent/15 px-2 py-1 text-xs text-galaxy-accent">📡 WIFI</span>
+                      <span className="rounded bg-galaxy-accent/15 px-2 py-1 text-xs text-galaxy-accent">📡 Wi-Fi</span>
                     )}
                   </td>
                   <td className="py-2">
