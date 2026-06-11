@@ -2,6 +2,7 @@ import { supa } from './supa.js';
 import { fetchRepoTexts } from './github.js';
 import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
 import { flagEmoji, renameConfig } from './uri.js';
+import fs from 'fs';
 import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
 import { log } from './log.js';
@@ -49,6 +50,10 @@ async function withVpnRetry(fn, { label = 'upload', intervalMs = 5000, maxAttemp
         log.warn(`║  ⚠️  VPN/Network seems down — cannot reach Supabase     ║`);
         log.warn(`║  📡 Please reconnect your VPN now.                      ║`);
         log.warn(`║  🔄 Auto-retrying every 5s until connection is restored  ║`);
+        log.warn(`║                                                          ║`);
+        log.warn(`║  💡 If it gets stuck here forever (Node.js cache bug):   ║`);
+        log.warn(`║  Press Ctrl+C, then double-click start-worker.bat again! ║`);
+        log.warn(`║  Your results are SAVED and will upload automatically!   ║`);
         log.warn(`╚══════════════════════════════════════════════════════════╝`);
       }
       if (i % 12 === 0) log.warn(`⏳ Still waiting for Supabase (${label})… attempt ${i}/${maxAttempts}. Please check VPN.`);
@@ -424,8 +429,26 @@ export async function runLteRecheck() {
     log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
     log.step('Phase 2 — Uploading results to Supabase…');
 
+    // Save state so we can resume if Node.js network stack gets permanently stuck on VPN reconnect
+    fs.writeFileSync('pending_lte.json', JSON.stringify({ geminiWifiIds, geminiLteIds, lteIds, wifiIds }));
+
+    await executeLteUpload(geminiWifiIds, geminiLteIds, lteIds, wifiIds);
+    if (fs.existsSync('pending_lte.json')) fs.unlinkSync('pending_lte.json');
+
+    log.done('✨ LTE re-check done!\n');
+    return stats;
+  } catch (e) {
+    log.err(`LTE re-check failed: ${e.message}`);
+    return { error: e.message, ...stats };
+  } finally {
+    running = false;
+  }
+}
+
+export async function executeLteUpload(geminiWifiIds, geminiLteIds, lteIds, wifiIds) {
     const now = new Date().toISOString();
     const classifyWithRetry = async (ids, type) => {
+      if (!ids || ids.length === 0) return;
       await withVpnRetry(async () => {
         const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
         if (selErr) throw new Error(selErr.message);
@@ -541,8 +564,26 @@ export async function runGeminiWifiRecheck() {
     log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
     log.step('Phase 2 — Uploading results to Supabase…');
 
+    const ids = working.map(r => r.id);
+    fs.writeFileSync('pending_gemini_wifi.json', JSON.stringify({ ids }));
+    await executeGeminiUpload(ids, 'gemini_wifi');
+    if (fs.existsSync('pending_gemini_wifi.json')) fs.unlinkSync('pending_gemini_wifi.json');
+
+    stats.finishedAt = new Date().toISOString();
+    log.done(`Gemini / Wi-Fi re-check done — ${stats.gemini} Gemini / Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
+    return stats;
+  } catch (e) {
+    log.err(`Gemini / Wi-Fi re-check failed: ${e.message}`);
+    return { error: e.message, ...stats };
+  } finally {
+    running = false;
+  }
+}
+
+export async function executeGeminiUpload(ids, type) {
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
+      if (!ids || ids.length === 0) return;
       await withVpnRetry(async () => {
         const { data: current } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
         if (!current) return;
@@ -563,18 +604,7 @@ export async function runGeminiWifiRecheck() {
         }
       }, { label: `classify-${type}` });
     };
-    await classify(geminiIds, 'gemini_wifi');
-    await classify(wifiIds, 'wifi');
-
-    stats.finishedAt = new Date().toISOString();
-    log.done(`Gemini / Wi-Fi re-check done — ${stats.gemini} Gemini / Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
-    return stats;
-  } catch (e) {
-    log.err(`Gemini / Wi-Fi re-check failed: ${e.message}`);
-    return { error: e.message, ...stats };
-  } finally {
-    running = false;
-  }
+    await classify(ids, type);
 }
 
 // Gemini / LTE re-check: tests only the 'lte' servers to see if they reach Gemini.

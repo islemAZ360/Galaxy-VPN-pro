@@ -6,9 +6,12 @@ import {
   runGeminiWifiRecheck, 
   runGeminiLteRecheck, 
   runLatencyCheck,
-  isRunning
+  isRunning,
+  executeLteUpload,
+  executeGeminiUpload
 } from './sync.js';
 import { banner, log } from './log.js';
+import fs from 'fs';
 
 const CRON = process.env.SYNC_CRON || '*/30 * * * *'; // every 30 min
 const POLL_MS = Number(process.env.REQUEST_POLL_MS || 15_000);
@@ -132,6 +135,42 @@ setInterval(() => drainPending('poll'), POLL_MS);
 // On boot, we clear any pending/stale requests left over from a previous crash 
 // so they don't unexpectedly run on the wrong network (e.g. LTE vs WIFI).
 (async () => {
+  if (fs.existsSync('pending_lte.json')) {
+    try {
+      log.bell('Found pending LTE upload! Resuming...');
+      const p = JSON.parse(fs.readFileSync('pending_lte.json', 'utf8'));
+      await executeLteUpload(p.geminiWifiIds, p.geminiLteIds, p.lteIds, p.wifiIds);
+      fs.unlinkSync('pending_lte.json');
+      log.ok('Pending LTE upload completed successfully!');
+    } catch (e) {
+      log.err('Failed to upload pending LTE data: ' + e.message);
+    }
+  }
+  
+  if (fs.existsSync('pending_gemini_wifi.json')) {
+    try {
+      log.bell('Found pending Gemini/Wi-Fi upload! Resuming...');
+      const p = JSON.parse(fs.readFileSync('pending_gemini_wifi.json', 'utf8'));
+      await executeGeminiUpload(p.ids, 'gemini_wifi');
+      fs.unlinkSync('pending_gemini_wifi.json');
+      log.ok('Pending Gemini/Wi-Fi upload completed successfully!');
+    } catch (e) {
+      log.err('Failed to upload pending Gemini/Wi-Fi data: ' + e.message);
+    }
+  }
+
+  if (fs.existsSync('pending_gemini_lte.json')) {
+    try {
+      log.bell('Found pending Gemini/LTE upload! Resuming...');
+      const p = JSON.parse(fs.readFileSync('pending_gemini_lte.json', 'utf8'));
+      await executeGeminiUpload(p.ids, 'gemini_lte');
+      fs.unlinkSync('pending_gemini_lte.json');
+      log.ok('Pending Gemini/LTE upload completed successfully!');
+    } catch (e) {
+      log.err('Failed to upload pending Gemini/LTE data: ' + e.message);
+    }
+  }
+
   log.step('Clearing stale requests on startup…');
   try {
     await trackPresence('idle');
