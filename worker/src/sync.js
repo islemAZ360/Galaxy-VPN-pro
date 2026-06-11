@@ -502,8 +502,8 @@ export async function runGeminiWifiRecheck() {
     process.stdout.write('\r\x1b[K');
     log.ok('Starting testing now!');
 
-    // Lower default concurrency for raw network tests to prevent router/adapter crashes
-    const CONC = Number(process.env.TEST_CONCURRENCY || 20);
+    // Home Wi-Fi can handle high concurrency, so we use 50
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     
     const working = [];
     const BATCH_SIZE = 500;
