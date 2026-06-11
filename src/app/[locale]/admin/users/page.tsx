@@ -66,7 +66,10 @@ export default async function AdminUsersPage({
     <div className="space-y-10">
       {/* Pending payments */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">{tp('title')}</h2>
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+          <span className="h-5 w-1 rounded-full bg-amber-400/80" />
+          {tp('title')}
+        </h2>
         {!payments || payments.length === 0 ? (
           <p className="glass p-6 text-center text-sm text-white/50">{tp('none')}</p>
         ) : (
@@ -87,7 +90,10 @@ export default async function AdminUsersPage({
 
       {/* Users — one card per user with all admin tools inline */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">{tu('title')}</h2>
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+          <span className="h-5 w-1 rounded-full bg-galaxy-accent/80" />
+          {tu('title')}
+        </h2>
         <div className="grid gap-3 md:grid-cols-2">
           {(users ?? []).map((u) => {
             return (

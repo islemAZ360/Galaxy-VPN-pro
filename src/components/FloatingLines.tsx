@@ -285,6 +285,14 @@ export default function FloatingLines({
 
     let active = true;
 
+    // Respect the OS "reduce motion" setting: freeze the scene + disable the
+    // cursor bend so the hero is a calm static image for those users.
+    const reduce =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const interactiveEnabled = interactive && !reduce;
+
     const scene = new Scene();
 
     const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -332,7 +340,7 @@ export default function FloatingLines({
       },
 
       iMouse: { value: new Vector2(-1000, -1000) },
-      interactive: { value: interactive },
+      interactive: { value: interactiveEnabled },
       bendRadius: { value: bendRadius },
       bendStrength: { value: bendStrength },
       bendInfluence: { value: 0 },
@@ -415,18 +423,22 @@ export default function FloatingLines({
       targetInfluenceRef.current = 0.0;
     };
 
-    if (interactive) {
+    if (interactiveEnabled) {
       renderer.domElement.addEventListener('pointermove', handlePointerMove);
       renderer.domElement.addEventListener('pointerleave', handlePointerLeave);
     }
 
     let raf = 0;
-    const renderLoop = () => {
+    let elapsed = 0;
+    let inView = true;
+
+    const frame = () => {
       if (!active) return;
 
-      uniforms.iTime.value = clock.getElapsedTime();
+      elapsed += clock.getDelta(); // accumulate only while running → no jump after a pause
+      uniforms.iTime.value = elapsed;
 
-      if (interactive) {
+      if (interactiveEnabled) {
         currentMouseRef.current.lerp(targetMouseRef.current, mouseDamping);
         uniforms.iMouse.value.copy(currentMouseRef.current);
 
@@ -440,18 +452,53 @@ export default function FloatingLines({
       }
 
       renderer.render(scene, camera);
-      raf = requestAnimationFrame(renderLoop);
+      raf = requestAnimationFrame(frame);
     };
-    renderLoop();
+
+    const start = () => {
+      if (raf || !active) return;
+      clock.getDelta(); // discard the gap accumulated while paused
+      raf = requestAnimationFrame(frame);
+    };
+    const stop = () => {
+      if (!raf) return;
+      cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    // Always paint one frame so the hero is never blank, even when frozen.
+    renderer.render(scene, camera);
+
+    // Pause the GPU loop when the hero is scrolled off-screen or the tab is in
+    // the background — a real battery/perf win on a shader that runs every frame.
+    const shouldRun = () => active && inView && !document.hidden;
+    const sync = () => (shouldRun() ? start() : stop());
+
+    const onVisibility = () => sync();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const io =
+      typeof IntersectionObserver !== 'undefined'
+        ? new IntersectionObserver((entries) => {
+            inView = entries[0]?.isIntersecting ?? true;
+            sync();
+          }, { threshold: 0 })
+        : null;
+    if (io) io.observe(container);
+
+    // Reduced motion → leave the single painted frame and never start the loop.
+    if (!reduce) sync();
 
     return () => {
       active = false;
 
-      cancelAnimationFrame(raf);
+      stop();
 
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (io) io.disconnect();
       if (ro) ro.disconnect();
 
-      if (interactive) {
+      if (interactiveEnabled) {
         renderer.domElement.removeEventListener('pointermove', handlePointerMove);
         renderer.domElement.removeEventListener('pointerleave', handlePointerLeave);
       }

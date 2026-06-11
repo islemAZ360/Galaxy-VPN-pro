@@ -16,12 +16,12 @@ export async function Navbar() {
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-galaxy-bg/70 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-galaxy-bg/70 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
       <nav className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4">
-        <Link href="/" className="text-lg font-bold tracking-tight">
-          <span className="text-galaxy-accent">Galaxy</span>VPN
+        <Link href="/" className="text-lg font-bold tracking-tight transition-opacity hover:opacity-80">
+          <span className="bg-gradient-to-r from-galaxy-accent to-violet-400 bg-clip-text text-transparent">Galaxy</span>VPN
         </Link>
-        <div className="hidden gap-5 text-sm text-white/80 md:flex">
+        <div className="hidden gap-1 text-sm text-white/75 md:flex [&>a]:rounded-lg [&>a]:px-3 [&>a]:py-1.5 [&>a]:transition-colors [&>a:hover]:bg-white/5 [&>a:hover]:text-white">
           <Link href="/">{t('home')}</Link>
           {!isAdmin && <Link href="/#why">{t('features')}</Link>}
           {!isAdmin && <Link href="/#plans">{t('plans')}</Link>}
@@ -43,7 +43,7 @@ export async function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="hidden md:inline-flex rounded-lg bg-galaxy-primary px-4 py-2 text-sm font-medium hover:opacity-90"
+              className="hidden md:inline-flex rounded-lg bg-gradient-to-br from-galaxy-primary to-indigo-600 px-4 py-2 text-sm font-semibold shadow-[0_2px_12px_rgba(124,58,237,0.4)] transition-all hover:shadow-[0_4px_18px_rgba(124,58,237,0.6)] hover:-translate-y-px"
             >
               {t('login')}
             </Link>
