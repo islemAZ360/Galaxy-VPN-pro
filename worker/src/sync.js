@@ -372,8 +372,8 @@ export async function runLteRecheck() {
     process.stdout.write('\r\x1b[K'); // clear line
     log.ok('Starting testing now!');
 
-    // Phase 3: Test servers (Heavy network, VPN should be OFF)
-    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
+    // Lower default concurrency for raw network tests to prevent router/adapter crashes
+    const CONC = Number(process.env.TEST_CONCURRENCY || 20);
     log.info(`Re-testing ${stats.total} servers over the current network (concurrency ${CONC})…`);
     
     const working = [];
@@ -502,8 +502,8 @@ export async function runGeminiWifiRecheck() {
     process.stdout.write('\r\x1b[K');
     log.ok('Starting testing now!');
 
-    log.info(`Testing ${stats.total} Wi-Fi servers for Gemini reachability…`);
-    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
+    // Lower default concurrency for raw network tests to prevent router/adapter crashes
+    const CONC = Number(process.env.TEST_CONCURRENCY || 20);
     
     const working = [];
     const BATCH_SIZE = 500;
@@ -611,7 +611,8 @@ export async function runGeminiLteRecheck() {
     process.stdout.write('\r\x1b[K');
     log.ok('Starting testing now!');
 
-    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
+    // Lower default concurrency for raw network tests to prevent router/adapter crashes
+    const CONC = Number(process.env.TEST_CONCURRENCY || 20);
     log.info(`Testing ${stats.total} LTE servers for Gemini reachability (concurrency ${CONC})…`);
     
     const working = [];

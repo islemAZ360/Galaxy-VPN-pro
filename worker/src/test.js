@@ -126,7 +126,7 @@ export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } 
       .split(/\r?\n/)
       .map((s) => s.trim())
       .filter((s) => /:\/\//.test(s));
-    log.ok(`xray-knife: ${workingUris.length}/${uris.length} configs passed the real test`);
+    // log.ok removed to prevent overlapping with the progress bar from sync.js
   } catch (e) {
     if (e.enoent) {
       log.warn(
