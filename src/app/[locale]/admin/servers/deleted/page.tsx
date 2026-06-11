@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { requireAdmin } from '@/lib/admin';
-import { ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
+import { RotateCcw } from 'lucide-react';
 import { restoreServer } from '../actions';
 
 export default async function AdminDeletedServersPage({
@@ -91,7 +91,7 @@ export default async function AdminDeletedServersPage({
                       await restoreServer(s.id);
                     }}>
                       <button className="rounded p-1 text-green-400 hover:bg-green-400/10 transition" title={t('restore', { fallback: 'Restore' })}>
-                        <ArrowUturnLeftIcon className="h-4 w-4" />
+                        <RotateCcw className="h-4 w-4" />
                       </button>
                     </form>
                   </td>
