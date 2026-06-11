@@ -173,7 +173,7 @@ export function RepoManager({
           <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-white/70">
             📄 {t('totalFiles')}: {activeStats.reduce((s, r) => s + r.files_found, 0)}
           </span>
-          <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-white/70">
+          <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-white/70" suppressHydrationWarning>
             🔍 {t('totalExtracted')}: {activeStats.reduce((s, r) => s + r.configs_extracted, 0).toLocaleString()}
           </span>
           <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-emerald-300">
@@ -208,7 +208,7 @@ export function RepoManager({
                   <span className="rounded bg-white/5 px-2 py-0.5 text-white/60" title={t('filesHint')}>
                     📄 {s.files_found} {t('files')}
                   </span>
-                  <span className="rounded bg-white/5 px-2 py-0.5 text-white/60" title={t('extractedHint')}>
+                  <span className="rounded bg-white/5 px-2 py-0.5 text-white/60" title={t('extractedHint')} suppressHydrationWarning>
                     🔍 {s.configs_extracted.toLocaleString()} {t('extracted')}
                   </span>
                   <span className="rounded bg-emerald-400/10 px-2 py-0.5 text-emerald-300" title={t('workingHint')}>
@@ -228,7 +228,7 @@ export function RepoManager({
                     </>
                   )}
                   {s.last_sync_at && (
-                    <span className="rounded bg-white/5 px-2 py-0.5 text-white/40" title={t('lastSyncHint')}>
+                    <span className="rounded bg-white/5 px-2 py-0.5 text-white/40" title={t('lastSyncHint')} suppressHydrationWarning>
                       🕐 {new Date(s.last_sync_at).toLocaleString()}
                     </span>
                   )}
