@@ -1,10 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Smartphone, Monitor, AlertTriangle } from 'lucide-react';
+import { Smartphone, Monitor, AlertTriangle, Copy, CheckCircle2 } from 'lucide-react';
+
+const BYPASS_RULES = "max.ru, domain:2gis.ru, domain:ads.x5.ru, domain:2gis.com, domain:aif.ru, domain:aeroflot.ru, domain:alfabank.ru, domain:avito.ru, domain:beeline.ru, domain:burgerkingrus.ru, domain:dellin.ru, domain:drive2.ru, domain:dzen.ru, domain:flypobeda.ru, domain:forbes.ru, domain:gazeta.ru, domain:gazprombank.ru, domain:gismeteo.ru, domain:gosuslugi.ru, domain:hh.ru, domain:kontur.ru, domain:kontur.host, domain:kp.ru, domain:kuper.ru, domain:lenta.ru, domain:mail.ru, domain:megamarket.ru, domain:megamarket.tech, domain:megafon.ru, domain:moex.com, domain:motivtelecom.ru, domain:ozon.ru, domain:pervye.ru, domain:psbank.ru, domain:rambler.ru, domain:rambler-co.ru, domain:rbc.ru, domain:reg.ru, domain:reviews.2gis.com, domain:rg.ru, domain:ria.ru, domain:ruwiki.ru, domain:rustore.ru, domain:rutube.ru, domain:rzd.ru, domain:sirena-travel.ru, domain:sravni.ru, domain:t-j.ru, domain:t2.ru, domain:tank-online.com, domain:taximaxim.ru, domain:tbank-online.com, domain:tildaapi.com, domain:tns-counter.ru, domain:trvl.yandex.net, domain:tutu.ru, domain:vk.com, domain:vk.ru, domain:vkvideo.ru, domain:vtb.ru, domain:x5.ru, domain:ya.ru, domain:yandex.ru, domain:yandex.net, domain:yandex.com, domain:yastatic.net, domain:yandexcloud.net, full:go.yandex, full:ru.ruwiki.ru, domain:xn--90acagbhgpca7c8c7f.xn--p1ai, domain:xn--80ajghhoc2aj1c8b.xn--p1ai, domain:xn--90aivcdt6dxbc.xn--p1ai, domain:xn--b1aew.xn--p1ai, domain:api.oneme.ru, domain:fd.oneme.ru, domain:i.oneme.ru, domain:miniapps.max.ru, domain:sdk-api.apptracer.ru, domain:st.max.ru, domain:tracker-api.vk-analytics.ru, domain:wb.ru, domain:wildberries.ru";
 
 export function HuppInstructions() {
   const t = useTranslations('profile');
+  const [copiedRules, setCopiedRules] = useState(false);
+
+  async function copyRules() {
+    try {
+      await navigator.clipboard.writeText(BYPASS_RULES);
+      setCopiedRules(true);
+      setTimeout(() => setCopiedRules(false), 2000);
+    } catch { /* ignore */ }
+  }
 
   return (
     <div className="space-y-6 mt-8">
@@ -99,6 +111,22 @@ export function HuppInstructions() {
                   <span className="leading-relaxed">{t('routingStep6')}</span>
                 </li>
               </ul>
+              <button
+                onClick={copyRules}
+                className="mt-6 flex items-center gap-2 rounded-lg bg-red-500/20 px-4 py-2.5 text-sm font-medium text-red-200 hover:bg-red-500/30 transition-colors border border-red-500/30 w-full sm:w-auto justify-center"
+              >
+                {copiedRules ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>{t('copiedRules')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>{t('copyRules')}</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
