@@ -220,7 +220,19 @@
       "unban": "رفع الحظر",
       "extend": "+30 يوماً",
       "delete": "حذف",
-      "confirmDelete": "حذف هذا المستخدم نهائياً؟"
+      "confirmDelete": "حذف هذا المستخدم نهائياً؟",
+      "time": "الوقت",
+      "seconds": "ثواني",
+      "minutes": "دقائق",
+      "hours": "ساعات",
+      "days": "أيام",
+      "months": "أشهر",
+      "setTime": "تحديد الوقت",
+      "addTime": "إضافة وقت",
+      "banFor": "مدة الحظر",
+      "banBtn": "حظر",
+      "messagePlaceholder": "رسالة للمستخدم…",
+      "sendMessage": "إرسال"
     },
     "repos": {
       "title": "مستودعات GitHub",

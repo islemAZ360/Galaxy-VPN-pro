@@ -58,7 +58,8 @@ export function UserRow({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [banDays, setBanDays] = useState('30');
+  const [banAmt, setBanAmt] = useState('30');
+  const [banUnit, setBanUnit] = useState<keyof typeof UNIT_MS>('days');
   const [msg, setMsg] = useState('');
 
   // Per-subscription state
@@ -157,8 +158,10 @@ export function UserRow({
                     onChange={(e) => setUnits({ ...units, [sub.id]: e.target.value as keyof typeof UNIT_MS })}
                     className={inputCls}
                   >
-                    <option value="days">{t('days')}</option>
+                    <option value="seconds">{t('seconds')}</option>
+                    <option value="minutes">{t('minutes')}</option>
                     <option value="hours">{t('hours')}</option>
+                    <option value="days">{t('days')}</option>
                     <option value="months">{t('months')}</option>
                   </select>
                   <button onClick={() => applyTime(sub.id, 'set')} disabled={isPending} className={btnCls}>{t('setTime')}</button>
@@ -206,8 +209,10 @@ export function UserRow({
                 onChange={(e) => setUnits({ ...units, ['new']: e.target.value as keyof typeof UNIT_MS })}
                 className={inputCls}
               >
-                <option value="days">{t('days')}</option>
+                <option value="seconds">{t('seconds')}</option>
+                <option value="minutes">{t('minutes')}</option>
                 <option value="hours">{t('hours')}</option>
+                <option value="days">{t('days')}</option>
                 <option value="months">{t('months')}</option>
               </select>
               <select
@@ -237,13 +242,23 @@ export function UserRow({
                 <span className="text-xs text-white/50">{t('banFor')}:</span>
                 <input
                   type="number" min="1"
-                  value={banDays}
-                  onChange={(e) => setBanDays(e.target.value)}
+                  value={banAmt}
+                  onChange={(e) => setBanAmt(e.target.value)}
                   className={`${inputCls} w-16`}
                 />
-                <span className="text-xs text-white/50">{t('days')}</span>
+                <select
+                  value={banUnit}
+                  onChange={(e) => setBanUnit(e.target.value as keyof typeof UNIT_MS)}
+                  className={inputCls}
+                >
+                  <option value="seconds">{t('seconds')}</option>
+                  <option value="minutes">{t('minutes')}</option>
+                  <option value="hours">{t('hours')}</option>
+                  <option value="days">{t('days')}</option>
+                  <option value="months">{t('months')}</option>
+                </select>
                 <button
-                  onClick={() => run(() => banUser(userId, Number(banDays) || 1))}
+                  onClick={() => run(() => banUser(userId, (Number(banAmt) || 1) * UNIT_MS[banUnit]))}
                   disabled={isPending}
                   className="rounded-md border border-amber-500/40 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/10 disabled:opacity-50"
                 >

@@ -83,10 +83,10 @@ export async function rejectPayment(paymentId: string, message: string) {
   revalidatePath('/', 'layout');
 }
 
-export async function banUser(userId: string, days = 30) {
+export async function banUser(userId: string, durationMs: number = 30 * DAY) {
   await assertAdmin();
   const admin = createAdminClient();
-  const until = new Date(Date.now() + days * DAY).toISOString();
+  const until = new Date(Date.now() + durationMs).toISOString();
   await admin.from('users').update({ banned_until: until }).eq('id', userId);
   revalidatePath('/', 'layout');
 }
