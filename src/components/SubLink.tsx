@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Smartphone, Monitor } from 'lucide-react';
+import { Smartphone, Monitor, Copy, CheckCircle2, Download, PlusCircle, Power } from 'lucide-react';
 
 export function SubLink({ url }: { url: string }) {
   const t = useTranslations('profile');
@@ -25,32 +25,62 @@ export function SubLink({ url }: { url: string }) {
         </code>
         <button
           onClick={copy}
-          className="shrink-0 rounded-lg bg-galaxy-primary px-4 text-sm font-medium hover:opacity-90"
+          className="shrink-0 flex items-center justify-center w-12 rounded-lg bg-galaxy-primary text-sm font-medium hover:opacity-90 transition-opacity"
+          aria-label={t('copy')}
         >
-          {copied ? t('copied') : t('copy')}
+          {copied ? <CheckCircle2 className="w-5 h-5 text-emerald-300" /> : <Copy className="w-5 h-5 text-white" />}
         </button>
       </div>
-      <div className="mt-4 rounded-lg bg-white/5 p-4 border border-white/10">
-        <p className="text-sm text-white/80 leading-relaxed mb-4">{t('subLinkHint')}</p>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="https://play.google.com/store/apps/details?id=app.hiddify.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm hover:bg-white/20 transition-colors"
-          >
-            <Smartphone className="w-4 h-4" />
-            {t('downloadMobile')}
-          </a>
-          <a
-            href="https://github.com/hiddify/hiddify-next/releases/latest/download/Hiddify-Windows-Setup-x64.exe"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm hover:bg-white/20 transition-colors"
-          >
-            <Monitor className="w-4 h-4" />
-            {t('downloadPC')}
-          </a>
+
+      <div className="mt-6 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+        <div className="bg-white/5 px-4 py-3 border-b border-white/5">
+          <h3 className="font-medium text-sm text-white/90">How to connect with Hiddify</h3>
+        </div>
+        
+        <div className="p-4">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-galaxy-accent/20 flex items-center justify-center text-galaxy-accent font-bold text-xs">1</div>
+              <p className="text-sm text-white/80">{t('step1')}</p>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-galaxy-accent/20 flex items-center justify-center text-galaxy-accent font-bold text-xs">2</div>
+              <div className="flex-1">
+                <p className="text-sm text-white/80 mb-3">{t('step2')}</p>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href="https://play.google.com/store/apps/details?id=app.hiddify.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs hover:bg-white/20 transition-colors border border-white/5"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    {t('downloadMobile')}
+                  </a>
+                  <a
+                    href="https://github.com/hiddify/hiddify-next/releases/latest/download/Hiddify-Windows-Setup-x64.exe"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs hover:bg-white/20 transition-colors border border-white/5"
+                  >
+                    <Monitor className="w-4 h-4" />
+                    {t('downloadPC')}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-galaxy-accent/20 flex items-center justify-center text-galaxy-accent font-bold text-xs">3</div>
+              <p className="text-sm text-white/80">{t('step3')}</p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-emerald-400/20 flex items-center justify-center text-emerald-400 font-bold text-xs">4</div>
+              <p className="text-sm text-white/80">{t('step4')}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

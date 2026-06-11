@@ -147,6 +147,7 @@ export async function setSubscriptionTime(subscriptionId: string | null, userId:
         end_at: new Date(base + ms).toISOString(),
       })
       .eq('id', sub.id);
+    }
   } else {
     // No subscription yet → create an admin-granted one (top LTE/Wi-Fi plan).
     const plan = getPlan(4)!;
@@ -160,7 +161,6 @@ export async function setSubscriptionTime(subscriptionId: string | null, userId:
       network_type: 'lte',
       start_at: new Date(now).toISOString(),
       end_at: new Date(now + ms).toISOString(),
-    });
     });
   }
   revalidatePath('/', 'layout');
