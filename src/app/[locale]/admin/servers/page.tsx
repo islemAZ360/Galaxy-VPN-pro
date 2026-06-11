@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { requireAdmin } from '@/lib/admin';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { Trash2 } from 'lucide-react';
 import { deleteServer, deleteAllServers } from './actions';
 
 export default async function AdminServersPage({
@@ -102,7 +102,7 @@ export default async function AdminServersPage({
                       await deleteServer(s.id);
                     }}>
                       <button className="rounded p-1 text-red-400 hover:bg-red-400/10 transition" title={t('delete')}>
-                        <TrashIcon className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </form>
                   </td>
