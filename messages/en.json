@@ -139,7 +139,9 @@
     "d": "d",
     "h": "h",
     "m": "m",
-    "s": "s"
+    "s": "s",
+    "subId": "ID",
+    "startedOn": "Started on"
   },
   "support": {
     "title": "Support",
