@@ -130,6 +130,10 @@ export default async function ProfilePage({
                   <div className="text-2xl mt-4">⏳</div>
                   <h2 className="mt-3 text-xl font-semibold">{t('pendingTitle')}</h2>
                   <p className="mt-2 text-white/70">{t('pendingDesc')}</p>
+                  <div className="mt-4 flex justify-center gap-4 text-xs text-white/40 font-mono">
+                    <div>{t('subId')}: {sub.sub_token.split('-')[0].toUpperCase()}</div>
+                    <div>{t('startedOn')}: {new Date(sub.created_at).toLocaleDateString()}</div>
+                  </div>
                 </div>
               )}
 
@@ -142,6 +146,10 @@ export default async function ProfilePage({
                   <div className="text-2xl mt-4">✖️</div>
                   <h2 className="mt-3 text-xl font-semibold text-red-400">{t('rejectedTitle')}</h2>
                   <p className="mt-2 text-white/70">{t('rejectedDesc')}</p>
+                  <div className="mt-4 flex justify-center gap-4 text-xs text-white/40 font-mono">
+                    <div>{t('subId')}: {sub.sub_token.split('-')[0].toUpperCase()}</div>
+                    <div>{t('startedOn')}: {new Date(sub.created_at).toLocaleDateString()}</div>
+                  </div>
                 </div>
               )}
 
@@ -162,6 +170,10 @@ export default async function ProfilePage({
                         </span>
                         • {t('serversIncluded', { count: sub.server_count })}
                       </p>
+                      <div className="mt-3 flex gap-4 text-xs text-white/40 font-mono">
+                        <div>{t('subId')}: {sub.sub_token.split('-')[0].toUpperCase()}</div>
+                        <div>{t('startedOn')}: {new Date(sub.created_at).toLocaleDateString()}</div>
+                      </div>
                     </div>
                   </div>
                   <div>
@@ -209,6 +221,10 @@ export default async function ProfilePage({
                   </div>
                   <div className="text-2xl mt-4">⛔</div>
                   <h2 className="mt-3 text-xl font-semibold">{t('expiredTitle')}</h2>
+                  <div className="mt-4 flex justify-center gap-4 text-xs text-white/40 font-mono">
+                    <div>{t('subId')}: {sub.sub_token.split('-')[0].toUpperCase()}</div>
+                    <div>{t('startedOn')}: {new Date(sub.created_at).toLocaleDateString()}</div>
+                  </div>
                 </div>
               )}
             </div>
