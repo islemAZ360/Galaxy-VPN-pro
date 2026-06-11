@@ -92,8 +92,8 @@ function runXrayKnife(inFile, outFile, threads, url) {
   });
 }
 
-// Pure TCP-reachability batch (fallback when xray-knife is unavailable).
-async function tcpTestAll(uris, { concurrency, timeoutMs }) {
+// Pure TCP-reachability batch (fallback when xray-knife is unavailable or for latency testing).
+export async function tcpTestAll(uris, { concurrency, timeoutMs }) {
   const results = [];
   let i = 0;
   const workers = Array.from({ length: Math.min(concurrency, uris.length) }, async () => {

@@ -173,6 +173,7 @@
       "empty_deleted": "لا توجد سيرفرات محذوفة.",
       "delete": "حذف نهائي",
       "delete_all": "حذف الكل",
+      "test_latency": "فحص البينج (Ping)",
       "restore": "استرجاع السيرفر"
     },
     "payments": {
