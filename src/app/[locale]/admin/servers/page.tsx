@@ -2,7 +2,8 @@ import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { requireAdmin } from '@/lib/admin';
 import { Trash2 } from 'lucide-react';
-import { deleteServer, deleteAllServers, testLatency } from './actions';
+import { deleteServer, deleteAllServers } from './actions';
+import { TestLatencyButton } from '@/components/admin/TestLatencyButton';
 
 export default async function AdminServersPage({
   params,
@@ -46,18 +47,11 @@ export default async function AdminServersPage({
           <span className="rounded-md border border-fuchsia-400/40 bg-fuchsia-400/10 px-2 py-1 text-fuchsia-300">✨ Gemini · {geminiCount}</span>
           <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE · {lteCount}</span>
           <span className="rounded-md border border-galaxy-accent/40 bg-galaxy-accent/10 px-2 py-1 text-galaxy-accent">📡 Wi-Fi · {wifiCount}</span>
-          <form action={async () => {
-            'use server';
-            await testLatency();
-          }}>
-            <button 
-              disabled={!isLive || isBusy}
-              className="rounded-md border border-blue-500/50 bg-blue-500/20 px-2 py-1 text-blue-400 hover:bg-blue-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!isLive ? "Worker is offline" : isBusy ? "Worker is busy" : "Ping all servers for latency"}
-            >
-              {t('test_latency', { fallback: 'Test Latency' })}
-            </button>
-          </form>
+          <TestLatencyButton 
+            isLive={isLive} 
+            isBusy={isBusy} 
+            label={t('test_latency', { fallback: 'Test Latency' })} 
+          />
           <form action={async () => {
             'use server';
             await deleteAllServers();
