@@ -17,7 +17,17 @@ type RepoStat = {
   last_sync_at: string | null;
 };
 
-export function RepoManager({ repos, repoStats }: { repos: Repo[]; repoStats: RepoStat[] }) {
+export function RepoManager({ 
+  repos, 
+  repoStats,
+  isLive,
+  isBusy
+}: { 
+  repos: Repo[]; 
+  repoStats: RepoStat[];
+  isLive?: boolean;
+  isBusy?: boolean;
+}) {
   const t = useTranslations('admin.repos');
   const router = useRouter();
   const [url, setUrl] = useState('');
@@ -54,19 +64,30 @@ export function RepoManager({ repos, repoStats }: { repos: Repo[]; repoStats: Re
       router.refresh();
     });
 
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
-  const requestKind = (kind: 'full' | 'lte' | 'gemini') =>
+  const [syncMsg, setSyncMsg] = useState<{ type: 'error' | 'success' | 'warning', text: string } | null>(null);
+  const requestKind = (kind: 'full' | 'lte' | 'gemini') => {
+    if (!isLive) {
+      setSyncMsg({ type: 'error', text: 'Worker is offline! Please start the Python worker script first.' });
+      return;
+    }
+    if (isBusy) {
+      setSyncMsg({ type: 'warning', text: 'Worker is already busy syncing. Please wait.' });
+      return;
+    }
+
     startTransition(async () => {
       setSyncMsg(null);
       try {
         await requestSync(kind);
-        setSyncMsg(
-          kind === 'gemini' ? t('geminiRequested') : kind === 'lte' ? t('lteRequested') : t('syncRequested'),
-        );
+        setSyncMsg({
+          type: 'success',
+          text: kind === 'gemini' ? t('geminiRequested') : kind === 'lte' ? t('lteRequested') : t('syncRequested')
+        });
       } catch (e) {
-        setSyncMsg(t('syncFailed') + ' ' + (e instanceof Error ? e.message : ''));
+        setSyncMsg({ type: 'error', text: t('syncFailed') + ' ' + (e instanceof Error ? e.message : '') });
       }
     });
+  };
   const recheck = () => requestKind('full');
   const lteRecheck = () => requestKind('lte');
   const geminiRecheck = () => requestKind('gemini');
@@ -105,10 +126,19 @@ export function RepoManager({ repos, repoStats }: { repos: Repo[]; repoStats: Re
           </button>
         </div>
       </div>
+      {/* Messages */}
       {syncMsg && (
-        <p className="mt-3 rounded-lg border border-galaxy-accent/30 bg-galaxy-accent/10 px-3 py-2 text-sm">
-          {syncMsg}
-        </p>
+        <div className={`mt-4 rounded-md border p-3 text-sm flex items-start gap-2 ${
+          syncMsg.type === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-200' :
+          syncMsg.type === 'warning' ? 'border-amber-500/30 bg-amber-500/10 text-amber-200' :
+          'border-sky-500/20 bg-sky-500/10 text-sky-200'
+        }`}>
+          <span className="mt-0.5">
+            {syncMsg.type === 'error' ? '⚠️' : syncMsg.type === 'warning' ? '⏳' : '✓'}
+          </span>
+          <span className="flex-1">{syncMsg.text}</span>
+          <button onClick={() => setSyncMsg(null)} className="opacity-50 hover:opacity-100">✕</button>
+        </div>
       )}
 
       <div className="mt-4 flex gap-2">

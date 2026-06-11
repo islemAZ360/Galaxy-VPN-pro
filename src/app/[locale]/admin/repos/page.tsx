@@ -29,10 +29,14 @@ export default async function AdminReposPage({
     .eq('id', 'worker')
     .maybeSingle();
 
+  const timeDiff = status?.last_seen ? Math.abs(Date.now() - Date.parse(status.last_seen)) : Infinity;
+  const isLive = timeDiff < 300_000; // 5 minutes tolerance
+  const isBusy = status?.state === 'syncing';
+
   return (
     <div className="space-y-4">
       <WorkerStatus initial={status ?? null} />
-      <RepoManager repos={repos ?? []} repoStats={repoStats ?? []} />
+      <RepoManager repos={repos ?? []} repoStats={repoStats ?? []} isLive={isLive} isBusy={isBusy} />
     </div>
   );
 }
