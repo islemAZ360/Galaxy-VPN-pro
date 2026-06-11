@@ -37,7 +37,7 @@ function chunk(arr, n) {
 
 // Naming: "🇩🇿 Algeria #2 | WIFI | LTE". The capability tags are cumulative —
 // gemini servers also work on lte+wifi, lte servers also work on wifi.
-const TIER_TAGS = { wifi: ' | WIFI', lte: ' | WIFI | LTE', gemini: ' | WIFI | LTE | GEMINI' };
+const TIER_TAGS = { wifi: ' | WIFI', lte: ' | WIFI/LTE', gemini: ' | WIFI/LTE/GEMINI' };
 
 // Smart label: real flag+country when known; a neutral 🌐 + "Server" otherwise
 // (no more blank-flag "Unknown"). Number only added when a country repeats.
@@ -120,11 +120,12 @@ export async function runSync() {
     // "🇩🇿 Algeria #1" name shows in the admin panel AND in the user's app (Happ).
     // Fetch existing servers to preserve their network_type and tags
     const existingBefore = await withRetry(async () => {
-      const { data, error } = await supa.from('servers').select('config_hash, network_type');
+      const { data, error } = await supa.from('servers').select('config_hash, network_type, is_deleted');
       if (error) throw new Error(error.message);
       return data ?? [];
     }, { label: 'select-existing-before' });
     const existingTiers = new Map(existingBefore.map(s => [s.config_hash, s.network_type]));
+    const existingDeleted = new Set(existingBefore.filter(s => s.is_deleted).map(s => s.config_hash));
 
     const now = new Date().toISOString();
     const sorted = [...working].sort((a, b) => {
@@ -134,7 +135,9 @@ export async function runSync() {
       return (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity);
     });
     const counters = {};
-    const rows = sorted.map((w) => {
+    const rows = sorted
+      .filter((w) => !existingDeleted.has(hashConfig(w.uri)))
+      .map((w) => {
       const hash = hashConfig(w.uri);
       const g = geo.get(w.host) || {};
       
@@ -176,11 +179,11 @@ export async function runSync() {
     // 6. delete servers no longer working (not in current working set)
     const keep = new Set(rows.map((r) => r.config_hash));
     const existing = await withRetry(async () => {
-      const { data, error } = await supa.from('servers').select('id, config_hash');
+      const { data, error } = await supa.from('servers').select('id, config_hash, is_deleted');
       if (error) throw new Error(error.message);
       return data ?? [];
     }, { label: 'select-existing' });
-    const toDelete = existing.filter((s) => !keep.has(s.config_hash)).map((s) => s.id);
+    const toDelete = existing.filter((s) => !keep.has(s.config_hash) && !s.is_deleted).map((s) => s.id);
     stats.deleted = toDelete.length;
     if (stats.deleted) {
       log.info(`Deleting ${stats.deleted} stale servers…`);
@@ -217,7 +220,7 @@ export async function runLteRecheck() {
   log.step('LTE re-check — testing the live pool over THIS connection…');
   try {
     const existing = await withRetry(async () => {
-      const { data, error } = await supa.from('servers').select('id, config_uri');
+      const { data, error } = await supa.from('servers').select('id, config_uri, network_type');
       if (error) throw new Error(error.message);
       return data ?? [];
     }, { label: 'select-pool' });
@@ -232,12 +235,21 @@ export async function runLteRecheck() {
     const results = await testAll(existing.map((s) => s.config_uri), { concurrency: CONC, timeoutMs: 4000 });
     const workingKeys = new Set(results.filter((r) => r.ok).map((r) => keyOf(r.uri)));
 
+    const geminiIds = [];
     const lteIds = [];
     const wifiIds = [];
-    for (const s of existing) (workingKeys.has(keyOf(s.config_uri)) ? lteIds : wifiIds).push(s.id);
+    for (const s of existing) {
+      if (workingKeys.has(keyOf(s.config_uri))) {
+        if (s.network_type === 'gemini') geminiIds.push(s.id);
+        else lteIds.push(s.id);
+      } else {
+        wifiIds.push(s.id);
+      }
+    }
+    stats.gemini = geminiIds.length;
     stats.lte = lteIds.length;
     stats.wifi = wifiIds.length;
-    log.ok(`${stats.lte} work on LTE  ·  ${stats.wifi} are Wi-Fi only`);
+    log.ok(`${stats.gemini} Gemini  ·  ${stats.lte} work on LTE  ·  ${stats.wifi} are Wi-Fi only`);
 
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
@@ -263,11 +275,12 @@ export async function runLteRecheck() {
         }, { label: `classify-${type}` });
       }
     };
+    await classify(geminiIds, 'gemini');
     await classify(lteIds, 'lte');
     await classify(wifiIds, 'wifi');
 
     stats.finishedAt = new Date().toISOString();
-    log.done(`LTE re-check done — ${stats.lte} LTE · ${stats.wifi} Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
+    log.done(`LTE re-check done — ${stats.gemini} Gemini · ${stats.lte} LTE · ${stats.wifi} Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
     return stats;
   } catch (e) {
     log.err(`LTE re-check failed: ${e.message}`);
@@ -290,7 +303,7 @@ export async function runGeminiRecheck() {
   log.step(`Gemini re-check — testing the pool against ${GEMINI_URL}…`);
   try {
     const existing = await withRetry(async () => {
-      const { data, error } = await supa.from('servers').select('id, config_uri');
+      const { data, error } = await supa.from('servers').select('id, config_uri, network_type');
       if (error) throw new Error(error.message);
       return data ?? [];
     }, { label: 'select-pool' });
@@ -311,10 +324,19 @@ export async function runGeminiRecheck() {
 
     const geminiIds = [];
     const lteIds = [];
-    for (const s of existing) (okKeys.has(keyOf(s.config_uri)) ? geminiIds : lteIds).push(s.id);
+    const wifiIds = [];
+    for (const s of existing) {
+      if (okKeys.has(keyOf(s.config_uri))) {
+        geminiIds.push(s.id);
+      } else {
+        if (s.network_type === 'wifi') wifiIds.push(s.id);
+        else lteIds.push(s.id);
+      }
+    }
     stats.gemini = geminiIds.length;
     stats.lte = lteIds.length;
-    log.ok(`${stats.gemini} reach Gemini  ·  ${stats.lte} demoted to LTE`);
+    stats.wifi = wifiIds.length;
+    log.ok(`${stats.gemini} reach Gemini  ·  ${stats.lte} LTE  ·  ${stats.wifi} Wi-Fi`);
 
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
@@ -343,9 +365,10 @@ export async function runGeminiRecheck() {
     };
     await classify(geminiIds, 'gemini');
     await classify(lteIds, 'lte');
+    await classify(wifiIds, 'wifi');
 
     stats.finishedAt = new Date().toISOString();
-    log.done(`Gemini re-check done — ${stats.gemini} Gemini · ${stats.lte} LTE · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
+    log.done(`Gemini re-check done — ${stats.gemini} Gemini · ${stats.lte} LTE · ${stats.wifi} Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
     return stats;
   } catch (e) {
     log.err(`Gemini re-check failed: ${e.message}`);
