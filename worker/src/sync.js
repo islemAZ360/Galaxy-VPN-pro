@@ -121,22 +121,37 @@ export async function runSync() {
       return stats;
     }
 
-    // 3. test a bounded, evenly-spread sample of candidates.
-    // Testing thousands of hosts exhausts OS sockets (esp. on Windows) and
-    // breaks later fetch() calls. MAX_CONFIGS keeps the pool healthy and the
-    // run reliable; raise it via env on a beefier host.
+    // 3. test all extracted configs (in batches to show progress).
+    // If MAX_CONFIGS is set > 0, we cap the testing pool to save time.
+    // Otherwise, we test everything.
     const allUris = [...configs.values()].map((c) => c.uri);
-    const MAX = Number(process.env.MAX_CONFIGS || 800);
+    const MAX = Number(process.env.MAX_CONFIGS || 0);
     let candidates = allUris;
-    if (allUris.length > MAX) {
+    if (MAX > 0 && allUris.length > MAX) {
+      // Sample evenly instead of just taking the first N
       const stride = allUris.length / MAX;
       candidates = Array.from({ length: MAX }, (_, k) => allUris[Math.floor(k * stride)]);
     }
     stats.candidates = candidates.length;
-    const CONC = Number(process.env.TEST_CONCURRENCY || 15);
+    
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     log.info(`Testing ${stats.candidates} candidates via xray-knife (concurrency ${CONC})…`);
-    const results = await testAll(candidates, { concurrency: CONC, timeoutMs: 4000 });
-    const working = results.filter((r) => r.ok);
+    
+    const working = [];
+    const BATCH_SIZE = 3000; // chunk size for progress updates
+    const candidateBatches = chunk(candidates, BATCH_SIZE);
+    let testedCount = 0;
+
+    for (let i = 0; i < candidateBatches.length; i++) {
+      const b = candidateBatches[i];
+      const results = await testAll(b, { concurrency: CONC, timeoutMs: 4000 });
+      const batchWorking = results.filter((r) => r.ok);
+      working.push(...batchWorking);
+      testedCount += b.length;
+      const percent = ((testedCount / stats.candidates) * 100).toFixed(1);
+      log.info(`  ⏳ Progress: ${testedCount} / ${stats.candidates} (${percent}%) — ${working.length} working so far...`);
+    }
+
     stats.working = working.length;
     log.ok(`${stats.working} / ${stats.candidates} servers passed the real test`);
 

@@ -276,7 +276,14 @@
       "totalRepos": "Repos",
       "totalFiles": "Files",
       "totalExtracted": "Extracted",
-      "totalWorking": "Working"
+      "totalWorking": "Working",
+      "scanHistoryBtn": "Scan History",
+      "scanHistoryTitle": "Scan History",
+      "scanHistoryEmpty": "No scans performed yet.",
+      "scanSkipped": "Skipped",
+      "scanPending": "Pending…",
+      "scanCandidates": "tested",
+      "scanDeleted": "deleted"
     },
     "support": {
       "title": "Conversations",
