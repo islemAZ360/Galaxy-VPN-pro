@@ -17,18 +17,36 @@ type RepoStat = {
   gemini_count: number;
   last_sync_at: string | null;
 };
+type ScanEntry = {
+  id: string;
+  kind: string;
+  requested_at: string;
+  processed_at: string | null;
+  result: Record<string, unknown> | null;
+};
+
+const KIND_LABELS: Record<string, { emoji: string; label: string; color: string }> = {
+  full:        { emoji: '📡', label: 'Wi-Fi',        color: 'text-galaxy-accent' },
+  lte:         { emoji: '📶', label: 'LTE / Wi-Fi',  color: 'text-amber-300' },
+  gemini_wifi: { emoji: '✨', label: 'Gemini / Wi-Fi', color: 'text-fuchsia-300' },
+  gemini_lte:  { emoji: '✨', label: 'Gemini / LTE', color: 'text-purple-300' },
+  latency:     { emoji: '⏱️', label: 'Latency',      color: 'text-cyan-300' },
+};
 
 export function RepoManager({ 
   repos, 
   repoStats,
+  scanHistory,
 }: { 
   repos: Repo[]; 
   repoStats: RepoStat[];
+  scanHistory: ScanEntry[];
 }) {
   const t = useTranslations('admin.repos');
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { online: isLive, syncing: isBusy } = useWorkerPresence();
 
@@ -138,6 +156,12 @@ export function RepoManager({
           >
             ❓ {t('instructionsBtn')}
           </button>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/20"
+          >
+            📋 {t('scanHistoryBtn')}
+          </button>
         </div>
       </div>
       
@@ -164,6 +188,73 @@ export function RepoManager({
           <p className="text-xs opacity-70 mt-2">
             {t('instructionsNote')}
           </p>
+        </div>
+      )}
+      {/* Scan History Panel */}
+      {showHistory && (
+        <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm leading-relaxed">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-emerald-300 text-base">📋 {t('scanHistoryTitle')}</h3>
+            <button onClick={() => setShowHistory(false)} className="opacity-50 hover:opacity-100 text-lg">✕</button>
+          </div>
+          {scanHistory.length === 0 ? (
+            <p className="text-white/40 text-center py-4">{t('scanHistoryEmpty')}</p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+              {scanHistory.map((entry) => {
+                const k = KIND_LABELS[entry.kind] || { emoji: '❓', label: entry.kind, color: 'text-white/60' };
+                const isProcessed = !!entry.processed_at;
+                const result = entry.result as Record<string, unknown> | null;
+                const duration = isProcessed && result?.startedAt && result?.finishedAt
+                  ? Math.round((Date.parse(result.finishedAt as string) - Date.parse(result.startedAt as string)) / 1000)
+                  : null;
+                const wasSkipped = result?.skipped === true;
+                return (
+                  <div key={entry.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-semibold ${k.color}`}>{k.emoji} {k.label}</span>
+                        {wasSkipped && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs text-yellow-300">{t('scanSkipped')}</span>}
+                        {isProcessed && !wasSkipped && <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-xs text-emerald-300">✓</span>}
+                        {!isProcessed && <span className="rounded bg-blue-500/20 px-1.5 py-0.5 text-xs text-blue-300 animate-pulse">{t('scanPending')}</span>}
+                      </div>
+                      <span className="text-xs text-white/40" suppressHydrationWarning>
+                        {new Date(entry.requested_at).toLocaleString()}
+                      </span>
+                    </div>
+                    {isProcessed && !wasSkipped && result && (
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        {result.working !== undefined && (
+                          <span className="rounded bg-emerald-400/10 px-2 py-0.5 text-emerald-300">✅ {String(result.working)} {t('working')}</span>
+                        )}
+                        {result.candidates !== undefined && (
+                          <span className="rounded bg-white/5 px-2 py-0.5 text-white/60">🔍 {String(result.candidates)} {t('scanCandidates')}</span>
+                        )}
+                        {result.deleted !== undefined && Number(result.deleted) > 0 && (
+                          <span className="rounded bg-red-400/10 px-2 py-0.5 text-red-300">🗑 {String(result.deleted)} {t('scanDeleted')}</span>
+                        )}
+                        {result.lte !== undefined && (
+                          <span className="rounded bg-amber-400/10 px-2 py-0.5 text-amber-300">📶 {String(result.lte)} LTE</span>
+                        )}
+                        {result.gemini !== undefined && (
+                          <span className="rounded bg-fuchsia-400/10 px-2 py-0.5 text-fuchsia-300">✨ {String(result.gemini)} Gemini</span>
+                        )}
+                        {result.wifi !== undefined && (
+                          <span className="rounded bg-galaxy-accent/10 px-2 py-0.5 text-galaxy-accent">📡 {String(result.wifi)} Wi-Fi</span>
+                        )}
+                        {duration !== null && (
+                          <span className="rounded bg-white/5 px-2 py-0.5 text-white/40">⏱ {duration}s</span>
+                        )}
+                      </div>
+                    )}
+                    {wasSkipped && result?.reason && (
+                      <p className="mt-1 text-xs text-yellow-300/70">↳ {String(result.reason)}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
       {/* Messages */}

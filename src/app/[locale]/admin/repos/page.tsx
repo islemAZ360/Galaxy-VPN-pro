@@ -29,10 +29,16 @@ export default async function AdminReposPage({
     .eq('id', 'worker')
     .maybeSingle();
 
+  const { data: scanHistory } = await admin
+    .from('sync_requests')
+    .select('id, kind, requested_at, processed_at, result')
+    .order('requested_at', { ascending: false })
+    .limit(50);
+
   return (
     <div className="space-y-4">
       <WorkerStatus initial={status ?? null} />
-      <RepoManager repos={repos ?? []} repoStats={repoStats ?? []} />
+      <RepoManager repos={repos ?? []} repoStats={repoStats ?? []} scanHistory={scanHistory ?? []} />
     </div>
   );
 }
