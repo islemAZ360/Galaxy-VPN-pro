@@ -143,8 +143,8 @@ export async function runSync() {
     
     for (let i = 0; i < tcpBatches.length; i++) {
       const b = tcpBatches[i];
-      // Quick 1.5s TCP ping to weed out totally dead IPs
-      const res = await tcpTestAll(b, { concurrency: TCP_CONC, timeoutMs: 1500 });
+      // Quick 3.0s TCP ping to weed out totally dead IPs
+      const res = await tcpTestAll(b, { concurrency: TCP_CONC, timeoutMs: 3000 });
       tcpWorking.push(...res.filter((r) => r.ok).map((r) => r.uri));
       tcpTestedCount += b.length;
       log.progress((tcpTestedCount / stats.candidates) * 100, `TCP: ${tcpWorking.length} alive`);
