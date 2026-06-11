@@ -247,8 +247,8 @@ export function RepoManager({
                         )}
                       </div>
                     )}
-                    {wasSkipped && result?.reason && (
-                      <p className="mt-1 text-xs text-yellow-300/70">↳ {String(result.reason)}</p>
+                    {wasSkipped && typeof result?.reason === 'string' && (
+                      <p className="mt-1 text-xs text-yellow-300/70">↳ {result.reason}</p>
                     )}
                   </div>
                 );
