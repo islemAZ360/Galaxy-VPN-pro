@@ -35,6 +35,29 @@ function chunk(arr, n) {
   return out;
 }
 
+// Two-phase VPN retry: after heavy xray-knife testing, the VPN/TUN adapter may
+// have dropped. This retries the Supabase upload indefinitely (every 5s) until
+// the connection is restored, so the admin just needs to reconnect VPN and the
+// results upload automatically — no data is lost.
+async function withVpnRetry(fn, { label = 'upload', intervalMs = 5000, maxAttempts = 120 } = {}) {
+  for (let i = 1; i <= maxAttempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i === 1) {
+        log.warn(`╔══════════════════════════════════════════════════════════╗`);
+        log.warn(`║  ⚠️  VPN/Network seems down — cannot reach Supabase     ║`);
+        log.warn(`║  📡 Please reconnect your VPN now.                      ║`);
+        log.warn(`║  🔄 Auto-retrying every 5s until connection is restored  ║`);
+        log.warn(`╚══════════════════════════════════════════════════════════╝`);
+      }
+      if (i % 12 === 0) log.warn(`⏳ Still waiting for Supabase (${label})… attempt ${i}/${maxAttempts}. Please check VPN.`);
+      await sleep(intervalMs);
+    }
+  }
+  throw new Error(`${label}: gave up after ${maxAttempts} attempts — Supabase unreachable`);
+}
+
 // Naming: "🇩🇿 Algeria #2 | WIFI | LTE". The capability tags are cumulative —
 const TIER_TAGS = { 
   wifi: ' | WIFI', 
@@ -290,8 +313,9 @@ export async function runLteRecheck() {
       stats.finishedAt = new Date().toISOString();
       return stats;
     }
-    log.info(`Re-testing ${stats.total} servers over the current network…`);
-    const CONC = Number(process.env.TEST_CONCURRENCY || 15);
+    // ──────── PHASE 1: Test servers (heavy network, may drop VPN) ────────
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
+    log.info(`Phase 1 — Re-testing ${stats.total} servers over the current network (concurrency ${CONC})…`);
     const results = await testAll(existing.map((s) => s.config_uri), { concurrency: CONC, timeoutMs: 4000 });
     const workingKeys = new Set(results.filter((r) => r.ok).map((r) => keyOf(r.uri)));
 
@@ -315,36 +339,40 @@ export async function runLteRecheck() {
     stats.lte = lteIds.length;
     stats.wifi = wifiIds.length;
     stats.gemini = stats.gemini_lte + stats.gemini_wifi;
-    log.ok(`${stats.gemini_lte} Gemini (LTE)  ·  ${stats.lte} LTE  ·  ${stats.gemini_wifi} Gemini (Wi-Fi)  ·  ${stats.wifi} Wi-Fi`);
+    // ──────── PHASE 2: Upload results to Supabase ────────
+    // VPN may have dropped during the heavy xray-knife phase above.
+    // withVpnRetry keeps trying until Supabase is reachable again.
+    log.step('Phase 2 — Uploading results to Supabase…');
 
     const now = new Date().toISOString();
-    const classify = async (ids, type) => {
-      const { data: current } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
-      if (!current) return;
-      
-      const updates = current.map(c => {
-        const newName = retag(c.name, type);
-        return {
-          id: c.id,
-          name: newName,
-          config_uri: renameConfig(c.config_uri, newName),
-          config_hash: c.config_hash,
-          network_type: type,
-          last_checked_at: now
-        };
-      });
+    const classifyWithRetry = async (ids, type) => {
+      await withVpnRetry(async () => {
+        const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
+        if (selErr) throw new Error(selErr.message);
+        if (!current) return;
+        
+        const updates = current.map(c => {
+          const newName = retag(c.name, type);
+          return {
+            id: c.id,
+            name: newName,
+            config_uri: renameConfig(c.config_uri, newName),
+            config_hash: c.config_hash,
+            network_type: type,
+            last_checked_at: now
+          };
+        });
 
-      for (const batch of chunk(updates, 200)) {
-        await withRetry(async () => {
+        for (const batch of chunk(updates, 200)) {
           const { error } = await supa.from('servers').upsert(batch, { onConflict: 'id' });
           if (error) throw new Error(error.message);
-        }, { label: `classify-${type}` });
-      }
+        }
+      }, { label: `classify-${type}` });
     };
-    await classify(geminiLteIds, 'gemini_lte');
-    await classify(geminiWifiIds, 'gemini_wifi');
-    await classify(lteIds, 'lte');
-    await classify(wifiIds, 'wifi');
+    await classifyWithRetry(geminiLteIds, 'gemini_lte');
+    await classifyWithRetry(geminiWifiIds, 'gemini_wifi');
+    await classifyWithRetry(lteIds, 'lte');
+    await classifyWithRetry(wifiIds, 'wifi');
 
     stats.finishedAt = new Date().toISOString();
     log.done(`LTE re-check done — ${stats.gemini} Gemini (${stats.gemini_lte} on LTE) · ${stats.lte} LTE · ${stats.wifi} Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
@@ -380,7 +408,7 @@ export async function runGeminiWifiRecheck() {
       return stats;
     }
     log.info(`Testing ${stats.total} Wi-Fi servers for Gemini reachability…`);
-    const CONC = Number(process.env.TEST_CONCURRENCY || 15);
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     const results = await testAll(existing.map((s) => s.config_uri), {
       concurrency: CONC,
       timeoutMs: 4000,
@@ -453,8 +481,9 @@ export async function runGeminiLteRecheck() {
       stats.finishedAt = new Date().toISOString();
       return stats;
     }
-    log.info(`Testing ${stats.total} LTE servers for Gemini reachability…`);
-    const CONC = Number(process.env.TEST_CONCURRENCY || 15);
+    // ──────── PHASE 1: Test servers (heavy network, may drop VPN) ────────
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
+    log.info(`Phase 1 — Testing ${stats.total} LTE servers for Gemini reachability (concurrency ${CONC})…`);
     const results = await testAll(existing.map((s) => s.config_uri), {
       concurrency: CONC,
       timeoutMs: 4000,
@@ -471,30 +500,34 @@ export async function runGeminiLteRecheck() {
     stats.gemini = geminiIds.length;
     log.ok(`${stats.gemini} reach Gemini over LTE  ·  ${lteIds.length} are LTE only`);
 
+    // ──────── PHASE 2: Upload results to Supabase ────────
+    log.step('Phase 2 — Uploading results to Supabase…');
+
     const now = new Date().toISOString();
-    const classify = async (ids, type) => {
-      const { data: current } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
-      if (!current) return;
-      const updates = current.map(c => {
-        const newName = retag(c.name, type);
-        return {
-          id: c.id,
-          name: newName,
-          config_uri: renameConfig(c.config_uri, newName),
-          config_hash: c.config_hash,
-          network_type: type,
-          last_checked_at: now
-        };
-      });
-      for (const batch of chunk(updates, 200)) {
-        await withRetry(async () => {
+    const classifyWithRetry = async (ids, type) => {
+      await withVpnRetry(async () => {
+        const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
+        if (selErr) throw new Error(selErr.message);
+        if (!current) return;
+        const updates = current.map(c => {
+          const newName = retag(c.name, type);
+          return {
+            id: c.id,
+            name: newName,
+            config_uri: renameConfig(c.config_uri, newName),
+            config_hash: c.config_hash,
+            network_type: type,
+            last_checked_at: now
+          };
+        });
+        for (const batch of chunk(updates, 200)) {
           const { error } = await supa.from('servers').upsert(batch, { onConflict: 'id' });
           if (error) throw new Error(error.message);
-        }, { label: `classify-${type}` });
-      }
+        }
+      }, { label: `classify-${type}` });
     };
-    await classify(geminiIds, 'gemini_lte');
-    await classify(lteIds, 'lte');
+    await classifyWithRetry(geminiIds, 'gemini_lte');
+    await classifyWithRetry(lteIds, 'lte');
 
     stats.finishedAt = new Date().toISOString();
     log.done(`Gemini / LTE re-check done — ${stats.gemini} Gemini / LTE · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
