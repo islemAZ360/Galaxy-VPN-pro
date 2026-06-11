@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { useWorkerPresence } from '@/hooks/useWorkerPresence';
 
 type Status = {
   state?: string;
@@ -14,8 +15,8 @@ type Status = {
 export function WorkerStatus({ initial }: { initial: Status }) {
   const t = useTranslations('admin.worker');
   const [status, setStatus] = useState<Status>(initial);
-  const [, force] = useState(0);
-
+  const { online, syncing } = useWorkerPresence();
+  
   useEffect(() => {
     const supabase = createClient();
     let active = true;
@@ -29,25 +30,16 @@ export function WorkerStatus({ initial }: { initial: Status }) {
         setStatus(p.new as Status),
       )
       .subscribe();
-    const tick = setInterval(() => force((x) => x + 1), 3000); // refresh freshness
     return () => {
       active = false;
       supabase.removeChannel(ch);
-      clearInterval(tick);
     };
   }, []);
 
-  const timeDiff = status?.last_seen ? Date.now() - new Date(status.last_seen).getTime() : Infinity;
-  const sinceSeen = Math.abs(timeDiff);
-  const online = sinceSeen < 25_000; // 25 seconds tolerance (heartbeat is every 10s)
-  const syncing = online && status?.state === 'syncing';
   const r = status?.last_result;
 
   const dot = syncing ? 'bg-amber-400 animate-pulse' : online ? 'bg-emerald-400' : 'bg-red-500';
   const label = syncing ? t('syncing') : online ? t('online') : t('offline');
-
-  const ago = (ms: number) =>
-    ms === Infinity ? t('never') : ms < 60_000 ? `${Math.round(ms / 1000)}s` : `${Math.round(ms / 60_000)}m`;
 
   return (
     <div className="glass flex flex-wrap items-center gap-x-4 gap-y-1 p-4 text-sm">
@@ -57,7 +49,7 @@ export function WorkerStatus({ initial }: { initial: Status }) {
       </span>
       {!online && (
         <span className="text-white/50">
-          {t('lastSeen')} {ago(sinceSeen)} · {t('startHint')}
+          {t('startHint')}
         </span>
       )}
       {r?.working != null && (
