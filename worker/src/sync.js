@@ -138,7 +138,7 @@ export async function runSync() {
     log.info(`Testing ${stats.candidates} candidates via xray-knife (concurrency ${CONC})…`);
     
     const working = [];
-    const BATCH_SIZE = 3000; // chunk size for progress updates
+    const BATCH_SIZE = 250; // chunk size for frequent progress updates
     const candidateBatches = chunk(candidates, BATCH_SIZE);
     let testedCount = 0;
 
