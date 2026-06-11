@@ -47,11 +47,12 @@ async function withVpnRetry(fn, { label = 'upload', intervalMs = 5000, maxAttemp
       if (i === 1) {
         log.warn(`╔══════════════════════════════════════════════════════════╗`);
         log.warn(`║  ⚠️  VPN/Network seems down — cannot reach Supabase     ║`);
+        log.warn(`║  Error: ${e.message.substring(0, 50)}`);
         log.warn(`║  📡 Please reconnect your VPN now.                      ║`);
         log.warn(`║  🔄 Auto-retrying every 5s until connection is restored  ║`);
         log.warn(`╚══════════════════════════════════════════════════════════╝`);
       }
-      if (i % 3 === 0) log.warn(`⏳ Still waiting for Supabase (${label})… attempt ${i}/${maxAttempts}. Please check VPN.`);
+      if (i % 3 === 0) log.warn(`⏳ Still waiting for Supabase (${label})… attempt ${i}/${maxAttempts}. Error: ${e.message}`);
       await sleep(intervalMs);
     }
   }
