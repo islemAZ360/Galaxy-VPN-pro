@@ -11,28 +11,46 @@ log.ok(`Connected to Supabase: ${process.env.SUPABASE_URL}`);
 log.info(`Scheduled cron: ${CRON}  ·  request poll: ${POLL_MS / 1000}s`);
 
 // --- Heartbeat + status (so the admin dashboard sees us live) ----------------
-async function setStatus(fields) {
-  try {
-    await supa
-      .from('worker_status')
-      .upsert({ id: 'worker', updated_at: new Date().toISOString(), ...fields }, { onConflict: 'id' });
-  } catch { /* best-effort */ }
+const presenceChannel = supa.channel('worker_presence', {
+  config: { presence: { key: 'worker' } }
+});
+
+let currentState = 'idle';
+
+async function trackPresence(state) {
+  currentState = state;
+  if (presenceChannel.state === 'joined') {
+    try {
+      await presenceChannel.track({ state, online_at: new Date().toISOString() });
+    } catch { /* best-effort */ }
+  }
 }
-const heartbeat = () => setStatus({ last_seen: new Date().toISOString() });
-heartbeat();
-setInterval(heartbeat, 10_000);
+
+presenceChannel.subscribe(async (status) => {
+  if (status === 'SUBSCRIBED') {
+    log.ok('Presence connected — worker is online');
+    trackPresence(currentState);
+  }
+});
 
 async function runWithStatus(reason, fn) {
-  await setStatus({ state: 'syncing', last_seen: new Date().toISOString() });
+  await trackPresence('syncing');
   const result = await fn();
-  await setStatus({
-    state: 'idle',
-    last_seen: new Date().toISOString(),
-    last_sync_at: new Date().toISOString(),
-    last_result: { reason, ...result },
-  });
+  await trackPresence('idle');
+  
+  // Persist the result to the DB so the dashboard can display it
+  try {
+    await supa.from('worker_status').upsert({
+      id: 'worker',
+      updated_at: new Date().toISOString(),
+      last_sync_at: new Date().toISOString(),
+      last_result: { reason, ...result },
+    }, { onConflict: 'id' });
+  } catch { /* best-effort */ }
+  
   return result;
 }
+
 const syncWithStatus = (reason) => runWithStatus(reason, runSync);
 const lteWithStatus = (reason) => runWithStatus(reason, runLteRecheck);
 const geminiWithStatus = (reason) => runWithStatus(reason, runGeminiRecheck);
@@ -106,7 +124,7 @@ setInterval(() => drainPending('poll'), POLL_MS);
 (async () => {
   log.step('Clearing stale requests on startup…');
   try {
-    await setStatus({ state: 'idle', last_seen: new Date().toISOString() });
+    await trackPresence('idle');
     await supa
       .from('sync_requests')
       .update({ processed_at: new Date().toISOString(), result: { aborted: 'startup-cleared' } })
@@ -119,5 +137,5 @@ setInterval(() => drainPending('poll'), POLL_MS);
 
 process.on('SIGINT', () => {
   log.warn('Shutting down…');
-  setStatus({ state: 'offline', last_seen: new Date().toISOString() }).finally(() => process.exit(0));
+  presenceChannel.untrack().finally(() => process.exit(0));
 });

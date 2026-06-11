@@ -5,17 +5,16 @@ import { testLatency } from '@/app/[locale]/admin/servers/actions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle2, Clock, X } from 'lucide-react';
 
+import { useWorkerPresence } from '@/hooks/useWorkerPresence';
+
 export function TestLatencyButton({ 
-  isLive, 
-  isBusy, 
   label 
 }: { 
-  isLive: boolean; 
-  isBusy: boolean; 
   label: string; 
 }) {
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ type: 'error' | 'success' | 'warning', message: string } | null>(null);
+  const { online: isLive, syncing: isBusy } = useWorkerPresence();
 
   useEffect(() => {
     if (toast) {

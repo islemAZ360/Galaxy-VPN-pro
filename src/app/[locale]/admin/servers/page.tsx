@@ -32,10 +32,6 @@ export default async function AdminServersPage({
     .eq('id', 'worker')
     .single();
 
-  const timeDiff = status?.last_seen ? Math.abs(Date.now() - Date.parse(status.last_seen)) : Infinity;
-  const isLive = timeDiff < 25_000; // 25 seconds tolerance for clock drift
-  const isBusy = status?.state === 'syncing';
-
   const geminiCount = servers?.filter((s) => s.network_type === 'gemini').length ?? 0;
   const lteCount = servers?.filter((s) => s.network_type === 'lte').length ?? 0;
   const wifiCount = (servers?.length ?? 0) - lteCount - geminiCount;
@@ -49,8 +45,6 @@ export default async function AdminServersPage({
           <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE · {lteCount}</span>
           <span className="rounded-md border border-galaxy-accent/40 bg-galaxy-accent/10 px-2 py-1 text-galaxy-accent">📡 Wi-Fi · {wifiCount}</span>
           <TestLatencyButton 
-            isLive={isLive} 
-            isBusy={isBusy} 
             label={t('test_latency', { fallback: 'Test Latency' })} 
           />
           <form action={async () => {

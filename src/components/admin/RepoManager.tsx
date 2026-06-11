@@ -4,6 +4,7 @@ import { useState, useTransition, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { addRepo, deleteRepo, requestSync } from '@/lib/admin-actions';
+import { useWorkerPresence } from '@/hooks/useWorkerPresence';
 
 type Repo = { id: string; repo_url: string; enabled: boolean };
 type RepoStat = {
@@ -20,18 +21,15 @@ type RepoStat = {
 export function RepoManager({ 
   repos, 
   repoStats,
-  isLive,
-  isBusy
 }: { 
   repos: Repo[]; 
   repoStats: RepoStat[];
-  isLive?: boolean;
-  isBusy?: boolean;
 }) {
   const t = useTranslations('admin.repos');
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [isPending, startTransition] = useTransition();
+  const { online: isLive, syncing: isBusy } = useWorkerPresence();
 
   // Build a map for quick lookup and filter out ghost stats
   const statsMap = useMemo(() => {
