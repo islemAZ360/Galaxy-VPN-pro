@@ -7,6 +7,7 @@ import { CountdownTimer } from '@/components/CountdownTimer';
 import { SubLink } from '@/components/SubLink';
 import { PlanCard } from '@/components/PlanCard';
 import { PLANS } from '@/lib/plans';
+import { ProfileRealtime } from '@/components/ProfileRealtime';
 
 // per-user auth-gated page — never prerender at build
 export const dynamic = 'force-dynamic';
@@ -85,6 +86,7 @@ export default async function ProfilePage({
 
   return (
     <div className="mx-auto max-w-3xl pt-12">
+      <ProfileRealtime userId={user!.id} />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h1 className="text-3xl font-bold">{t('title')}</h1>
         <span className="text-sm text-white/60 break-all">{user!.email}</span>
@@ -149,9 +151,18 @@ export default async function ProfilePage({
                   </div>
                   <SubLink url={subUrl} />
                   
-                  {devices.length > 0 && (
-                    <div className="mt-4 border-t border-white/5 pt-6">
-                      <h3 className="text-lg font-semibold mb-3">{t('connectedDevices')}</h3>
+                  <div className="mt-4 border-t border-white/5 pt-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold">{t('connectedDevices')}</h3>
+                      <span className="rounded-md bg-white/10 px-2 py-1 text-xs text-white/60">
+                        {devices.length} {t('devicesCount')}
+                      </span>
+                    </div>
+                    {devices.length === 0 ? (
+                      <div className="rounded-lg border border-white/5 bg-white/5 p-4 text-center text-sm text-white/50">
+                        {t('noDevices') || 'No devices connected yet.'}
+                      </div>
+                    ) : (
                       <div className="grid gap-3 sm:grid-cols-2">
                         {devices.map((d, i) => (
                           <div key={i} className="rounded-lg bg-white/5 p-4 border border-white/10 flex items-center justify-between">
@@ -166,8 +177,8 @@ export default async function ProfilePage({
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
 
