@@ -551,24 +551,33 @@ export async function runGeminiWifiRecheck() {
 
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
+      if (!ids || ids.length === 0) return;
       await withVpnRetry(async () => {
-        const { data: current } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
-        if (!current) return;
-        const updates = current.map(c => {
-        const newName = retag(c.name, type);
-        return {
-          id: c.id,
-          name: newName,
-          config_uri: renameConfig(c.config_uri, newName),
-          config_hash: c.config_hash,
-          network_type: type,
-          last_checked_at: now
-        };
-      });
-        for (const batch of chunk(updates, 200)) {
-          const { error } = await supa.from('servers').upsert(batch, { onConflict: 'id' });
+        let cCount = 0;
+        for (const idBatch of chunk(ids, 100)) {
+          const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
+          if (selErr) throw new Error(selErr.message);
+          if (!current || current.length === 0) continue;
+          
+          const updates = current.map(c => {
+            const newName = retag(c.name, type);
+            return {
+              id: c.id,
+              name: newName,
+              config_uri: renameConfig(c.config_uri, newName),
+              config_hash: c.config_hash,
+              network_type: type,
+              last_checked_at: now
+            };
+          });
+          
+          const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
           if (error) throw new Error(error.message);
+          
+          cCount += updates.length;
+          log.progress((cCount / ids.length) * 100, `Uploading ${type} (${cCount}/${ids.length})`);
         }
+        log.clearProgress();
       }, { label: `classify-${type}` });
     };
     await classify(geminiIds, 'gemini_wifi');
@@ -662,25 +671,33 @@ export async function runGeminiLteRecheck() {
 
     const now = new Date().toISOString();
     const classifyWithRetry = async (ids, type) => {
+      if (!ids || ids.length === 0) return;
       await withVpnRetry(async () => {
-        const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', ids);
-        if (selErr) throw new Error(selErr.message);
-        if (!current) return;
-        const updates = current.map(c => {
-          const newName = retag(c.name, type);
-          return {
-            id: c.id,
-            name: newName,
-            config_uri: renameConfig(c.config_uri, newName),
-            config_hash: c.config_hash,
-            network_type: type,
-            last_checked_at: now
-          };
-        });
-        for (const batch of chunk(updates, 200)) {
-          const { error } = await supa.from('servers').upsert(batch, { onConflict: 'id' });
+        let cCount = 0;
+        for (const idBatch of chunk(ids, 100)) {
+          const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
+          if (selErr) throw new Error(selErr.message);
+          if (!current || current.length === 0) continue;
+          
+          const updates = current.map(c => {
+            const newName = retag(c.name, type);
+            return {
+              id: c.id,
+              name: newName,
+              config_uri: renameConfig(c.config_uri, newName),
+              config_hash: c.config_hash,
+              network_type: type,
+              last_checked_at: now
+            };
+          });
+          
+          const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
           if (error) throw new Error(error.message);
+          
+          cCount += updates.length;
+          log.progress((cCount / ids.length) * 100, `Uploading ${type} (${cCount}/${ids.length})`);
         }
+        log.clearProgress();
       }, { label: `classify-${type}` });
     };
     await classifyWithRetry(geminiIds, 'gemini_lte');
