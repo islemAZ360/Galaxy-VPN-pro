@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useTransition, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
 import { addRepo, deleteRepo, requestSync, triggerGithubScan, checkGithubScanStatus } from '@/lib/admin-actions';
@@ -58,7 +58,6 @@ export function RepoManager({
   const [ghError, setGhError] = useState('');
 
   // Poll GitHub Action Status every 15 seconds
-  import { useEffect } from 'react';
   useEffect(() => {
     let mounted = true;
     const checkGh = async () => {
