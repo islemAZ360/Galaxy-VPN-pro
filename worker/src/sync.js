@@ -225,8 +225,8 @@ export async function runWifiCascade() {
 
     log.step('Phase 2 — Gemini availability…');
     const geminiKeys = await geminiKeysFor(working.map((w) => w.uri), meta);
-    stats.gemini = geminiKeys.size;
-    log.ok(`${geminiKeys.size} of the Wi-Fi servers reach Gemini.`);
+    stats.gemini = working.filter((w) => geminiKeys.has(keyOf(w.uri))).length;
+    log.ok(`${stats.gemini} of the Wi-Fi servers reach Gemini.`);
 
     vpnOnPrompt();
     log.step('Uploading results to Supabase…');
@@ -290,7 +290,7 @@ export async function runWifiCascade() {
 
     await updateRepoStats();
     stats.finishedAt = new Date().toISOString();
-    log.done(`Wi-Fi re-check done — ${working.length} live · ${geminiKeys.size} Gemini · ${stats.deleted} removed · took ${elapsed(stats)}s`);
+    log.done(`Wi-Fi re-check done — ${working.length} live · ${stats.gemini} Gemini · ${stats.deleted} removed · took ${elapsed(stats)}s`);
     return stats;
   } catch (e) {
     log.err(`Wi-Fi re-check failed: ${e.message}`);
@@ -341,7 +341,8 @@ export async function runLteCascade() {
     log.step('Phase 2 — Gemini availability…');
     const lteUris = existing.filter((s) => lteKeys.has(keyOf(s.config_uri))).map((s) => s.config_uri);
     const geminiKeys = await geminiKeysFor(lteUris, meta);
-    log.ok(`${geminiKeys.size} of the LTE servers reach Gemini.`);
+    stats.gemini = lteUris.filter((u) => geminiKeys.has(keyOf(u))).length;
+    log.ok(`${stats.gemini} of the LTE servers reach Gemini.`);
 
     vpnOnPrompt();
     log.step('Uploading results to Supabase…');
