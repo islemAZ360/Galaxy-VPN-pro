@@ -4,7 +4,7 @@ import { flagEmoji, renameConfig } from './uri.js';
 import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
 import { classifyGeminiPool, isCountryGeminiBlocked } from './gemini.js';
-import { log } from './log.js';
+import { log, C } from './log.js';
 
 let running = false;
 
@@ -169,18 +169,19 @@ async function geminiKeysFor(uris, meta) {
 
 // VPN choreography: OFF for the real test, ON for the DB.
 async function vpnOffGate(connectionMsg) {
-  console.log('');
-  log.bell('🛑  TURN OFF YOUR VPN NOW');
-  log.bell(connectionMsg);
-  log.bell('Testing starts automatically in 15 seconds…');
-  for (let i = 15; i > 0; i--) { process.stdout.write(`\r⏳  ${i}s… `); await sleep(1000); }
-  process.stdout.write('\r\x1b[K');
+  log.panel('🛑  ACTION REQUIRED: TURN OFF VPN', [
+    connectionMsg,
+    'The DPI test must run on your REAL local connection.',
+    'Testing starts automatically in 15 seconds...'
+  ], C.red);
+  await log.countdown(15);
   log.ok('Testing now!');
 }
 function vpnOnPrompt() {
-  console.log('');
-  log.bell('✅  Testing finished — TURN YOUR VPN BACK ON to upload the results.');
-  console.log('');
+  log.panel('✅  TESTING FINISHED', [
+    'TURN YOUR VPN BACK ON NOW.',
+    'We need a secure connection to upload results to Supabase.'
+  ], C.emerald);
 }
 
 const elapsed = (stats) => Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000);

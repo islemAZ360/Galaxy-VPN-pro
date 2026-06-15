@@ -99,6 +99,36 @@ export const log = {
     out('✦', C.magenta, C.magenta + C.bold, m);
   },
 
+  // Beautiful bordered panel for major alerts (VPN on/off)
+  panel: (title, lines, color) => {
+    console.log('');
+    const w = 65;
+    const pad = (s, len) => {
+      // strip ANSI to count visible length
+      const visible = s.replace(/\x1b\[[0-9;]*m/g, '');
+      const space = Math.max(0, len - visible.length);
+      return s + ' '.repeat(space);
+    };
+    
+    console.log(`  ${C.gray}╭${'─'.repeat(w)}╮${C.reset}`);
+    console.log(`  ${C.gray}│ ${color}${C.bold}${pad(highlight(title), w - 2)}${C.reset} ${C.gray}│${C.reset}`);
+    console.log(`  ${C.gray}├${'─'.repeat(w)}┤${C.reset}`);
+    for (const line of lines) {
+      console.log(`  ${C.gray}│ ${color}${pad(highlight(line), w - 2)}${C.reset} ${C.gray}│${C.reset}`);
+    }
+    console.log(`  ${C.gray}╰${'─'.repeat(w)}╯${C.reset}`);
+    console.log('');
+  },
+
+  // Animated countdown
+  countdown: async (seconds) => {
+    for (let i = seconds; i > 0; i--) {
+      process.stdout.write(`\r${C.gray}${ts()}${C.reset} ${GUTTER} ${C.amber}⏳${C.reset}  ${C.amber}Waiting ${i}s...${C.reset}\x1b[K`);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    process.stdout.write('\r\x1b[K');
+  },
+
   // Smooth gradient progress bar with an animated spinner; overwrites its line.
   progress: (pct, msg) => {
     const p = Math.max(0, Math.min(100, pct));
