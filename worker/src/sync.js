@@ -142,9 +142,9 @@ async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 100, phaseLa
     tested += b.length;
     log.progress((tested / Math.max(1, uris.length)) * 100, `${phaseLabel}: ${working.length} passed`);
     
-    // Add a cooling delay to prevent Wi-Fi adapter crash or router NAT table overflow
+    // Add a short cooling delay to prevent Windows Wi-Fi driver crash
     if (tested < uris.length) {
-      await sleep(3000); 
+      await sleep(1000); 
     }
   }
   log.clearProgress();
@@ -223,7 +223,7 @@ export async function runWifiCascade() {
 
     const CONC = Number(process.env.TEST_CONCURRENCY || 10); // Reduced to prevent Wi-Fi drop
     log.step('Phase 1 — Wi-Fi reachability…');
-    const working = await deepTest(uris, { conc: CONC, batchSize: 50, phaseLabel: 'Wi-Fi' });
+    const working = await deepTest(uris, { conc: CONC, batchSize: 100, phaseLabel: 'Wi-Fi' });
     stats.working = working.length;
     log.ok(`${working.length} / ${stats.total} pass Wi-Fi.`);
 
@@ -336,9 +336,9 @@ export async function runLteCascade() {
 
     await vpnOffGate('Connect to your PHONE hotspot (mobile data), NOT home Wi-Fi.');
 
-    const CONC = 20; // raw mobile adapter — keep low to avoid driver crashes
+    const CONC = 10; // raw mobile adapter — keep low to avoid driver crashes
     log.step('Phase 1 — LTE reachability…');
-    const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 150, phaseLabel: 'LTE' });
+    const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 100, phaseLabel: 'LTE' });
     const lteKeys = new Set(working.map((w) => keyOf(w.uri)));
     log.ok(`${working.length} / ${stats.total} pass LTE.`);
 
