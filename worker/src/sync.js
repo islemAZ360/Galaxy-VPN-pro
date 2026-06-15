@@ -42,7 +42,7 @@ function chunk(arr, n) {
 // `candidates` table is empty/missing/unreachable; never reduces to empty.
 async function skipKnownDead(uris) {
   try {
-    const { data, error } = await supa.from('candidates').select('config_hash').eq('alive', false);
+    const { data, error } = await supa.from('candidates').select('config_hash').eq('alive', false).limit(20000);
     if (error) throw new Error(error.message);
     if (!data || data.length === 0) return uris;
     const dead = new Set(data.map((d) => d.config_hash));
@@ -121,7 +121,7 @@ const keyOf = (u) => renameConfig(u, '');
 // Returns { uris, meta } where meta maps keyOf(uri) → { exit_cc, source_repo }.
 async function loadAliveCandidates() {
   const { data, error } = await supa
-    .from('candidates').select('config_uri, exit_cc, source_repo').eq('alive', true);
+    .from('candidates').select('config_uri, exit_cc, source_repo').eq('alive', true).limit(20000);
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) {
     return { uris: [], meta: new Map(), source: 'GitHub candidates (empty)' };
@@ -326,7 +326,7 @@ export async function runLteCascade() {
     // Egress country (for the Gemini dimension) from GitHub's candidates.
     const meta = new Map();
     try {
-      const { data } = await supa.from('candidates').select('config_uri, exit_cc').eq('alive', true);
+      const { data } = await supa.from('candidates').select('config_uri, exit_cc').eq('alive', true).limit(20000);
       for (const c of data ?? []) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null });
     } catch { /* probe will cover unknowns */ }
 
