@@ -5,19 +5,26 @@
 const e = (n) => `\x1b[${n}m`;
 const reset = e(0);
 const fg = (r, g, b) => `\x1b[38;2;${r};${g};${b}m`;
+const bg = (r, g, b) => `\x1b[48;2;${r};${g};${b}m`;
 
-const C = {
+export const C = {
   reset,
   bold: e(1),
   dim: e(2),
+  italic: e(3),
   violet: fg(167, 139, 250),
   magenta: fg(232, 121, 249),
   cyan: fg(56, 211, 238),
   green: fg(74, 222, 128),
+  emerald: fg(16, 185, 129),
   amber: fg(251, 191, 36),
   red: fg(248, 113, 113),
-  gray: fg(122, 124, 148),
-  white: fg(236, 237, 248),
+  gray: fg(148, 163, 184),
+  white: fg(248, 250, 252),
+  bgRed: bg(220, 38, 38) + fg(255, 255, 255),
+  bgGreen: bg(22, 163, 74) + fg(255, 255, 255),
+  bgAmber: bg(217, 119, 6) + fg(255, 255, 255),
+  bgViolet: bg(124, 58, 237) + fg(255, 255, 255),
 };
 
 const lerp = (a, b, t) => Math.round(a + (b - a) * t);
@@ -42,30 +49,55 @@ function gradient(w, char) {
   return s + C.reset;
 }
 
-const ts = () => {
+export const ts = () => {
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 };
 
-const GUTTER = `${C.gray}│${C.reset}`;
+export const GUTTER = `${C.gray}│${C.reset}`;
 
-const out = (icon, color, msg) => {
+// Auto-colorize numbers and keywords to make the console extremely readable and beautiful
+function highlight(msg) {
+  if (typeof msg !== 'string') return String(msg);
+  let s = msg;
+  // Numbers (only if not preceded by # so we don't mess up IDs)
+  s = s.replace(/(?<!#)\b(\d+)\b/g, `${C.cyan}${C.bold}$1${C.reset}`);
+  // Specific keywords
+  s = s.replace(/\b(Wi-Fi|WIFI|LTE|Gemini|GitHub|Supabase|VPN)\b/gi, (match) => {
+    const m = match.toLowerCase();
+    if (m === 'wifi' || m === 'wi-fi') return `${C.cyan}${C.bold}${match}${C.reset}`;
+    if (m === 'lte') return `${C.amber}${C.bold}${match}${C.reset}`;
+    if (m === 'gemini') return `${C.magenta}${C.bold}${match}${C.reset}`;
+    if (m === 'vpn') return `${C.red}${C.bold}${match}${C.reset}`;
+    return `${C.violet}${C.bold}${match}${C.reset}`;
+  });
+  return s;
+}
+
+const out = (icon, iconColor, textColor, msg) => {
   process.stdout.write('\r\x1b[K'); // clear any live progress line first
-  console.log(`${C.gray}${ts()}${C.reset} ${GUTTER} ${color}${icon}${C.reset} ${msg}`);
+  const hlMsg = textColor ? highlight(msg) : msg;
+  console.log(`${C.gray}${ts()}${C.reset} ${GUTTER} ${iconColor}${icon}${C.reset}  ${textColor}${hlMsg}${C.reset}`);
 };
 
 const SPIN = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 let frame = 0;
 
 export const log = {
-  info: (m) => out('•', C.cyan, m),
-  ok: (m) => out('✓', C.green, m),
-  warn: (m) => out('▲', C.amber, m),
-  err: (m) => out('✗', C.red, m),
-  step: (m) => out('▸', C.violet, `${C.white}${m}${C.reset}`),
-  bell: (m) => out('◆', C.amber, m),
-  done: (m) => out('✦', C.magenta, `${C.bold}${C.white}${m}${C.reset}`),
+  info: (m) => out('•', C.cyan, C.gray, m), // Dim grey for text, cyan for icon/keywords
+  ok: (m) => out('✓', C.emerald, C.green, m), // Bright green
+  warn: (m) => out('▲', C.amber, C.amber, m),
+  err: (m) => out('✗', C.red, C.red + C.bold, m),
+  step: (m) => {
+    console.log('');
+    out('▸', C.violet, C.violet + C.bold, m);
+  },
+  bell: (m) => out('◆', C.amber, C.amber + C.bold, m),
+  done: (m) => {
+    console.log('');
+    out('✦', C.magenta, C.magenta + C.bold, m);
+  },
 
   // Smooth gradient progress bar with an animated spinner; overwrites its line.
   progress: (pct, msg) => {
@@ -74,9 +106,13 @@ export const log = {
     const filled = Math.round((p / 100) * w);
     const bar = gradient(filled, '█') + `${C.gray}${'░'.repeat(w - filled)}${C.reset}`;
     const spin = SPIN[frame++ % SPIN.length];
+    
+    // Highlight message
+    const hlMsg = highlight(msg);
+
     process.stdout.write(
       `\r${C.gray}${ts()}${C.reset} ${GUTTER} ${C.cyan}${spin}${C.reset} ${bar} ` +
-        `${C.white}${C.bold}${p.toFixed(0).padStart(3)}%${C.reset} ${C.dim}${msg}${C.reset}\x1b[K`
+        `${C.white}${C.bold}${p.toFixed(0).padStart(3)}%${C.reset}  ${C.gray}${hlMsg}${C.reset}\x1b[K`
     );
   },
   clearProgress: () => {
@@ -85,15 +121,15 @@ export const log = {
 };
 
 export function banner() {
-  const rule = gradient(58, '━');
+  const rule = gradient(65, '━');
   console.log('');
   console.log('  ' + rule);
   console.log(
-    `  ${C.bold}${C.white}🌌  GalaxyVPN${C.reset}  ${C.gray}·${C.reset}  ` +
-      `${C.violet}${C.bold}Tester Worker${C.reset}`
+    `  ${C.bold}${C.white}🌌 GalaxyVPN${C.reset}  ${C.gray}•${C.reset}  ` +
+      `${C.bgViolet} Tester Worker ${C.reset}`
   );
   console.log(
-    `  ${C.dim}Real-test via xray-knife  ·  Russia-side  ·  Realtime triggers${C.reset}`
+    `  ${C.gray}Real-test via xray-knife  •  Russia-side  •  Realtime triggers${C.reset}`
   );
   console.log('  ' + rule);
   console.log('');
