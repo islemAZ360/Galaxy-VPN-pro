@@ -27,7 +27,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22+ ships a native WebSocket — @supabase/supabase-js needs it at
+          # createClient() time (Node 20 throws "no native WebSocket support").
+          node-version: '22'
 
       - name: Install worker deps
         working-directory: worker
