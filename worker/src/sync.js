@@ -1,10 +1,10 @@
 import { supa } from './supa.js';
 import { fetchRepoTexts } from './github.js';
 import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
-import { flagEmoji, renameConfig, parseConfig } from './uri.js';
+import { flagEmoji, renameConfig } from './uri.js';
 import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
-import { geminiCheckAll } from './gemini.js';
+import { classifyGeminiPool } from './gemini.js';
 import { log } from './log.js';
 
 let running = false;
@@ -430,47 +430,50 @@ export async function runLteRecheck() {
   }
 }
 
+// The Gemini result is decided by each server's EXIT IP country, NOT by your
+// system VPN — so the geo answer is identical whether your VPN is on or off.
+// Default therefore lets you KEEP YOUR VPN ON (so you can stay online / chat
+// while it runs). Set GEMINI_RECHECK_VPN_OFF=1 to test on the raw connection
+// instead (slightly more reliable: no single VPN chokepoint for the probes).
+const GEMINI_VPN_OFF = process.env.GEMINI_RECHECK_VPN_OFF === '1';
+
+async function geminiVpnGate() {
+  if (!GEMINI_VPN_OFF) {
+    log.info('Gemini re-check: you can keep your VPN ON — the result depends on each');
+    log.info('server\'s own exit IP, not your connection. (GEMINI_RECHECK_VPN_OFF=1 to test raw.)');
+    return;
+  }
+  log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+  log.bell(`║  🛑 STOP! TURN OFF YOUR VPN NOW!                        ║`);
+  log.bell(`║  Testing on your REAL connection. Starts in 15s…        ║`);
+  log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+  for (let i = 15; i > 0; i--) {
+    process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
+    await sleep(1000);
+  }
+  process.stdout.write('\r\x1b[K');
+  log.ok('Starting testing now!');
+}
+
 // Run the REAL Gemini availability check over a pool of server rows.
 //
 // Old approach (broken): asked xray-knife to merely *reach* a Google URL — which
 // succeeds from every country, so every working server was wrongly tagged
-// "Gemini". New approach: geo-locate each egress (cheap pre-filter to drop
-// RU/CN/HK/… ) then actually call the Gemini API through each server's tunnel
-// and read the response, keeping only servers that land in a supported region.
-// See worker/src/gemini.js for the mechanics.
+// "Gemini". New approach (worker/src/gemini.js): one fast batched run reports
+// each server's REAL egress country (through the tunnel) and classifies by
+// Gemini's supported regions; only servers whose country can't be resolved fall
+// through to a precise per-config API probe. Fast AND accurate.
 //
 // Returns a Set of config-keys (renameConfig(uri,'')) that truly reach Gemini.
-async function checkGeminiPool(existing, { concurrency, keyOf }) {
+async function checkGeminiPool(existing, { keyOf }) {
   const uris = existing.map((s) => s.config_uri);
-
-  // Map each uri → its server host's country (pre-filter input).
-  const hostByUri = new Map();
-  for (const u of uris) {
-    try { hostByUri.set(u, parseConfig(u).host); } catch { hostByUri.set(u, null); }
-  }
-  let ccByHost = new Map();
-  try {
-    ccByHost = await lookupCountries([...new Set([...hostByUri.values()].filter(Boolean))]);
-  } catch (e) {
-    log.warn(`geoip pre-filter unavailable (${e.message}) — probing all servers directly.`);
-  }
-  const countryOf = (u) => {
-    const host = hostByUri.get(u);
-    return host ? (ccByHost.get(host)?.country_code ?? null) : null;
-  };
-
-  const okKeys = new Set();
-  const BATCH_SIZE = 150;
-  const batches = chunk(uris, BATCH_SIZE);
-  let tested = 0;
-  log.progress(0, `Gemini: 0 passed`);
-  for (const b of batches) {
-    const results = await geminiCheckAll(b, { concurrency, countryOf });
-    for (const r of results) if (r && r.ok) okKeys.add(keyOf(r.uri));
-    tested += b.length;
-    log.progress((tested / uris.length) * 100, `Gemini: ${okKeys.size} passed`);
-  }
+  log.progress(0, `Gemini: starting…`);
+  const results = await classifyGeminiPool(uris, {
+    onProgress: (pct, label) => log.progress(pct, `Gemini — ${label}`),
+  });
   log.clearProgress();
+  const okKeys = new Set();
+  for (const r of results) if (r && r.ok) okKeys.add(keyOf(r.uri));
   return okKeys;
 }
 
@@ -497,25 +500,9 @@ export async function runGeminiWifiRecheck() {
       return stats;
     }
 
-    // Phase 2: Wait for user to turn off VPN
-    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
-    log.bell(`║  🛑 STOP! TURN OFF YOUR VPN NOW!                        ║`);
-    log.bell(`║  We need to test the servers on your REAL connection.   ║`);
-    log.bell(`║  Testing will begin automatically in 15 seconds...      ║`);
-    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
-    
-    for (let i = 15; i > 0; i--) {
-      process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
-      await sleep(1000);
-    }
-    process.stdout.write('\r\x1b[K');
-    log.ok('Starting testing now!');
+    await geminiVpnGate();
 
-    // Real Gemini probe runs a local proxy per config, so keep concurrency
-    // modest (each spawns an xray-knife process).
-    const CONC = Number(process.env.GEMINI_PROBE_CONCURRENCY || 8);
-
-    const okKeys = await checkGeminiPool(existing, { concurrency: CONC, keyOf });
+    const okKeys = await checkGeminiPool(existing, { keyOf });
 
     const geminiIds = [];
     const wifiIds = [];
@@ -527,11 +514,13 @@ export async function runGeminiWifiRecheck() {
     log.ok(`${stats.gemini} reach Gemini over Wi-Fi  ·  ${wifiIds.length} are Wi-Fi only`);
 
     // ──────── PHASE 2: Upload results to Supabase ────────
-    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
-    log.bell(`║  ✅ TESTING FINISHED!                                   ║`);
-    log.bell(`║  Please TURN YOUR VPN BACK ON now!                      ║`);
-    log.bell(`║  We need the VPN to upload the results to Supabase.     ║`);
-    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    if (GEMINI_VPN_OFF) {
+      log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+      log.bell(`║  ✅ TESTING FINISHED!                                   ║`);
+      log.bell(`║  Please TURN YOUR VPN BACK ON now!                      ║`);
+      log.bell(`║  We need the VPN to upload the results to Supabase.     ║`);
+      log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    }
     log.step('Phase 2 — Uploading results to Supabase…');
 
     const now = new Date().toISOString();
@@ -604,25 +593,9 @@ export async function runGeminiLteRecheck() {
       return stats;
     }
 
-    // Phase 2: Wait for user to turn off VPN
-    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
-    log.bell(`║  🛑 STOP! TURN OFF YOUR VPN NOW!                        ║`);
-    log.bell(`║  We need to test the servers on your REAL connection.   ║`);
-    log.bell(`║  Testing will begin automatically in 15 seconds...      ║`);
-    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
-    
-    for (let i = 15; i > 0; i--) {
-      process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
-      await sleep(1000);
-    }
-    process.stdout.write('\r\x1b[K');
-    log.ok('Starting testing now!');
+    await geminiVpnGate();
 
-    // Real Gemini probe spawns a local proxy per config — keep concurrency low.
-    const CONC = Number(process.env.GEMINI_PROBE_CONCURRENCY || 8);
-    log.info(`Probing ${stats.total} LTE servers for REAL Gemini availability (concurrency ${CONC})…`);
-
-    const okKeys = await checkGeminiPool(existing, { concurrency: CONC, keyOf });
+    const okKeys = await checkGeminiPool(existing, { keyOf });
 
     const geminiIds = [];
     const lteIds = [];
@@ -634,11 +607,13 @@ export async function runGeminiLteRecheck() {
     log.ok(`${stats.gemini} reach Gemini over LTE  ·  ${lteIds.length} are LTE only`);
 
     // ──────── PHASE 2: Upload results to Supabase ────────
-    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
-    log.bell(`║  ✅ TESTING FINISHED!                                   ║`);
-    log.bell(`║  Please TURN YOUR VPN BACK ON now!                      ║`);
-    log.bell(`║  We need the VPN to upload the results to Supabase.     ║`);
-    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    if (GEMINI_VPN_OFF) {
+      log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+      log.bell(`║  ✅ TESTING FINISHED!                                   ║`);
+      log.bell(`║  Please TURN YOUR VPN BACK ON now!                      ║`);
+      log.bell(`║  We need the VPN to upload the results to Supabase.     ║`);
+      log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    }
     log.step('Phase 2 — Uploading results to Supabase…');
 
     const now = new Date().toISOString();

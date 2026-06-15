@@ -1,28 +1,26 @@
 #!/usr/bin/env node
-// Quick sanity check for the REAL Gemini probe (worker/src/gemini.js).
+// Quick sanity check for the REAL Gemini classification (worker/src/gemini.js).
 //
-// Run this on ONE OR TWO configs you can verify by hand BEFORE trusting a full
-// re-check. It spins up the local proxy exactly the way the worker does and
-// tells you the verdict for each config.
+// Run this on a few configs you can verify by hand BEFORE trusting a full
+// re-check. It uses the exact same pipeline the worker does (fast batched
+// egress-country pass, then a precise per-config probe for unknowns).
 //
 // Usage:
 //   node --env-file-if-exists=.env scripts/gemini-probe-test.mjs "vless://..." "vmess://..."
 //   node --env-file-if-exists=.env scripts/gemini-probe-test.mjs --file some-configs.txt
 //
 // Verdicts:
-//   available      → tunnel lands in a Gemini-supported region (KEEP)
-//   blocked        → "User location is not supported" (Gemini will NOT work)
-//   prefilter-XX   → skipped: egress country XX is in the blocked list
-//   proxy-not-up   → xray-knife didn't open the local proxy (check flags below)
-//   spawn-error    → xray-knife binary not found / failed to start
-//   probe-error / unknown → transient or non-geo error
+//   country-XX   → exit IP is in country XX, a Gemini-supported region (KEEP)
+//   available    → precise probe confirmed Gemini works (KEEP)
+//   blocked-XX   → exit IP is in unsupported country XX (Gemini won't work)
+//   dead         → server didn't connect at all
+//   probe-error  → connected but the Gemini request failed (treated as no)
+//   no-binary    → xray-knife not found (set XRAY_KNIFE_PATH)
 //
-// If you get proxy-not-up / spawn-error for everything, your xray-knife version
-// likely uses different "proxy" flags — override in .env:
-//   XRAY_KNIFE_PROXY_ARGS=proxy -c {URI} --inbound socks5://127.0.0.1:{PORT}
-//   GEMINI_PROXY_SCHEME=socks5         # or: http
+// If everything is "dead"/"probe-error", your xray-knife "proxy" flags may
+// differ — override XRAY_KNIFE_PROXY_ARGS / GEMINI_PROXY_SCHEME (see .env.example).
 import { readFile } from 'node:fs/promises';
-import { geminiCheckAll } from '../src/gemini.js';
+import { classifyGeminiPool } from '../src/gemini.js';
 
 const argv = process.argv.slice(2);
 let uris = [];
@@ -39,8 +37,11 @@ if (uris.length === 0) {
   process.exit(1);
 }
 
-console.log(`Probing ${uris.length} config(s) for REAL Gemini availability…\n`);
-const results = await geminiCheckAll(uris, { concurrency: Math.min(4, uris.length) });
+console.log(`Classifying ${uris.length} config(s) for REAL Gemini availability…\n`);
+const results = await classifyGeminiPool(uris, {
+  onProgress: (pct, label) => process.stdout.write(`\r  ${pct.toFixed(0)}% — ${label}            `),
+});
+console.log('\n');
 
 let ok = 0;
 for (const r of results) {

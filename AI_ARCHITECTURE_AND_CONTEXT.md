@@ -103,14 +103,24 @@ The live pool is retested over the worker's *current* connection:
 - **`runLteRecheck()`** — survivors over LTE become `network_type='lte'`
   (work on mobile + Wi-Fi); the rest are demoted to `wifi`. Nothing is deleted.
 - **`runGeminiWifiRecheck()` / `runGeminiLteRecheck()`** — REAL Gemini
-  availability probe (`worker/src/gemini.js`): each config is run as a local
-  proxy via xray-knife, then an actual Gemini API call is made *through that
-  tunnel* and the response body is read to detect the geo-block
-  (`"User location is not supported for the API use."`). A cheap egress-country
-  pre-filter (`GEMINI_BLOCKED_CC`) drops obviously-blocked regions first. Only
-  servers that land in a supported region become `gemini_wifi` / `gemini_lte`.
-  ⚠️ Do NOT revert to merely "reaching" a Google URL — that endpoint responds
-  from every country (incl. blocked ones), so it falsely passed everything.
+  availability, FAST (`worker/src/gemini.js`, `classifyGeminiPool`). What decides
+  Gemini is the server's **exit-IP country**, not reachability of a Google URL.
+  - **Stage 1 (fast):** one batched `xray-knife http -x csv` over the whole pool
+    reports each server's real egress country (the `location` column, resolved
+    *through* the tunnel) + connectivity. Classify by `GEMINI_BLOCKED_CC` (exit
+    in a blocked country → no; otherwise → yes). ~1.5 min for 800 servers.
+  - **Stage 2 (precise):** only servers that connect but whose country xray-knife
+    couldn't resolve (`ip_info_failed`) get a per-config probe — run as a local
+    NO-AUTH SOCKS5 proxy (`-I socks://127.0.0.1:PORT`; v10's default inbound
+    demands a random user/pass), call the Gemini API through it, read the body
+    for `"User location is not supported"`.
+  - Because it keys off the exit IP, the system **VPN may stay ON** during the
+    re-check (default) — set `GEMINI_RECHECK_VPN_OFF=1` to test on the raw
+    connection. NOTE: the geo answer is VPN-independent; only host-reachability
+    differs, and DPI is already enforced by the full sync.
+  - ⚠️ Do NOT revert to merely "reaching" a Google URL — that responds from every
+    country (incl. blocked ones), so it falsely passed everything. Both 400-key
+    and 400-geo share the same status code, so the COUNTRY (or body) is the signal.
 - **`runLatencyCheck()`** — TCP ping pass to refresh `latency_ms`.
 
 ### 4.3 The "LTE → TypeError: terminated" issue (`worker/src/supa.js`)
