@@ -254,7 +254,7 @@
       "lteRequested": "📶 LTE re-check started — testing the pool over the mobile network.",
       "geminiWifiRecheck": "Gemini / Wi-Fi",
       "geminiWifiRecheckHint": "Run to test if Wi-Fi servers can reach Gemini.",
-      "geminiLteRecheck": "Gemini / LTE",
+      "geminiLteRecheck": "Gemini / LTE / Wi-Fi",
       "geminiLteRecheckHint": "Run to test if LTE servers can reach Gemini.",
       "geminiRequested": "✨ Gemini re-check started — testing which servers can reach Gemini.",
       "duplicateWarning": "This repository is already added! Please use a different URL.",

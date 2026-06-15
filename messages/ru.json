@@ -254,7 +254,7 @@
       "lteRequested": "📶 Проверка LTE начата — тестирование серверов через мобильную сеть.",
       "geminiWifiRecheck": "Проверка Gemini / Wi-Fi",
       "geminiWifiRecheckHint": "Запустите, чтобы проверить доступность Gemini для Wi-Fi серверов.",
-      "geminiLteRecheck": "Проверка Gemini / LTE",
+      "geminiLteRecheck": "Проверка Gemini / LTE / Wi-Fi",
       "geminiLteRecheckHint": "Запустите, чтобы проверить доступность Gemini для LTE серверов.",
       "geminiRequested": "✨ Проверка Gemini начата — тестирование доступности серверов.",
       "duplicateWarning": "Этот репозиторий уже добавлен! Используйте другой URL.",

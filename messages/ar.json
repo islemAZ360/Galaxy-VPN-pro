@@ -253,7 +253,7 @@
       "lteRequested": "📶 بدأ فحص LTE — يتم الآن اختبار السيرفرات على شبكة الهاتف.",
       "geminiWifiRecheck": "فحص Gemini / Wi-Fi",
       "geminiWifiRecheckHint": "قم بتشغيل هذا لفحص قدرة سيرفرات الـ Wi-Fi على الوصول إلى Gemini.",
-      "geminiLteRecheck": "فحص Gemini / LTE",
+      "geminiLteRecheck": "فحص Gemini / LTE / Wi-Fi",
       "geminiLteRecheckHint": "قم بتشغيل هذا لفحص قدرة سيرفرات الـ LTE على الوصول إلى Gemini.",
       "geminiRequested": "✨ بدأ فحص Gemini — يتم الآن اختبار وصول السيرفرات.",
       "duplicateWarning": "هذا المستودع مضاف بالفعل! الرجاء استخدام رابط مختلف.",

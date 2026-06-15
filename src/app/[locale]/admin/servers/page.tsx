@@ -42,7 +42,7 @@ export default async function AdminServersPage({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{t('title')}</h2>
         <div className="flex gap-2 text-xs">
-          <span className="rounded-md border border-fuchsia-500/50 bg-fuchsia-500/10 px-2 py-1 text-fuchsia-300">✨ Gemini / LTE · {geminiLteCount}</span>
+          <span className="rounded-md border border-fuchsia-500/50 bg-fuchsia-500/10 px-2 py-1 text-fuchsia-300">✨ Gemini / LTE / Wi-Fi · {geminiLteCount}</span>
           <span className="rounded-md border border-fuchsia-400/40 bg-fuchsia-400/10 px-2 py-1 text-fuchsia-300">✨ Gemini / Wi-Fi · {geminiWifiCount}</span>
           <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE / Wi-Fi · {lteCount}</span>
           <span className="rounded-md border border-galaxy-accent/40 bg-galaxy-accent/10 px-2 py-1 text-galaxy-accent">📡 Wi-Fi · {wifiCount}</span>
@@ -83,7 +83,7 @@ export default async function AdminServersPage({
                   </td>
                   <td className="py-2">
                     {s.network_type === 'gemini_lte' ? (
-                      <span className="rounded bg-fuchsia-500/15 px-2 py-1 text-xs text-fuchsia-400">✨ Gemini / LTE</span>
+                      <span className="rounded bg-fuchsia-500/15 px-2 py-1 text-xs text-fuchsia-400">✨ Gemini / LTE / Wi-Fi</span>
                     ) : s.network_type === 'gemini_wifi' ? (
                       <span className="rounded bg-fuchsia-400/15 px-2 py-1 text-xs text-fuchsia-300">✨ Gemini / Wi-Fi</span>
                     ) : s.network_type === 'lte' ? (

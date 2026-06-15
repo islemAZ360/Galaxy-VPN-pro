@@ -31,7 +31,7 @@ const KIND_LABELS: Record<string, { emoji: string; label: string; color: string 
   full:        { emoji: '📡', label: 'Wi-Fi',        color: 'text-galaxy-accent' },
   lte:         { emoji: '📶', label: 'LTE / Wi-Fi',  color: 'text-amber-300' },
   gemini_wifi: { emoji: '✨', label: 'Gemini / Wi-Fi', color: 'text-fuchsia-300' },
-  gemini_lte:  { emoji: '✨', label: 'Gemini / LTE', color: 'text-purple-300' },
+  gemini_lte:  { emoji: '✨', label: 'Gemini / LTE / Wi-Fi', color: 'text-purple-300' },
   latency:     { emoji: '⏱️', label: 'Latency',      color: 'text-cyan-300' },
 };
 
@@ -361,7 +361,7 @@ export function RepoManager({
                         ✨ {s.gemini_wifi_count as number} Gemini / Wi-Fi
                       </span>
                       <span className="rounded bg-fuchsia-500/10 px-2 py-0.5 text-fuchsia-400">
-                        ✨ {s.gemini_lte_count as number} Gemini / LTE
+                        ✨ {s.gemini_lte_count as number} Gemini / LTE / Wi-Fi
                       </span>
                     </>
                   )}

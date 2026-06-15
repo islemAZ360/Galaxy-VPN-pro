@@ -577,7 +577,7 @@ export async function runGeminiLteRecheck() {
   const stats = { startedAt: new Date().toISOString(), mode: 'gemini_lte' };
   const keyOf = (u) => renameConfig(u, '');
   console.log('');
-  log.step(`Gemini / LTE re-check — REAL availability probe through each server's tunnel…`);
+  log.step(`Gemini / LTE / Wi-Fi re-check — REAL availability probe through each server's tunnel…`);
   try {
     // Phase 1: Download pool (Needs VPN)
     log.info('Downloading pool from Supabase (Ensure VPN is ON)…');
@@ -653,10 +653,10 @@ export async function runGeminiLteRecheck() {
     await updateRepoStats();
 
     stats.finishedAt = new Date().toISOString();
-    log.done(`Gemini / LTE re-check done — ${stats.gemini} Gemini / LTE · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
+    log.done(`Gemini / LTE / Wi-Fi re-check done — ${stats.gemini} Gemini / LTE / Wi-Fi · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
     return stats;
   } catch (e) {
-    log.err(`Gemini / LTE re-check failed: ${e.message}`);
+    log.err(`Gemini / LTE / Wi-Fi re-check failed: ${e.message}`);
     return { error: e.message, ...stats };
   } finally {
     running = false;
