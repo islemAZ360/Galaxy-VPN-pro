@@ -137,9 +137,13 @@ export function RepoManager({
     startTransition(async () => {
       setSyncMsg(null);
       try {
-        await triggerGithubScan();
-        setGhRunning(true);
-        setSyncMsg({ type: 'success', text: 'GitHub Actions scan triggered successfully! The background scan will run for a few minutes.' });
+        const res = await triggerGithubScan();
+        if (res?.error) {
+          setSyncMsg({ type: 'error', text: 'Failed to trigger GitHub Scan: ' + res.error });
+        } else {
+          setGhRunning(true);
+          setSyncMsg({ type: 'success', text: 'GitHub Actions scan triggered successfully! The background scan will run for a few minutes.' });
+        }
       } catch (e) {
         setSyncMsg({ type: 'error', text: 'Failed to trigger GitHub Scan: ' + (e instanceof Error ? e.message : 'Unknown error') });
       }

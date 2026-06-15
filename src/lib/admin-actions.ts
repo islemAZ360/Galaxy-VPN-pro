@@ -241,10 +241,10 @@ export async function addRepo(repoUrl: string) {
   
   // Attempt to trigger a GitHub scan automatically
   try {
-    await triggerGithubScan();
+    const res = await triggerGithubScan();
+    if (res?.error) console.error('Auto-trigger GitHub scan failed:', res.error);
   } catch (e) {
-    // Ignore error if token is missing or API fails, just let it be
-    console.error('Failed to auto-trigger GitHub scan:', e);
+    // Ignore unexpected errors
   }
 
   revalidatePath('/', 'layout');
@@ -284,23 +284,29 @@ export async function requestSync(kind: 'wifi' | 'lte' = 'wifi') {
 
 // ---- GitHub Actions Integration ----
 export async function triggerGithubScan() {
-  await assertAdmin();
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error('GITHUB_TOKEN environment variable is not set. Please add it to your .env.local file.');
+  try {
+    await assertAdmin();
+    const token = process.env.GITHUB_TOKEN;
+    if (!token) return { error: 'GITHUB_TOKEN environment variable is not set in Vercel. Please add it to your project settings.' };
 
-  const res = await fetch('https://api.github.com/repos/islemAZ360/Galaxy-VPN-pro/actions/workflows/liveness.yml/dispatches', {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/vnd.github.v3+json',
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ ref: 'main' }),
-  });
+    const res = await fetch('https://api.github.com/repos/islemAZ360/Galaxy-VPN-pro/actions/workflows/liveness.yml/dispatches', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ref: 'main' }),
+    });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GitHub API error: ${res.status} ${text}`);
+    if (!res.ok) {
+      const text = await res.text();
+      return { error: `GitHub API error: ${res.status} ${text}` };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
 
