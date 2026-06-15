@@ -42,8 +42,7 @@ function chunk(arr, n) {
 // `candidates` table is empty/missing/unreachable; never reduces to empty.
 async function skipKnownDead(uris) {
   try {
-    const { data, error } = await supa.from('candidates').select('config_hash').eq('alive', false).limit(20000);
-    if (error) throw new Error(error.message);
+    const data = await fetchAllPaginated('candidates', 'config_hash', { alive: false });
     if (!data || data.length === 0) return uris;
     const dead = new Set(data.map((d) => d.config_hash));
     const kept = uris.filter((u) => !dead.has(hashConfig(u)));
@@ -117,12 +116,28 @@ const retag = (name, tier) => `${(name || '').split(' | ')[0]}${TIER_TAGS[tier] 
 // name-independent key so test output matches our (renamed) DB rows
 const keyOf = (u) => renameConfig(u, '');
 
+// Helper to paginate any Supabase fetch to avoid payload/connection crashes
+async function fetchAllPaginated(table, select, filters = {}) {
+  let allData = [];
+  let from = 0;
+  const size = 1000;
+  while (true) {
+    let q = supa.from(table).select(select).range(from, from + size - 1);
+    for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    allData.push(...data);
+    if (data.length < size) break;
+    from += size;
+  }
+  return allData;
+}
+
 // Source the Wi-Fi test pool from the GitHub-maintained `candidates` (alive).
 // Returns { uris, meta } where meta maps keyOf(uri) → { exit_cc, source_repo }.
 async function loadAliveCandidates() {
-  const { data, error } = await supa
-    .from('candidates').select('config_uri, exit_cc, source_repo').eq('alive', true).limit(20000);
-  if (error) throw new Error(error.message);
+  const data = await fetchAllPaginated('candidates', 'config_uri, exit_cc, source_repo', { alive: true });
   if (!data || data.length === 0) {
     return { uris: [], meta: new Map(), source: 'GitHub candidates (empty)' };
   }
@@ -212,9 +227,7 @@ export async function runWifiCascade() {
 
     // Capture existing tiers (to preserve the LTE dimension) before going offline.
     const existingBefore = await withVpnRetry(async () => {
-      const { data, error } = await supa.from('servers').select('config_hash, network_type, is_deleted');
-      if (error) throw new Error(error.message);
-      return data ?? [];
+      return await fetchAllPaginated('servers', 'config_hash, network_type, is_deleted');
     }, { label: 'select-existing' });
     const existingTiers = new Map(existingBefore.map((s) => [s.config_hash, s.network_type]));
     const existingDeleted = new Set(existingBefore.filter((s) => s.is_deleted).map((s) => s.config_hash));
@@ -276,9 +289,7 @@ export async function runWifiCascade() {
     // delete servers that no longer pass (not in the working set)
     const keep = new Set(rows.map((r) => r.config_hash));
     const existing = await withVpnRetry(async () => {
-      const { data, error } = await supa.from('servers').select('id, config_hash, is_deleted');
-      if (error) throw new Error(error.message);
-      return data ?? [];
+      return await fetchAllPaginated('servers', 'id, config_hash, is_deleted');
     }, { label: 'select-stale' });
     const toDelete = existing.filter((s) => !keep.has(s.config_hash) && !s.is_deleted).map((s) => s.id);
     stats.deleted = toDelete.length;
@@ -316,9 +327,7 @@ export async function runLteCascade() {
   try {
     log.info('Loading the Wi-Fi pool (keep VPN ON)…');
     const existing = await withVpnRetry(async () => {
-      const { data, error } = await supa.from('servers').select('id, config_uri, network_type');
-      if (error) throw new Error(error.message);
-      return data ?? [];
+      return await fetchAllPaginated('servers', 'id, config_uri, network_type');
     }, { label: 'select-pool' });
     stats.total = existing.length;
     if (!stats.total) {
@@ -330,7 +339,7 @@ export async function runLteCascade() {
     // Egress country (for the Gemini dimension) from GitHub's candidates.
     const meta = new Map();
     try {
-      const { data } = await supa.from('candidates').select('config_uri, exit_cc').eq('alive', true).limit(20000);
+      const data = await fetchAllPaginated('candidates', 'config_uri, exit_cc', { alive: true });
       for (const c of data ?? []) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null });
     } catch { /* probe will cover unknowns */ }
 
