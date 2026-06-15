@@ -4,7 +4,7 @@ import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
 import { flagEmoji, renameConfig } from './uri.js';
 import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
-import { classifyGeminiPool } from './gemini.js';
+import { classifyGeminiPool, isCountryGeminiBlocked } from './gemini.js';
 import { log } from './log.js';
 
 let running = false;
@@ -101,6 +101,318 @@ function baseLabel(country, cc, numbered, idx) {
 
 // Re-tag an existing name with a new tier, preserving its "flag country #n" base.
 const retag = (name, tier) => `${(name || '').split(' | ')[0]}${TIER_TAGS[tier] || TIER_TAGS.wifi}`;
+
+// ===========================================================================
+// TWO-BUTTON CASCADES (Wi-Fi and LTE). Each runs two phases in one go:
+//   Wi-Fi button → Phase 1: Wi-Fi DPI test   → Phase 2: Gemini split
+//   LTE   button → Phase 1: LTE DPI test      → Phase 2: Gemini split
+//
+// The tier is two INDEPENDENT dimensions: NETWORK (wifi | wifi+lte) × GEMINI
+// (no | yes) → wifi / lte / gemini_wifi / gemini_lte. The Wi-Fi button sets the
+// Gemini dimension and PRESERVES the existing LTE dimension; the LTE button sets
+// the LTE dimension. Gemini is derived for FREE from GitHub's measured egress
+// country (candidates.exit_cc) — only servers with an unknown country are probed
+// locally. VPN must be ON for DB access and OFF during the real test.
+// ===========================================================================
+
+// name-independent key so test output matches our (renamed) DB rows
+const keyOf = (u) => renameConfig(u, '');
+
+// Source the Wi-Fi test pool from the GitHub-maintained `candidates` (alive).
+// Falls back to pulling repos directly if the table is empty/unavailable.
+// Returns { uris, meta } where meta maps keyOf(uri) → { exit_cc, source_repo }.
+async function loadAliveCandidates() {
+  try {
+    const { data, error } = await supa
+      .from('candidates').select('config_uri, exit_cc, source_repo').eq('alive', true);
+    if (error) throw new Error(error.message);
+    if (data && data.length) {
+      const meta = new Map();
+      for (const c of data) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null, source_repo: c.source_repo || null });
+      return { uris: data.map((c) => c.config_uri), meta, source: 'GitHub candidates' };
+    }
+    log.warn('candidates table is empty — falling back to repo discovery.');
+  } catch (e) {
+    log.warn(`candidates unavailable (${e.message}) — falling back to repo discovery.`);
+  }
+  // Fallback: discover straight from the repos (same as the legacy full sync).
+  const { data: repos } = await supa.from('repos').select('repo_url').eq('enabled', true);
+  const meta = new Map();
+  const uris = [];
+  for (const r of repos ?? []) {
+    try {
+      const { text } = await fetchRepoTexts(r.repo_url);
+      for (const uri of extractConfigs(text)) {
+        if (!meta.has(keyOf(uri))) { uris.push(uri); meta.set(keyOf(uri), { exit_cc: null, source_repo: r.repo_url }); }
+      }
+    } catch (e) { log.err(`repo failed ${r.repo_url}: ${e.message}`); }
+  }
+  return { uris, meta, source: 'repos (fallback)' };
+}
+
+// Deep DPI test in progress-friendly batches; returns the passing results.
+async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 200, phaseLabel = 'Test' }) {
+  const working = [];
+  const batches = chunk(uris, batchSize);
+  let tested = 0;
+  log.progress(0, `${phaseLabel}: 0 passed`);
+  for (const b of batches) {
+    const results = await testAll(b, { concurrency: conc, timeoutMs });
+    working.push(...results.filter((r) => r.ok));
+    tested += b.length;
+    log.progress((tested / Math.max(1, uris.length)) * 100, `${phaseLabel}: ${working.length} passed`);
+  }
+  log.clearProgress();
+  return working;
+}
+
+// Decide which URIs reach Gemini. Uses GitHub's egress country (instant) when
+// known; only probes the unknowns locally. Returns a Set of keyOf(uri).
+async function geminiKeysFor(uris, meta) {
+  const geminiKeys = new Set();
+  const unknown = [];
+  for (const uri of uris) {
+    const k = keyOf(uri);
+    const cc = meta.get(k)?.exit_cc;
+    if (cc) { if (!isCountryGeminiBlocked(cc)) geminiKeys.add(k); }
+    else unknown.push(uri);
+  }
+  if (unknown.length) {
+    log.info(`Gemini: ${unknown.length} server(s) have no known egress country — probing locally…`);
+    const results = await classifyGeminiPool(unknown, { onProgress: (p, l) => log.progress(p, `Gemini — ${l}`) });
+    log.clearProgress();
+    for (const r of results) if (r && r.ok) geminiKeys.add(keyOf(r.uri));
+  }
+  return geminiKeys;
+}
+
+// VPN choreography: OFF for the real test, ON for the DB.
+async function vpnOffGate(connectionMsg) {
+  console.log('');
+  log.bell('🛑  TURN OFF YOUR VPN NOW');
+  log.bell(connectionMsg);
+  log.bell('Testing starts automatically in 15 seconds…');
+  for (let i = 15; i > 0; i--) { process.stdout.write(`\r⏳  ${i}s… `); await sleep(1000); }
+  process.stdout.write('\r\x1b[K');
+  log.ok('Testing now!');
+}
+function vpnOnPrompt() {
+  console.log('');
+  log.bell('✅  Testing finished — TURN YOUR VPN BACK ON to upload the results.');
+  console.log('');
+}
+
+const elapsed = (stats) => Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000);
+
+// ───────────────────────── Wi-Fi button cascade ───────────────────────────
+// Pool = GitHub-verified candidates → Phase 1 Wi-Fi DPI → Phase 2 Gemini.
+// Sets the base tier (wifi/gemini_wifi) and PRESERVES the LTE dimension.
+export async function runWifiCascade() {
+  if (running) return { skipped: true, reason: 'already running' };
+  running = true;
+  const stats = { startedAt: new Date().toISOString(), mode: 'wifi' };
+  console.log('');
+  log.step('Wi-Fi re-check  ·  Phase 1: Wi-Fi DPI  →  Phase 2: Gemini');
+  try {
+    log.info('Loading GitHub-verified candidates (keep VPN ON)…');
+    const { uris, meta, source } = await withVpnRetry(loadAliveCandidates, { label: 'load-candidates' });
+    stats.total = uris.length;
+    if (!stats.total) {
+      log.warn('No candidates to test — run the GitHub liveness scan first.');
+      stats.finishedAt = new Date().toISOString();
+      return stats;
+    }
+    log.ok(`${stats.total} candidate(s) from ${source}.`);
+
+    // Capture existing tiers (to preserve the LTE dimension) before going offline.
+    const existingBefore = await withVpnRetry(async () => {
+      const { data, error } = await supa.from('servers').select('config_hash, network_type, is_deleted');
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }, { label: 'select-existing' });
+    const existingTiers = new Map(existingBefore.map((s) => [s.config_hash, s.network_type]));
+    const existingDeleted = new Set(existingBefore.filter((s) => s.is_deleted).map((s) => s.config_hash));
+
+    await vpnOffGate('Make sure your HOME Wi-Fi is connected.');
+
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
+    log.step('Phase 1 — Wi-Fi reachability…');
+    const working = await deepTest(uris, { conc: CONC, batchSize: 200, phaseLabel: 'Wi-Fi' });
+    stats.working = working.length;
+    log.ok(`${working.length} / ${stats.total} pass Wi-Fi.`);
+
+    log.step('Phase 2 — Gemini availability…');
+    const geminiKeys = await geminiKeysFor(working.map((w) => w.uri), meta);
+    stats.gemini = geminiKeys.size;
+    log.ok(`${geminiKeys.size} of the Wi-Fi servers reach Gemini.`);
+
+    vpnOnPrompt();
+    log.step('Uploading results to Supabase…');
+    const geo = await withVpnRetry(() => lookupCountries(working.map((w) => w.host)), { label: 'geoip' });
+    const now = new Date().toISOString();
+    const sorted = [...working].sort((a, b) => {
+      const ca = geo.get(a.host)?.country || 'ZZZ';
+      const cb = geo.get(b.host)?.country || 'ZZZ';
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      return (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity);
+    });
+    const counters = {};
+    const rows = sorted
+      .filter((w) => !existingDeleted.has(hashConfig(w.uri)))
+      .map((w) => {
+        const hash = hashConfig(w.uri);
+        const g = geo.get(w.host) || {};
+        const country = g.country || 'Server';
+        const cc = g.country_code ?? null;
+        counters[country] = (counters[country] || 0) + 1;
+        const base = `${flagEmoji(cc)} ${country} #${counters[country]}`;
+        // dimensional tier: keep LTE dimension from before, set Gemini from this run
+        const prev = existingTiers.get(hash);
+        const lteDim = prev === 'lte' || prev === 'gemini_lte';
+        const gem = geminiKeys.has(keyOf(w.uri));
+        const tier = lteDim ? (gem ? 'gemini_lte' : 'lte') : (gem ? 'gemini_wifi' : 'wifi');
+        const name = retag(base, tier);
+        return {
+          name, country: g.country ?? null, country_code: cc, protocol: PROTOCOL_OF(w.uri),
+          config_uri: renameConfig(w.uri, name), config_hash: hash, latency_ms: w.latencyMs,
+          is_working: true, network_type: tier,
+          source_repo: meta.get(keyOf(w.uri))?.source_repo ?? null,
+          last_checked_at: now, updated_at: now,
+        };
+      });
+    await withVpnRetry(async () => {
+      for (const part of chunk(rows, 500)) {
+        const { error } = await supa.from('servers').upsert(part, { onConflict: 'config_hash' });
+        if (error) throw new Error(error.message);
+      }
+    }, { label: 'upsert' });
+
+    // delete servers that no longer pass (not in the working set)
+    const keep = new Set(rows.map((r) => r.config_hash));
+    const existing = await withVpnRetry(async () => {
+      const { data, error } = await supa.from('servers').select('id, config_hash, is_deleted');
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }, { label: 'select-stale' });
+    const toDelete = existing.filter((s) => !keep.has(s.config_hash) && !s.is_deleted).map((s) => s.id);
+    stats.deleted = toDelete.length;
+    if (stats.deleted) {
+      log.info(`Deleting ${stats.deleted} stale servers…`);
+      for (const batch of chunk(toDelete, 100)) {
+        await withVpnRetry(async () => {
+          const { error } = await supa.from('servers').delete().in('id', batch);
+          if (error) throw new Error(error.message);
+        }, { label: 'delete' });
+      }
+    }
+
+    await updateRepoStats();
+    stats.finishedAt = new Date().toISOString();
+    log.done(`Wi-Fi re-check done — ${working.length} live · ${geminiKeys.size} Gemini · ${stats.deleted} removed · took ${elapsed(stats)}s`);
+    return stats;
+  } catch (e) {
+    log.err(`Wi-Fi re-check failed: ${e.message}`);
+    return { error: e.message, ...stats };
+  } finally {
+    running = false;
+  }
+}
+
+// ───────────────────────── LTE button cascade ─────────────────────────────
+// Pool = the current Wi-Fi pool → Phase 1 LTE DPI → Phase 2 Gemini. Sets the
+// LTE dimension; non-passers are demoted to Wi-Fi-only (Gemini dimension kept).
+export async function runLteCascade() {
+  if (running) return { skipped: true, reason: 'already running' };
+  running = true;
+  const stats = { startedAt: new Date().toISOString(), mode: 'lte' };
+  console.log('');
+  log.step('LTE re-check  ·  Phase 1: LTE DPI  →  Phase 2: Gemini');
+  try {
+    log.info('Loading the Wi-Fi pool (keep VPN ON)…');
+    const existing = await withVpnRetry(async () => {
+      const { data, error } = await supa.from('servers').select('id, config_uri, network_type');
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    }, { label: 'select-pool' });
+    stats.total = existing.length;
+    if (!stats.total) {
+      log.warn('No servers in the pool — run the Wi-Fi re-check first.');
+      stats.finishedAt = new Date().toISOString();
+      return stats;
+    }
+
+    // Egress country (for the Gemini dimension) from GitHub's candidates.
+    const meta = new Map();
+    try {
+      const { data } = await supa.from('candidates').select('config_uri, exit_cc').eq('alive', true);
+      for (const c of data ?? []) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null });
+    } catch { /* probe will cover unknowns */ }
+
+    await vpnOffGate('Connect to your PHONE hotspot (mobile data), NOT home Wi-Fi.');
+
+    const CONC = 20; // raw mobile adapter — keep low to avoid driver crashes
+    log.step('Phase 1 — LTE reachability…');
+    const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 150, phaseLabel: 'LTE' });
+    const lteKeys = new Set(working.map((w) => keyOf(w.uri)));
+    log.ok(`${working.length} / ${stats.total} pass LTE.`);
+
+    log.step('Phase 2 — Gemini availability…');
+    const lteUris = existing.filter((s) => lteKeys.has(keyOf(s.config_uri))).map((s) => s.config_uri);
+    const geminiKeys = await geminiKeysFor(lteUris, meta);
+    log.ok(`${geminiKeys.size} of the LTE servers reach Gemini.`);
+
+    vpnOnPrompt();
+    log.step('Uploading results to Supabase…');
+    const buckets = { gemini_lte: [], lte: [], gemini_wifi: [], wifi: [] };
+    for (const s of existing) {
+      const k = keyOf(s.config_uri);
+      const lteDim = lteKeys.has(k);
+      // gemini: this run's result for LTE-passers; preserve existing bit otherwise
+      const gemDim = lteDim
+        ? geminiKeys.has(k)
+        : (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
+      const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
+      buckets[tier].push(s.id);
+    }
+    const now = new Date().toISOString();
+    const classify = async (ids, type) => {
+      if (!ids.length) return;
+      await withVpnRetry(async () => {
+        let cCount = 0;
+        for (const idBatch of chunk(ids, 100)) {
+          const { data: cur, error: se } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
+          if (se) throw new Error(se.message);
+          if (!cur || cur.length === 0) continue;
+          const updates = cur.map((c) => {
+            const nn = retag(c.name, type);
+            return { id: c.id, name: nn, config_uri: renameConfig(c.config_uri, nn), config_hash: c.config_hash, network_type: type, last_checked_at: now };
+          });
+          const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
+          if (error) throw new Error(error.message);
+          cCount += updates.length;
+          log.progress((cCount / ids.length) * 100, `Uploading ${type} (${cCount}/${ids.length})`);
+        }
+        log.clearProgress();
+      }, { label: `classify-${type}` });
+    };
+    await classify(buckets.gemini_lte, 'gemini_lte');
+    await classify(buckets.lte, 'lte');
+    await classify(buckets.gemini_wifi, 'gemini_wifi');
+    await classify(buckets.wifi, 'wifi');
+
+    await updateRepoStats();
+    stats.lte = buckets.lte.length + buckets.gemini_lte.length;
+    stats.gemini_lte = buckets.gemini_lte.length;
+    stats.finishedAt = new Date().toISOString();
+    log.done(`LTE re-check done — ${stats.lte} LTE (${buckets.gemini_lte.length} Gemini) · took ${elapsed(stats)}s`);
+    return stats;
+  } catch (e) {
+    log.err(`LTE re-check failed: ${e.message}`);
+    return { error: e.message, ...stats };
+  } finally {
+    running = false;
+  }
+}
 
 export async function runSync() {
   if (running) return { skipped: true, reason: 'already running' };

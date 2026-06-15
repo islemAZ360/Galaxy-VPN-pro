@@ -261,7 +261,7 @@ export async function deleteRepo(id: string) {
 // Request a fresh sync — inserts a row into sync_requests; the local Tester
 // Worker picks it up over Supabase Realtime, runs the real test, and updates
 // the live server pool.
-export async function requestSync(kind: 'full' | 'lte' | 'gemini_wifi' | 'gemini_lte' = 'full') {
+export async function requestSync(kind: 'wifi' | 'lte' = 'wifi') {
   const adminId = await assertAdmin();
   const admin = createAdminClient();
   const { data, error } = await admin

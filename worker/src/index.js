@@ -1,10 +1,8 @@
 import cron from 'node-cron';
 import { supa } from './supa.js';
-import { 
-  runSync, 
-  runLteRecheck, 
-  runGeminiWifiRecheck, 
-  runGeminiLteRecheck, 
+import {
+  runWifiCascade,
+  runLteCascade,
   runLatencyCheck,
   isRunning
 } from './sync.js';
@@ -58,10 +56,8 @@ async function runWithStatus(reason, fn) {
   return result;
 }
 
-const syncWithStatus = (reason) => runWithStatus(reason, runSync);
-const lteWithStatus = (reason) => runWithStatus(reason, runLteRecheck);
-const geminiWifiWithStatus = (reason) => runWithStatus(reason, runGeminiWifiRecheck);
-const geminiLteWithStatus = (reason) => runWithStatus(reason, runGeminiLteRecheck);
+const wifiWithStatus = (reason) => runWithStatus(reason, runWifiCascade);
+const lteWithStatus = (reason) => runWithStatus(reason, runLteCascade);
 const latencyWithStatus = (reason) => runWithStatus(reason, runLatencyCheck);
 
 // --- Process admin sync requests --------------------------------------------
@@ -77,21 +73,20 @@ async function drainPending(source) {
       .from('sync_requests').select('id, kind').is('processed_at', null);
     if (error || !pending?.length) return;
 
-    const geminiWifiReqs = pending.filter((p) => p.kind === 'gemini_wifi');
-    const geminiLteReqs = pending.filter((p) => p.kind === 'gemini_lte');
-    const lteReqs = pending.filter((p) => p.kind === 'lte');
+    // Two cascades now. Map any legacy kinds onto them:
+    //   wifi  (+ legacy full / gemini_wifi) → Wi-Fi cascade (Wi-Fi DPI → Gemini)
+    //   lte   (+ legacy gemini_lte)         → LTE cascade   (LTE DPI → Gemini)
     const latencyReqs = pending.filter((p) => p.kind === 'latency');
-    const fullReqs = pending.filter((p) => p.kind !== 'lte' && p.kind !== 'gemini_wifi' && p.kind !== 'gemini_lte' && p.kind !== 'latency');
-    log.bell(`${pending.length} request(s) pending (${source}) — full:${fullReqs.length} lte:${lteReqs.length} gemini_wifi:${geminiWifiReqs.length} gemini_lte:${geminiLteReqs.length} latency:${latencyReqs.length}`);
+    const lteReqs = pending.filter((p) => p.kind === 'lte' || p.kind === 'gemini_lte');
+    const wifiReqs = pending.filter((p) => !latencyReqs.includes(p) && !lteReqs.includes(p));
+    log.bell(`${pending.length} request(s) pending (${source}) — wifi:${wifiReqs.length} lte:${lteReqs.length} latency:${latencyReqs.length}`);
 
     const markDone = (ids, result) =>
       supa.from('sync_requests').update({ processed_at: new Date().toISOString(), result }).in('id', ids);
 
-    // Order: full → lte → gemini_wifi → gemini_lte → latency
-    if (fullReqs.length) await markDone(fullReqs.map((p) => p.id), await syncWithStatus('admin'));
+    // Order: Wi-Fi (rebuilds the base pool) → LTE (refines) → latency
+    if (wifiReqs.length) await markDone(wifiReqs.map((p) => p.id), await wifiWithStatus('admin-wifi'));
     if (lteReqs.length) await markDone(lteReqs.map((p) => p.id), await lteWithStatus('admin-lte'));
-    if (geminiWifiReqs.length) await markDone(geminiWifiReqs.map((p) => p.id), await geminiWifiWithStatus('admin-gemini-wifi'));
-    if (geminiLteReqs.length) await markDone(geminiLteReqs.map((p) => p.id), await geminiLteWithStatus('admin-gemini-lte'));
     if (latencyReqs.length) await markDone(latencyReqs.map((p) => p.id), await latencyWithStatus('admin-latency'));
   } catch (e) {
     log.err(`drain failed: ${e.message}`);

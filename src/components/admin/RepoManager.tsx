@@ -28,8 +28,9 @@ type ScanEntry = {
 };
 
 const KIND_LABELS: Record<string, { emoji: string; label: string; color: string }> = {
+  wifi:        { emoji: '📡', label: 'Wi-Fi → Gemini', color: 'text-galaxy-accent' },
   full:        { emoji: '📡', label: 'Wi-Fi',        color: 'text-galaxy-accent' },
-  lte:         { emoji: '📶', label: 'LTE / Wi-Fi',  color: 'text-amber-300' },
+  lte:         { emoji: '📶', label: 'LTE → Gemini', color: 'text-amber-300' },
   gemini_wifi: { emoji: '✨', label: 'Gemini / Wi-Fi', color: 'text-fuchsia-300' },
   gemini_lte:  { emoji: '✨', label: 'Gemini / LTE / Wi-Fi', color: 'text-purple-300' },
   latency:     { emoji: '⏱️', label: 'Latency',      color: 'text-cyan-300' },
@@ -84,9 +85,9 @@ export function RepoManager({
     });
 
   const [syncMsg, setSyncMsg] = useState<{ type: 'error' | 'success' | 'warning', text: string } | null>(null);
-  const requestKind = (kind: 'full' | 'lte' | 'gemini_wifi' | 'gemini_lte') => {
+  const requestKind = (kind: 'wifi' | 'lte') => {
     if (!isLive) {
-      setSyncMsg({ type: 'error', text: 'Worker is offline! Please start the Python worker script first.' });
+      setSyncMsg({ type: 'error', text: 'Worker is offline! Please start the Tester Worker first.' });
       return;
     }
     if (isBusy) {
@@ -98,19 +99,14 @@ export function RepoManager({
       setSyncMsg(null);
       try {
         await requestSync(kind);
-        setSyncMsg({
-          type: 'success',
-          text: (kind === 'gemini_wifi' || kind === 'gemini_lte') ? t('geminiRequested') : kind === 'lte' ? t('lteRequested') : t('syncRequested')
-        });
+        setSyncMsg({ type: 'success', text: kind === 'lte' ? t('lteRequested') : t('syncRequested') });
       } catch (e) {
         setSyncMsg({ type: 'error', text: t('syncFailed') + ' ' + (e instanceof Error ? e.message : '') });
       }
     });
   };
-  const recheck = () => requestKind('full');
+  const wifiRecheck = () => requestKind('wifi');
   const lteRecheck = () => requestKind('lte');
-  const geminiWifiRecheck = () => requestKind('gemini_wifi');
-  const geminiLteRecheck = () => requestKind('gemini_lte');
 
   return (
     <div className="glass p-5">
@@ -121,36 +117,20 @@ export function RepoManager({
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <button
-            onClick={geminiLteRecheck}
+            onClick={wifiRecheck}
             disabled={isPending}
-            title={t('geminiLteRecheckHint')}
-            className="rounded-lg border border-purple-400/40 bg-purple-400/10 px-3 py-2 text-sm font-medium text-purple-300 hover:bg-purple-400/20 disabled:opacity-60"
+            title={t('wifiCascadeHint')}
+            className="rounded-lg border border-galaxy-accent/40 bg-galaxy-accent/10 px-3 py-2 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 disabled:opacity-60"
           >
-            ✨ {t('geminiLteRecheck')}
-          </button>
-          <button
-            onClick={geminiWifiRecheck}
-            disabled={isPending}
-            title={t('geminiWifiRecheckHint')}
-            className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 px-3 py-2 text-sm font-medium text-fuchsia-300 hover:bg-fuchsia-400/20 disabled:opacity-60"
-          >
-            ✨ {t('geminiWifiRecheck')}
+            📡 {t('wifiCascade')}
           </button>
           <button
             onClick={lteRecheck}
             disabled={isPending}
-            title={t('lteRecheckHint')}
+            title={t('lteCascadeHint')}
             className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/20 disabled:opacity-60"
           >
-            📶 {t('lteRecheck')}
-          </button>
-          <button
-            onClick={recheck}
-            disabled={isPending}
-            title={t('recheckHint')}
-            className="rounded-lg border border-galaxy-accent/40 bg-galaxy-accent/10 px-3 py-2 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 disabled:opacity-60"
-          >
-            ↻ {t('recheck')}
+            📶 {t('lteCascade')}
           </button>
           <button
             onClick={() => setShowInstructions(!showInstructions)}
