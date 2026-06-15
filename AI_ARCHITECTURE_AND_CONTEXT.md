@@ -102,8 +102,15 @@ Runs locally via `start-worker.bat` → `node src/index.js`. Entry points:
 The live pool is retested over the worker's *current* connection:
 - **`runLteRecheck()`** — survivors over LTE become `network_type='lte'`
   (work on mobile + Wi-Fi); the rest are demoted to `wifi`. Nothing is deleted.
-- **`runGeminiRecheck()`** — tests reachability of a Gemini endpoint through each
-  proxy; those that pass become `gemini`.
+- **`runGeminiWifiRecheck()` / `runGeminiLteRecheck()`** — REAL Gemini
+  availability probe (`worker/src/gemini.js`): each config is run as a local
+  proxy via xray-knife, then an actual Gemini API call is made *through that
+  tunnel* and the response body is read to detect the geo-block
+  (`"User location is not supported for the API use."`). A cheap egress-country
+  pre-filter (`GEMINI_BLOCKED_CC`) drops obviously-blocked regions first. Only
+  servers that land in a supported region become `gemini_wifi` / `gemini_lte`.
+  ⚠️ Do NOT revert to merely "reaching" a Google URL — that endpoint responds
+  from every country (incl. blocked ones), so it falsely passed everything.
 - **`runLatencyCheck()`** — TCP ping pass to refresh `latency_ms`.
 
 ### 4.3 The "LTE → TypeError: terminated" issue (`worker/src/supa.js`)

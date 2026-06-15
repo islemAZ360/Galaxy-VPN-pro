@@ -1,9 +1,10 @@
 import { supa } from './supa.js';
 import { fetchRepoTexts } from './github.js';
 import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
-import { flagEmoji, renameConfig } from './uri.js';
+import { flagEmoji, renameConfig, parseConfig } from './uri.js';
 import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
+import { geminiCheckAll } from './gemini.js';
 import { log } from './log.js';
 
 let running = false;
@@ -429,7 +430,49 @@ export async function runLteRecheck() {
   }
 }
 
-const GEMINI_URL = process.env.GEMINI_TEST_URL || 'https://generativelanguage.googleapis.com/';
+// Run the REAL Gemini availability check over a pool of server rows.
+//
+// Old approach (broken): asked xray-knife to merely *reach* a Google URL — which
+// succeeds from every country, so every working server was wrongly tagged
+// "Gemini". New approach: geo-locate each egress (cheap pre-filter to drop
+// RU/CN/HK/… ) then actually call the Gemini API through each server's tunnel
+// and read the response, keeping only servers that land in a supported region.
+// See worker/src/gemini.js for the mechanics.
+//
+// Returns a Set of config-keys (renameConfig(uri,'')) that truly reach Gemini.
+async function checkGeminiPool(existing, { concurrency, keyOf }) {
+  const uris = existing.map((s) => s.config_uri);
+
+  // Map each uri → its server host's country (pre-filter input).
+  const hostByUri = new Map();
+  for (const u of uris) {
+    try { hostByUri.set(u, parseConfig(u).host); } catch { hostByUri.set(u, null); }
+  }
+  let ccByHost = new Map();
+  try {
+    ccByHost = await lookupCountries([...new Set([...hostByUri.values()].filter(Boolean))]);
+  } catch (e) {
+    log.warn(`geoip pre-filter unavailable (${e.message}) — probing all servers directly.`);
+  }
+  const countryOf = (u) => {
+    const host = hostByUri.get(u);
+    return host ? (ccByHost.get(host)?.country_code ?? null) : null;
+  };
+
+  const okKeys = new Set();
+  const BATCH_SIZE = 150;
+  const batches = chunk(uris, BATCH_SIZE);
+  let tested = 0;
+  log.progress(0, `Gemini: 0 passed`);
+  for (const b of batches) {
+    const results = await geminiCheckAll(b, { concurrency, countryOf });
+    for (const r of results) if (r && r.ok) okKeys.add(keyOf(r.uri));
+    tested += b.length;
+    log.progress((tested / uris.length) * 100, `Gemini: ${okKeys.size} passed`);
+  }
+  log.clearProgress();
+  return okKeys;
+}
 
 // Gemini / Wi-Fi re-check: tests only the 'wifi' servers to see if they reach Gemini.
 export async function runGeminiWifiRecheck() {
@@ -438,7 +481,7 @@ export async function runGeminiWifiRecheck() {
   const stats = { startedAt: new Date().toISOString(), mode: 'gemini_wifi' };
   const keyOf = (u) => renameConfig(u, '');
   console.log('');
-  log.step(`Gemini / Wi-Fi re-check — testing against ${GEMINI_URL}…`);
+  log.step(`Gemini / Wi-Fi re-check — REAL availability probe through each server's tunnel…`);
   try {
     // Phase 1: Download pool (Needs VPN)
     log.info('Downloading pool from Supabase (Ensure VPN is ON)…');
@@ -468,25 +511,11 @@ export async function runGeminiWifiRecheck() {
     process.stdout.write('\r\x1b[K');
     log.ok('Starting testing now!');
 
-    // Home Wi-Fi can handle high concurrency
-    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
-    
-    const working = [];
-    const BATCH_SIZE = 200; // smaller batch for frequent updates
-    const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
-    let testedCount = 0;
-    log.progress(0, `Gemini: 0 passed`);
+    // Real Gemini probe runs a local proxy per config, so keep concurrency
+    // modest (each spawns an xray-knife process).
+    const CONC = Number(process.env.GEMINI_PROBE_CONCURRENCY || 8);
 
-    for (let i = 0; i < candidateBatches.length; i++) {
-      const b = candidateBatches[i];
-      const results = await testAll(b, { concurrency: CONC, timeoutMs: 4000, url: GEMINI_URL });
-      working.push(...results.filter((r) => r.ok));
-      testedCount += b.length;
-      log.progress((testedCount / stats.total) * 100, `Gemini: ${working.length} passed`);
-    }
-    log.clearProgress();
-    
-    const okKeys = new Set(working.map((r) => keyOf(r.uri)));
+    const okKeys = await checkGeminiPool(existing, { concurrency: CONC, keyOf });
 
     const geminiIds = [];
     const wifiIds = [];
@@ -559,7 +588,7 @@ export async function runGeminiLteRecheck() {
   const stats = { startedAt: new Date().toISOString(), mode: 'gemini_lte' };
   const keyOf = (u) => renameConfig(u, '');
   console.log('');
-  log.step(`Gemini / LTE re-check — testing against ${GEMINI_URL}…`);
+  log.step(`Gemini / LTE re-check — REAL availability probe through each server's tunnel…`);
   try {
     // Phase 1: Download pool (Needs VPN)
     log.info('Downloading pool from Supabase (Ensure VPN is ON)…');
@@ -589,26 +618,11 @@ export async function runGeminiLteRecheck() {
     process.stdout.write('\r\x1b[K');
     log.ok('Starting testing now!');
 
-    // Force concurrency to 20 for raw network tests to prevent adapter crashes
-    const CONC = 20;
-    log.info(`Testing ${stats.total} LTE servers for Gemini reachability (concurrency ${CONC})…`);
-    
-    const working = [];
-    const BATCH_SIZE = 150;
-    const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
-    let testedCount = 0;
-    log.progress(0, `Gemini: 0 passed`);
+    // Real Gemini probe spawns a local proxy per config — keep concurrency low.
+    const CONC = Number(process.env.GEMINI_PROBE_CONCURRENCY || 8);
+    log.info(`Probing ${stats.total} LTE servers for REAL Gemini availability (concurrency ${CONC})…`);
 
-    for (let i = 0; i < candidateBatches.length; i++) {
-      const b = candidateBatches[i];
-      const results = await testAll(b, { concurrency: CONC, timeoutMs: 4000, url: GEMINI_URL });
-      working.push(...results.filter((r) => r.ok));
-      testedCount += b.length;
-      log.progress((testedCount / stats.total) * 100, `Gemini: ${working.length} passed`);
-    }
-    log.clearProgress();
-    
-    const okKeys = new Set(working.map((r) => keyOf(r.uri)));
+    const okKeys = await checkGeminiPool(existing, { concurrency: CONC, keyOf });
 
     const geminiIds = [];
     const lteIds = [];
