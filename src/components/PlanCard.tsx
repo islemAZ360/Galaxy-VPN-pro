@@ -59,8 +59,8 @@ export function PlanCard({
               <span className={`grid h-8 w-8 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg ${chip}`}>
                 <Icon className="w-4 h-4 lg:w-[18px] lg:h-[18px]" />
               </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs lg:text-[13px] font-semibold leading-tight" title={title}>{title}</div>
+              <div className="min-w-0 flex-1 pr-1">
+                <div className="text-xs lg:text-[13px] font-semibold leading-tight line-clamp-2" title={title}>{title}</div>
                 <div className="truncate text-[10px] lg:text-[11px] text-white/55 mt-0.5">{t('servers', { count: v.serverCount })}</div>
               </div>
               <div className="text-end shrink-0 whitespace-nowrap">
