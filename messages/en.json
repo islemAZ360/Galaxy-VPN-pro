@@ -300,44 +300,44 @@
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know about GalaxyVPN.",
     "whatIsVpn": {
-      "q": "What is GalaxyVPN and how does it work?",
-      "a": "GalaxyVPN is a high-speed VPN service that uses V2Ray/VLESS protocols to encrypt your internet traffic and route it through our servers worldwide. This allows you to bypass geo-restrictions, access blocked websites, and browse privately."
+      "q": "How does GalaxyVPN differ from regular VPNs?",
+      "a": "Standard VPNs (like OpenVPN or WireGuard) are easily detected and blocked by Deep Packet Inspection (DPI) in countries with strict censorship. We use advanced proxy protocols (V2Ray/VLESS/Reality) that disguise your traffic as normal web browsing, ensuring you stay connected when other VPNs fail."
     },
     "howToUse": {
-      "q": "How do I start using GalaxyVPN?",
-      "a": "Simply create an account, choose a plan, complete the payment, and you'll receive a subscription link. Import this link into any V2Ray-compatible app (like Hiddify or v2rayN) and connect with one tap."
+      "q": "How do I activate and use my subscription?",
+      "a": "After you pay and get your receipt approved, you will receive a subscription link in your profile. You just need to download the 'Hupp' app (or any V2Ray client like v2rayNG/Shadowrocket), add the link, and hit connect. The app will automatically download all working servers."
     },
     "whichDevices": {
-      "q": "Which devices and platforms are supported?",
-      "a": "GalaxyVPN works on Android (Hiddify, v2rayNG), iOS (Streisand, Shadowrocket), Windows (Hiddify, v2rayN), macOS, and Linux. Any app that supports V2Ray/VLESS protocols will work."
+      "q": "Which devices and apps do you support?",
+      "a": "Our service works on any device that supports V2Ray/VLESS. We highly recommend 'Hupp' or 'v2rayN' for Windows, 'v2rayNG' or 'Hiddify' for Android, and 'Shadowrocket' or 'V2Box' for iOS."
     },
     "paymentMethods": {
-      "q": "What payment methods do you accept?",
-      "a": "We currently accept payments via Sber Bank transfer. After making the transfer, simply upload a screenshot of your receipt and our team will verify it within minutes."
+      "q": "How long does it take to activate my account?",
+      "a": "Once you transfer the payment via Sber Bank and upload the screenshot of the receipt, our admins review it manually. Approvals typically take just a few minutes during active hours."
     },
     "howManyDevices": {
-      "q": "Can I use my subscription on multiple devices?",
-      "a": "Yes! All plans include multi-device sharing. You can use the same subscription link on your phone, tablet, and computer simultaneously."
+      "q": "Can I share my subscription link with friends?",
+      "a": "Your plan includes multi-device sharing for personal use across your own phone, tablet, and PC. However, sharing the link publicly or with too many different IPs will trigger our abuse detection and may result in an automatic ban."
     },
     "serverDifference": {
-      "q": "What is the difference between Wi-Fi, LTE, and Gemini servers?",
-      "a": "Wi-Fi servers work great on home/office Wi-Fi networks. LTE servers are optimized for mobile data connections and resist severe network disruptions. Gemini servers can additionally unblock Google Gemini AI, which most VPNs cannot."
+      "q": "What is the difference between Wi-Fi and LTE plans?",
+      "a": "Mobile networks (LTE/4G) use much stricter firewalls than home Wi-Fi. A server that works on Wi-Fi is often blocked on LTE. Our 'LTE / Wi-Fi' plans give you access to premium servers that are rigorously tested to bypass strict mobile carrier DPI."
     },
     "geminiServer": {
-      "q": "Why do I need a special server for Gemini?",
-      "a": "Google Gemini uses advanced detection that blocks most VPN connections. Our Gemini-tier servers use specialized techniques to bypass this detection, giving you reliable access to Gemini AI."
+      "q": "What makes the 'Gemini' servers special?",
+      "a": "Google Gemini uses advanced geographic and VPN detection that blocks almost all VPNs. Our Gemini-tier servers use specialized routing to completely bypass this detection, giving you reliable access to Gemini AI while keeping your internet unblocked."
     },
     "lteServer": {
-      "q": "When should I use LTE servers?",
-      "a": "Use LTE servers when you're on mobile data (SIM card), or during internet disruptions. They're specifically engineered to maintain stable connections even under heavy network interference."
+      "q": "Do the servers ever stop working?",
+      "a": "Censors constantly try to block VPNs, so individual servers will inevitably die. However, our automated system tests all servers continuously from inside restricted networks. If a server dies, we replace it. All you have to do is 'Update' your subscription in the app to get the fresh servers."
     },
     "cancelRefund": {
-      "q": "Can I get a refund if I'm not satisfied?",
-      "a": "If you experience persistent issues that our support team cannot resolve, please contact us through the support chat. We handle refund requests on a case-by-case basis."
+      "q": "Why does the VPN slow down my local websites?",
+      "a": "By default, all your traffic goes through the VPN. For maximum speed, we recommend using 'Routing Rules' in your app to bypass local websites (like Russian banks or local streaming) so they open directly. Check the 'Pro Tip' section in your profile for a quick guide."
     },
     "notWorking": {
-      "q": "What should I do if my VPN is not connecting?",
-      "a": "First, try switching to a different server from your subscription. If the issue persists, our servers are automatically tested and refreshed — try again in a few minutes. You can also reach out via our Support chat for immediate help."
+      "q": "What should I do if my VPN stops connecting?",
+      "a": "1. Try another server from the list. 2. Tap 'Update Subscription' in your app to fetch newly tested working servers. 3. Ensure you are using the correct network type for your plan (e.g., you can't use a Wi-Fi server on mobile data). 4. Contact support if the issue persists."
     }
   },
   "footer": {
