@@ -131,8 +131,7 @@ async function loadAliveCandidates() {
   return { uris: data.map((c) => c.config_uri), meta, source: 'GitHub candidates' };
 }
 
-// Deep DPI test in progress-friendly batches; returns the passing results.
-async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 200, phaseLabel = 'Test' }) {
+async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 100, phaseLabel = 'Test' }) {
   const working = [];
   const batches = chunk(uris, batchSize);
   let tested = 0;
@@ -142,6 +141,11 @@ async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 200, phaseLa
     working.push(...results.filter((r) => r.ok));
     tested += b.length;
     log.progress((tested / Math.max(1, uris.length)) * 100, `${phaseLabel}: ${working.length} passed`);
+    
+    // Add a cooling delay to prevent Wi-Fi adapter crash or router NAT table overflow
+    if (tested < uris.length) {
+      await sleep(3000); 
+    }
   }
   log.clearProgress();
   return working;
@@ -217,9 +221,9 @@ export async function runWifiCascade() {
 
     await vpnOffGate('Make sure your HOME Wi-Fi is connected.');
 
-    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
+    const CONC = Number(process.env.TEST_CONCURRENCY || 10); // Reduced to prevent Wi-Fi drop
     log.step('Phase 1 — Wi-Fi reachability…');
-    const working = await deepTest(uris, { conc: CONC, batchSize: 200, phaseLabel: 'Wi-Fi' });
+    const working = await deepTest(uris, { conc: CONC, batchSize: 50, phaseLabel: 'Wi-Fi' });
     stats.working = working.length;
     log.ok(`${working.length} / ${stats.total} pass Wi-Fi.`);
 

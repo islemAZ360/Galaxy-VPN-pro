@@ -46,9 +46,9 @@ const BLOCK_SIGNAL = process.env.GEMINI_BLOCK_SIGNAL || 'User location is not su
 // Stage 1 (batched http) tuning. High thread count + a tight max-delay is the
 // whole speed story: dead servers cost at most BATCH_MDELAY each, amortized over
 // BATCH_THREADS parallel slots.
-const BATCH_THREADS = Number(process.env.GEMINI_BATCH_THREADS || 80);
+const BATCH_THREADS = Number(process.env.GEMINI_BATCH_THREADS || 20); // Reduced to prevent Wi-Fi drop
 const BATCH_MDELAY = Number(process.env.GEMINI_BATCH_MDELAY_MS || 7000);
-const BATCH_CHUNK = Number(process.env.GEMINI_BATCH_CHUNK || 400); // for progress granularity
+const BATCH_CHUNK = Number(process.env.GEMINI_BATCH_CHUNK || 100); // Reduced batch size
 
 // Stage 2 (per-config probe) — forces a NO-AUTH SOCKS5 inbound (xray-knife v10's
 // default inbound otherwise demands a random user/pass). Override per version.
@@ -370,6 +370,9 @@ export async function classifyGeminiPool(uris, opts = {}) {
     for (const [k, v] of m) if (k !== '__enoent__') info.set(k, v);
     done += b.length;
     onProgress?.((done / uris.length) * 60, `country pass ${done}/${uris.length}`);
+    
+    // Add cooling delay to prevent network stack crash
+    if (done < uris.length) await sleep(2000);
   }
   if (enoent) {
     log.err(`xray-knife not found at "${XK_PATH}" — cannot run the Gemini check. Set XRAY_KNIFE_PATH.`);
