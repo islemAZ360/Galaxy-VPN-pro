@@ -1,0 +1,195 @@
+// ===========================================================================
+// GitHub liveness scan — runs on a GitHub Action (NOT in Russia).
+//
+// Discovers every config from the enabled repos, runs a real xray-knife
+// protocol test + egress-country lookup, and writes the result to the
+// `candidates` table in Supabase. The LOCAL worker then skips configs this scan
+// confirmed DEAD, so the Russia machine only deep-tests known/likely-alive
+// servers.
+//
+// What this can/can't tell us:
+//   • DEAD here (host down / handshake fails)  → almost certainly dead everywhere.
+//   • ALIVE here                               → reachable from a permissive net;
+//                                                Russia may still block it (the
+//                                                local DPI test decides that).
+// Russia-only-hosted servers could look dead here, so any config whose HOST is
+// in a kept country (RU/BY by default) is force-marked alive → always tested
+// locally. Nothing here ever touches the `servers` pool.
+// ===========================================================================
+import os from 'node:os';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { writeFile, readFile, mkdtemp, rm } from 'node:fs/promises';
+import { supa, closeSupa } from './supa.js';
+import { fetchRepoTexts } from './github.js';
+import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
+import { lookupCountries } from './geoip.js';
+import { parseConfig } from './uri.js';
+import { log } from './log.js';
+
+const XK_PATH = process.env.XRAY_KNIFE_PATH || 'xray-knife';
+const XK_CORE = process.env.XRAY_KNIFE_CORE || 'auto';
+const URL_TEST = process.env.LIVENESS_URL || 'https://cloudflare.com/cdn-cgi/trace';
+const THREADS = Number(process.env.LIVENESS_THREADS || 100);
+const MDELAY = Number(process.env.LIVENESS_MDELAY_MS || 8000);
+const CHUNK = Number(process.env.LIVENESS_CHUNK || 1500);
+const STALE_HOURS = Number(process.env.LIVENESS_STALE_HOURS || 6);
+// Host countries kept (force-alive) even if unreachable from the runner — they
+// may be Russia-only and must still be deep-tested locally.
+const KEEP_HOST_CC = new Set(
+  (process.env.LIVENESS_KEEP_HOST_CC || 'RU,BY')
+    .split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
+);
+
+const chunk = (a, n) => {
+  const o = [];
+  for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n));
+  return o;
+};
+
+function parseCsvLine(line) {
+  const out = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+// columns: link,status,reason,tls,ip,delay,code,download,upload,location,ttfb,connect_time
+function runBatch(uris) {
+  return new Promise(async (resolve) => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'gv-live-'));
+    const inFile = path.join(dir, 'in.txt');
+    const outFile = path.join(dir, 'out.csv');
+    const map = new Map();
+    try {
+      await writeFile(inFile, uris.join('\n'), 'utf8');
+      await new Promise((done) => {
+        execFile(
+          XK_PATH,
+          ['http', '-f', inFile, '-u', URL_TEST, '-x', 'csv', '-o', outFile,
+            '-t', String(THREADS), '-d', String(MDELAY), '-z', XK_CORE],
+          { timeout: 30 * 60 * 1000, maxBuffer: 256 * 1024 * 1024 },
+          (err) => { if (err && err.code === 'ENOENT') map.set('__enoent__', true); done(); }
+        );
+      });
+      const text = await readFile(outFile, 'utf8').catch(() => '');
+      const lines = text.split(/\r?\n/);
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i]) continue;
+        const c = parseCsvLine(lines[i]);
+        if (c.length < 11) continue;
+        const link = c[0];
+        const status = c[1];
+        const loc = c[9];
+        map.set(hashConfig(link), {
+          alive: status === 'passed' || status === 'semi-passed',
+          exit_cc: loc && loc !== 'null' ? loc.toUpperCase() : null,
+        });
+      }
+    } catch (e) {
+      log.warn(`liveness batch failed: ${e.message}`);
+    } finally {
+      await rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
+    resolve(map);
+  });
+}
+
+(async () => {
+  log.step('GitHub liveness scan — testing the whole pool from a permissive network…');
+
+  // 1. enabled repos → unique configs
+  const { data: repos, error: repoErr } = await supa.from('repos').select('repo_url').eq('enabled', true);
+  if (repoErr) { log.err(`repos query failed: ${repoErr.message}`); await closeSupa(); process.exit(1); }
+  log.info(`Reading ${repos?.length ?? 0} enabled repo(s)…`);
+
+  const configs = new Map(); // hash -> { uri, source }
+  for (const r of repos ?? []) {
+    try {
+      const { text, fileCount } = await fetchRepoTexts(r.repo_url);
+      const found = extractConfigs(text);
+      log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${found.length} configs`);
+      for (const uri of found) configs.set(hashConfig(uri), { uri, source: r.repo_url });
+    } catch (e) {
+      log.err(`repo ${r.repo_url}: ${e.message}`);
+    }
+  }
+  log.ok(`Discovered ${configs.size} unique configs`);
+  if (configs.size === 0) { log.warn('0 configs — leaving candidates untouched.'); await closeSupa(); process.exit(0); }
+
+  // 2. batched liveness + egress country
+  const uris = [...configs.values()].map((c) => c.uri);
+  const live = new Map();
+  let enoent = false;
+  const batches = chunk(uris, CHUNK);
+  let done = 0;
+  for (const b of batches) {
+    const m = await runBatch(b);
+    if (m.get('__enoent__')) enoent = true;
+    for (const [k, v] of m) if (k !== '__enoent__') live.set(k, v);
+    done += b.length;
+    log.info(`liveness ${done}/${uris.length} tested`);
+  }
+  if (enoent) { log.err(`xray-knife not found at "${XK_PATH}".`); await closeSupa(); process.exit(1); }
+  const aliveCount = [...live.values()].filter((v) => v.alive).length;
+  log.ok(`${aliveCount}/${uris.length} alive from the runner`);
+
+  // 3. Russia-host protection: geoip the hosts of NOT-alive configs
+  const deadHosts = new Set();
+  for (const [hash, c] of configs) {
+    const l = live.get(hash);
+    if (!l || !l.alive) { const h = parseConfig(c.uri).host; if (h) deadHosts.add(h); }
+  }
+  let hostCC = new Map();
+  if (deadHosts.size) {
+    try { hostCC = await lookupCountries([...deadHosts]); }
+    catch (e) { log.warn(`host geoip failed (${e.message}) — skipping Russia-host protection this run.`); }
+  }
+
+  // 4. build + upsert rows
+  const nowIso = new Date().toISOString();
+  const rows = [];
+  let forced = 0;
+  for (const [hash, c] of configs) {
+    const l = live.get(hash);
+    const host = parseConfig(c.uri).host;
+    const hostCountry = host ? (hostCC.get(host)?.country_code ?? null) : null;
+    const keep = hostCountry && KEEP_HOST_CC.has(hostCountry) && !(l && l.alive);
+    if (keep) forced++;
+    rows.push({
+      config_hash: hash,
+      config_uri: c.uri,
+      source_repo: c.source,
+      protocol: PROTOCOL_OF(c.uri),
+      exit_cc: l?.exit_cc ?? null,
+      alive: !!(l && l.alive) || !!keep,
+      scanned_at: nowIso,
+    });
+  }
+  for (const part of chunk(rows, 500)) {
+    const { error } = await supa.from('candidates').upsert(part, { onConflict: 'config_hash' });
+    if (error) log.err(`upsert: ${error.message}`);
+  }
+  const aliveRows = rows.filter((r) => r.alive).length;
+  log.ok(`Upserted ${rows.length} candidates — ${aliveRows} alive (incl. ${forced} Russia-hosted protected), ${rows.length - aliveRows} dead.`);
+
+  // 5. prune configs that vanished from the repos (not re-scanned this run)
+  const cutoff = new Date(Date.now() - STALE_HOURS * 3600 * 1000).toISOString();
+  const { error: delErr } = await supa.from('candidates').delete().lt('scanned_at', cutoff);
+  if (delErr) log.err(`prune: ${delErr.message}`);
+  else log.info(`Pruned candidates not seen in ${STALE_HOURS}h.`);
+
+  log.done('Liveness scan complete.');
+  await closeSupa();
+  process.exit(0);
+})();

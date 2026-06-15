@@ -9,7 +9,17 @@
     "support": "Support",
     "login": "Sign in",
     "logout": "Sign out",
-    "admin": "Admin"
+    "admin": "Admin",
+    "servers": "Servers"
+  },
+  "servers": {
+    "title": "Global Servers",
+    "description": "Our extensive network of high-speed servers around the world.",
+    "empty": "No servers available at the moment.",
+    "name": "Server Name",
+    "network": "Network",
+    "country": "Country",
+    "protocol": "Protocol"
   },
   "home": {
     "heroTitle": "GalaxyVPN",

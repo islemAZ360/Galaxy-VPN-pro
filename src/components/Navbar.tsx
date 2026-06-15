@@ -26,6 +26,7 @@ export async function Navbar() {
           <Link href="/">{t('home')}</Link>
           {!isAdmin && <Link href="/#why">{t('features')}</Link>}
           {!isAdmin && <Link href="/#plans">{t('plans')}</Link>}
+          {!isAdmin && <Link href="/servers">{t('servers')}</Link>}
           {!isAdmin && <Link href="/#faq">{t('faq')}</Link>}
           {user && !isAdmin && <Link href="/profile">{t('profile')}</Link>}
           {user && <Link href="/support">{t('support')}</Link>}
@@ -55,6 +56,7 @@ export async function Navbar() {
               { href: '/', label: t('home') },
               ...(!isAdmin ? [{ href: '/#why', label: t('features') }] : []),
               ...(!isAdmin ? [{ href: '/#plans', label: t('plans') }] : []),
+              ...(!isAdmin ? [{ href: '/servers', label: t('servers') }] : []),
               ...(!isAdmin ? [{ href: '/#faq', label: t('faq') }] : []),
               ...(user && !isAdmin ? [{ href: '/profile', label: t('profile') }] : []),
               ...(user ? [{ href: '/support', label: t('support') }] : []),

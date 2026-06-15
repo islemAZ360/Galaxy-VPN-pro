@@ -1,0 +1,56 @@
+name: server-liveness-scan
+
+# Periodically test every discovered config for basic liveness (+ egress country)
+# from a free GitHub runner, and write the result to the `candidates` table in
+# Supabase. The local Russia worker then skips configs confirmed dead.
+#
+# Free for public repos (unlimited Actions minutes). Requires two repo secrets:
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+# (Settings → Secrets and variables → Actions → New repository secret)
+
+on:
+  schedule:
+    - cron: '23 * * * *'   # hourly, offset off the hour to dodge load spikes
+  workflow_dispatch: {}     # lets you run it manually from the Actions tab
+
+# Never let two scans overlap.
+concurrency:
+  group: liveness-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install worker deps
+        working-directory: worker
+        run: npm ci || npm install
+
+      - name: Download xray-knife (Linux x64, v10)
+        run: |
+          set -e
+          curl -fsSL -o xk.zip \
+            https://github.com/lilendian0x00/xray-knife/releases/latest/download/Xray-knife-linux-64.zip
+          mkdir -p "$HOME/xk"
+          unzip -o xk.zip -d "$HOME/xk"
+          BIN="$(find "$HOME/xk" -type f -name 'xray-knife*' | head -1)"
+          chmod +x "$BIN"
+          echo "XRAY_KNIFE_PATH=$BIN" >> "$GITHUB_ENV"
+          "$BIN" --version || true
+
+      - name: Run liveness scan
+        working-directory: worker
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          XRAY_KNIFE_CORE: auto
+          LIVENESS_THREADS: '100'
+        run: node src/liveness-scan.js
