@@ -36,6 +36,30 @@ function chunk(arr, n) {
   return out;
 }
 
+// GitHub liveness pre-filter (SAFE + REVERSIBLE). Skips configs that the GitHub
+// Action (worker/src/liveness-scan.js) positively confirmed DEAD, so the local
+// deep-test only runs on known/likely-alive servers. Russia-hosted servers are
+// force-kept by the scan, so they're never skipped here. No-op when the
+// `candidates` table is empty/missing/unreachable; never reduces to empty.
+async function skipKnownDead(uris) {
+  try {
+    const { data, error } = await supa.from('candidates').select('config_hash').eq('alive', false);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) return uris;
+    const dead = new Set(data.map((d) => d.config_hash));
+    const kept = uris.filter((u) => !dead.has(hashConfig(u)));
+    const skipped = uris.length - kept.length;
+    if (skipped > 0 && kept.length > 0) {
+      log.info(`GitHub liveness: skipping ${skipped} server(s) confirmed dead — deep-testing ${kept.length} alive/unknown.`);
+      return kept;
+    }
+    return uris;
+  } catch (e) {
+    log.warn(`Liveness pre-filter unavailable (${e.message}) — testing all candidates.`);
+    return uris;
+  }
+}
+
 // Two-phase VPN retry: after heavy xray-knife testing, the VPN/TUN adapter may
 // have dropped. This retries the Supabase upload indefinitely (every 5s) until
 // the connection is restored, so the admin just needs to reconnect VPN and the
@@ -134,8 +158,10 @@ export async function runSync() {
       const stride = allUris.length / MAX;
       candidates = Array.from({ length: MAX }, (_, k) => allUris[Math.floor(k * stride)]);
     }
+    // Drop servers the GitHub liveness scan already confirmed dead (if any).
+    candidates = await skipKnownDead(candidates);
     stats.candidates = candidates.length;
-    
+
     const TCP_CONC = 300;
     log.info(`Pre-filtering ${stats.candidates} configs via fast TCP ping (concurrency ${TCP_CONC})…`);
     
