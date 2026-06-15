@@ -286,7 +286,7 @@ export async function requestSync(kind: 'wifi' | 'lte' = 'wifi') {
 export async function triggerGithubScan() {
   try {
     await assertAdmin();
-    const token = process.env.GITHUB_TOKEN;
+    const token = process.env.GITHUB_TOKEN?.trim();
     if (!token) return { error: 'GITHUB_TOKEN environment variable is not set in Vercel. Please add it to your project settings.' };
 
     const res = await fetch('https://api.github.com/repos/islemAZ360/Galaxy-VPN-pro/actions/workflows/liveness.yml/dispatches', {
@@ -312,7 +312,7 @@ export async function triggerGithubScan() {
 
 export async function checkGithubScanStatus() {
   await assertAdmin();
-  const token = process.env.GITHUB_TOKEN;
+  const token = process.env.GITHUB_TOKEN?.trim();
   if (!token) return { isRunning: false, error: 'No GITHUB_TOKEN configured' };
 
   // Check for queued or in_progress runs
