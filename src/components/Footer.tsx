@@ -12,8 +12,8 @@ export function Footer() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-galaxy-primary/50 to-transparent" />
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-            <Shield className="h-4 w-4 text-galaxy-accent" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] overflow-hidden">
+            <img src="/icon-192x192.png" alt="GalaxyVPN Icon" className="h-full w-full object-cover" />
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-bold tracking-tight">

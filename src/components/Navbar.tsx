@@ -18,8 +18,9 @@ export async function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-galaxy-bg/70 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
       <nav className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4">
-        <Link href="/" className="text-lg font-bold tracking-tight transition-opacity hover:opacity-80">
-          <span className="bg-gradient-to-r from-galaxy-accent to-violet-400 bg-clip-text text-transparent">Galaxy</span>VPN
+        <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight transition-opacity hover:opacity-80">
+          <img src="/icon-192x192.png" alt="GalaxyVPN Icon" className="h-7 w-7 rounded-md" />
+          <span><span className="bg-gradient-to-r from-galaxy-accent to-violet-400 bg-clip-text text-transparent">Galaxy</span>VPN</span>
         </Link>
         <div className="hidden gap-1 text-sm text-white/75 md:flex [&>a]:rounded-lg [&>a]:px-3 [&>a]:py-1.5 [&>a]:transition-colors [&>a:hover]:bg-white/5 [&>a:hover]:text-white">
           <Link href="/">{t('home')}</Link>
