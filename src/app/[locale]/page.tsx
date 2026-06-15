@@ -44,7 +44,7 @@ export default async function HomePage({
               <span className="w-1.5 h-1.5 rounded-full bg-violet-300 animate-pulse"></span>
               {t('heroPill')}
             </div>
-            <h1 className="text-hero mx-auto mt-6 max-w-4xl text-6xl font-extrabold leading-[1.05] md:text-8xl tracking-tight pb-2">
+            <h1 className="text-hero mx-auto mt-6 max-w-4xl text-5xl sm:text-6xl font-extrabold leading-[1.05] md:text-8xl tracking-tight pb-2">
               {t('heroTitle')}
             </h1>
           </FadeIn>
