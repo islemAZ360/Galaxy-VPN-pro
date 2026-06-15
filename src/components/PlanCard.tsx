@@ -54,14 +54,14 @@ export function PlanCard({
               key={net}
               href={url}
               aria-label={`${t(`duration.${plan.durationKey}`)} — ${title} — ${v.priceRub}₽`}
-              className={`flex items-center gap-2 lg:gap-3 rounded-xl border border-white/10 bg-black/20 p-2 lg:p-3 transition hover:bg-white/[0.04] ${ring}`}
+              className={`flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-2 lg:px-2.5 lg:py-3 transition hover:bg-white/[0.04] ${ring}`}
             >
-              <span className={`grid h-8 w-8 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg ${chip}`}>
-                <Icon className="w-4 h-4 lg:w-[18px] lg:h-[18px]" />
+              <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${chip}`}>
+                <Icon className="w-4 h-4" />
               </span>
               <div className="min-w-0 flex-1 pr-1">
-                <div className="text-xs lg:text-[13px] font-semibold leading-tight line-clamp-2" title={title}>{title}</div>
-                <div className="truncate text-[10px] lg:text-[11px] text-white/55 mt-0.5">{t('servers', { count: v.serverCount })}</div>
+                <div className="text-[11px] lg:text-xs font-semibold leading-tight" style={{ wordBreak: 'break-word' }} title={title}>{title}</div>
+                <div className="truncate text-[10px] text-white/55 mt-0.5">{t('servers', { count: v.serverCount })}</div>
               </div>
               <div className="text-end shrink-0 whitespace-nowrap">
                 <div className={`text-base lg:text-lg font-extrabold leading-none ${price}`}>
