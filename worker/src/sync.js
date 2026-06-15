@@ -1,6 +1,5 @@
 import { supa } from './supa.js';
-import { fetchRepoTexts } from './github.js';
-import { extractConfigs, hashConfig, PROTOCOL_OF } from './parse.js';
+import { hashConfig, PROTOCOL_OF } from './parse.js';
 import { flagEmoji, renameConfig } from './uri.js';
 import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
@@ -119,35 +118,17 @@ const retag = (name, tier) => `${(name || '').split(' | ')[0]}${TIER_TAGS[tier] 
 const keyOf = (u) => renameConfig(u, '');
 
 // Source the Wi-Fi test pool from the GitHub-maintained `candidates` (alive).
-// Falls back to pulling repos directly if the table is empty/unavailable.
 // Returns { uris, meta } where meta maps keyOf(uri) → { exit_cc, source_repo }.
 async function loadAliveCandidates() {
-  try {
-    const { data, error } = await supa
-      .from('candidates').select('config_uri, exit_cc, source_repo').eq('alive', true);
-    if (error) throw new Error(error.message);
-    if (data && data.length) {
-      const meta = new Map();
-      for (const c of data) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null, source_repo: c.source_repo || null });
-      return { uris: data.map((c) => c.config_uri), meta, source: 'GitHub candidates' };
-    }
-    log.warn('candidates table is empty — falling back to repo discovery.');
-  } catch (e) {
-    log.warn(`candidates unavailable (${e.message}) — falling back to repo discovery.`);
+  const { data, error } = await supa
+    .from('candidates').select('config_uri, exit_cc, source_repo').eq('alive', true);
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    return { uris: [], meta: new Map(), source: 'GitHub candidates (empty)' };
   }
-  // Fallback: discover straight from the repos (same as the legacy full sync).
-  const { data: repos } = await supa.from('repos').select('repo_url').eq('enabled', true);
   const meta = new Map();
-  const uris = [];
-  for (const r of repos ?? []) {
-    try {
-      const { text } = await fetchRepoTexts(r.repo_url);
-      for (const uri of extractConfigs(text)) {
-        if (!meta.has(keyOf(uri))) { uris.push(uri); meta.set(keyOf(uri), { exit_cc: null, source_repo: r.repo_url }); }
-      }
-    } catch (e) { log.err(`repo failed ${r.repo_url}: ${e.message}`); }
-  }
-  return { uris, meta, source: 'repos (fallback)' };
+  for (const c of data) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null, source_repo: c.source_repo || null });
+  return { uris: data.map((c) => c.config_uri), meta, source: 'GitHub candidates' };
 }
 
 // Deep DPI test in progress-friendly batches; returns the passing results.
@@ -414,215 +395,7 @@ export async function runLteCascade() {
   }
 }
 
-export async function runSync() {
-  if (running) return { skipped: true, reason: 'already running' };
-  running = true;
-  const stats = { startedAt: new Date().toISOString() };
-  console.log(''); // visual gap between runs
-  log.step('Starting a sync cycle…');
-  try {
-    // 1. enabled repos
-    const { data: repos, error: repoErr } = await supa.from('repos').select('repo_url').eq('enabled', true);
-    if (repoErr) throw repoErr;
-    stats.repos = repos?.length ?? 0;
-    log.info(`Reading repos from Supabase  ·  ${stats.repos} enabled`);
 
-    // 2. gather unique configs across all repos (hash -> { uri, source })
-    //    Also track per-repo stats for the admin dashboard.
-    log.info('Pulling .txt files from GitHub…');
-    const configs = new Map();
-    const repoStats = new Map(); // repo_url -> { files, extracted }
-    for (const r of repos ?? []) {
-      try {
-        const { text, fileCount } = await fetchRepoTexts(r.repo_url);
-        const repoConfigs = extractConfigs(text);
-        log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${repoConfigs.length} configs`);
-        repoStats.set(r.repo_url, { files: fileCount, extracted: repoConfigs.length });
-        for (const uri of repoConfigs) {
-          configs.set(hashConfig(uri), { uri, source: r.repo_url });
-        }
-      } catch (e) {
-        log.err(`repo failed ${r.repo_url}: ${e.message}`);
-        repoStats.set(r.repo_url, { files: 0, extracted: 0, error: e.message });
-      }
-    }
-    stats.discovered = configs.size;
-    log.ok(`Discovered ${stats.discovered} unique server configs`);
-
-    // GUARD: if we discovered nothing (e.g. GitHub was unreachable), DO NOT wipe
-    // the existing pool. Abort the run so a transient network blip can't delete
-    // every server. The pool is preserved; the next successful run refreshes it.
-    if (stats.discovered === 0) {
-      log.warn('Discovered 0 configs (repos unreachable?) — keeping the existing pool untouched.');
-      stats.finishedAt = new Date().toISOString();
-      stats.aborted = 'no-configs';
-      return stats;
-    }
-
-    // 3. test all extracted configs (in batches to show progress).
-    // If MAX_CONFIGS is set > 0, we cap the testing pool to save time.
-    // Otherwise, we test everything.
-    const allUris = [...configs.values()].map((c) => c.uri);
-    const MAX = Number(process.env.MAX_CONFIGS || 0);
-    let candidates = allUris;
-    if (MAX > 0 && allUris.length > MAX) {
-      // Sample evenly instead of just taking the first N
-      const stride = allUris.length / MAX;
-      candidates = Array.from({ length: MAX }, (_, k) => allUris[Math.floor(k * stride)]);
-    }
-    // Drop servers the GitHub liveness scan already confirmed dead (if any).
-    candidates = await skipKnownDead(candidates);
-    stats.candidates = candidates.length;
-
-    const TCP_CONC = 300;
-    log.info(`Pre-filtering ${stats.candidates} configs via fast TCP ping (concurrency ${TCP_CONC})…`);
-    
-    let tcpWorking = [];
-    let tcpTestedCount = 0;
-    const tcpBatches = chunk(candidates, 5000);
-    
-    for (let i = 0; i < tcpBatches.length; i++) {
-      const b = tcpBatches[i];
-      // Quick 3.0s TCP ping to weed out totally dead IPs
-      const res = await tcpTestAll(b, { concurrency: TCP_CONC, timeoutMs: 3000 });
-      tcpWorking.push(...res.filter((r) => r.ok).map((r) => r.uri));
-      tcpTestedCount += b.length;
-      log.progress((tcpTestedCount / stats.candidates) * 100, `TCP: ${tcpWorking.length} alive`);
-    }
-    log.clearProgress();
-    log.ok(`TCP filter: ${tcpWorking.length}/${stats.candidates} configs are reachable`);
-
-    if (tcpWorking.length === 0) {
-      log.warn('0 reachable configs. Aborting sync.');
-      stats.working = 0;
-      stats.finishedAt = new Date().toISOString();
-      return stats;
-    }
-
-    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
-    log.info(`Deep testing ${tcpWorking.length} candidates via xray-knife (concurrency ${CONC})…`);
-    
-    const working = [];
-    // Larger batch size for xray-knife now that dead IPs are gone
-    const BATCH_SIZE = 500; 
-    const candidateBatches = chunk(tcpWorking, BATCH_SIZE);
-    let testedCount = 0;
-
-    for (let i = 0; i < candidateBatches.length; i++) {
-      const b = candidateBatches[i];
-      const results = await testAll(b, { concurrency: CONC, timeoutMs: 4000 });
-      const batchWorking = results.filter((r) => r.ok);
-      working.push(...batchWorking);
-      testedCount += b.length;
-      log.progress((testedCount / tcpWorking.length) * 100, `Xray: ${working.length} passed`);
-    }
-    log.clearProgress();
-
-    stats.working = working.length;
-    log.ok(`${stats.working} / ${stats.candidates} servers passed the real test`);
-
-    // let lingering sockets drain before HTTP fetch calls (Windows TIME_WAIT)
-    await sleep(Number(process.env.DRAIN_MS || 2000));
-
-    // 4. geoip for working hosts
-    log.info('Looking up country / flag for each working host…');
-    const geo = await lookupCountries(working.map((w) => w.host));
-
-    // 5. Smart rename: sort by country (then latency), number per country, and
-    // rewrite BOTH the display name and the config's own remark so the clean
-    // "🇩🇿 Algeria #1" name shows in the admin panel AND in the user's app (Happ).
-    // Fetch existing servers to preserve their network_type and tags
-    const existingBefore = await withRetry(async () => {
-      const { data, error } = await supa.from('servers').select('config_hash, network_type, is_deleted');
-      if (error) throw new Error(error.message);
-      return data ?? [];
-    }, { label: 'select-existing-before' });
-    const existingTiers = new Map(existingBefore.map(s => [s.config_hash, s.network_type]));
-    const existingDeleted = new Set(existingBefore.filter(s => s.is_deleted).map(s => s.config_hash));
-
-    const now = new Date().toISOString();
-    const sorted = [...working].sort((a, b) => {
-      const ca = geo.get(a.host)?.country || 'ZZZ';
-      const cb = geo.get(b.host)?.country || 'ZZZ';
-      if (ca !== cb) return ca < cb ? -1 : 1;
-      return (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity);
-    });
-    const counters = {};
-    const rows = sorted
-      .filter((w) => !existingDeleted.has(hashConfig(w.uri)))
-      .map((w) => {
-      const hash = hashConfig(w.uri);
-      const g = geo.get(w.host) || {};
-      
-      let country = g.country;
-      let cc = g.country_code ?? null;
-      if (!country) {
-        country = 'Server';
-      }
-      
-      counters[country] = (counters[country] || 0) + 1;
-      const baseName = `${flagEmoji(cc)} ${country} #${counters[country]}`;
-      
-      const tier = existingTiers.get(hash) || 'wifi';
-      const displayName = retag(baseName, tier);
-      
-      return {
-        name: displayName,
-        country: g.country ?? null,
-        country_code: cc,
-        protocol: PROTOCOL_OF(w.uri),
-        config_uri: renameConfig(w.uri, displayName), // what the user sees in Happ
-        config_hash: hash, // hash the ORIGINAL uri = stable identity
-        latency_ms: w.latencyMs,
-        is_working: true,
-        network_type: tier,
-        source_repo: configs.get(hash)?.source ?? null,
-        last_checked_at: now,
-        updated_at: now,
-      };
-    });
-    // upsert in chunks (resilient to transient network errors)
-    log.info(`Renaming + uploading ${rows.length} working servers to Supabase…`);
-    for (const part of chunk(rows, 500)) {
-      await withRetry(async () => {
-        const { error } = await supa.from('servers').upsert(part, { onConflict: 'config_hash' });
-        if (error) throw new Error(error.message);
-      }, { label: 'upsert' });
-    }
-
-    // 6. delete servers no longer working (not in current working set)
-    const keep = new Set(rows.map((r) => r.config_hash));
-    const existing = await withRetry(async () => {
-      const { data, error } = await supa.from('servers').select('id, config_hash, is_deleted');
-      if (error) throw new Error(error.message);
-      return data ?? [];
-    }, { label: 'select-existing' });
-    const toDelete = existing.filter((s) => !keep.has(s.config_hash) && !s.is_deleted).map((s) => s.id);
-    stats.deleted = toDelete.length;
-    if (stats.deleted) {
-      log.info(`Deleting ${stats.deleted} stale servers…`);
-      for (const batch of chunk(toDelete, 100)) {
-        await withRetry(async () => {
-          const { error } = await supa.from('servers').delete().in('id', batch);
-          if (error) throw new Error(error.message);
-        }, { label: 'delete' });
-      }
-    }
-
-    // 7. Compute per-repo stats and save to repo_stats table
-    await updateRepoStats();
-
-
-    stats.finishedAt = new Date().toISOString();
-    log.done(`Done — ${stats.working} live · ${stats.deleted} removed · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt))/1000)}s`);
-    return stats;
-  } catch (e) {
-    log.err(`Sync failed: ${e.message}`);
-    return { error: e.message, ...stats };
-  } finally {
-    running = false;
-  }
-}
 
 // LTE re-check: retest the servers ALREADY in the pool over the worker's current
 // (LTE) connection. Those that still pass become 'lte' (work on mobile + Wi-Fi);
