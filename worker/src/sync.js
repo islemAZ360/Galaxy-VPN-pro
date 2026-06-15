@@ -221,9 +221,9 @@ export async function runWifiCascade() {
 
     await vpnOffGate('Make sure your HOME Wi-Fi is connected.');
 
-    const CONC = Number(process.env.TEST_CONCURRENCY || 10); // Reduced to prevent Wi-Fi drop
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     log.step('Phase 1 — Wi-Fi reachability…');
-    const working = await deepTest(uris, { conc: CONC, batchSize: 100, phaseLabel: 'Wi-Fi' });
+    const working = await deepTest(uris, { conc: CONC, batchSize: 500, phaseLabel: 'Wi-Fi' });
     stats.working = working.length;
     log.ok(`${working.length} / ${stats.total} pass Wi-Fi.`);
 
@@ -336,9 +336,9 @@ export async function runLteCascade() {
 
     await vpnOffGate('Connect to your PHONE hotspot (mobile data), NOT home Wi-Fi.');
 
-    const CONC = 10; // raw mobile adapter — keep low to avoid driver crashes
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     log.step('Phase 1 — LTE reachability…');
-    const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 100, phaseLabel: 'LTE' });
+    const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 500, phaseLabel: 'LTE' });
     const lteKeys = new Set(working.map((w) => keyOf(w.uri)));
     log.ok(`${working.length} / ${stats.total} pass LTE.`);
 
