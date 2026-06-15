@@ -8,6 +8,9 @@
     "start": "node --env-file-if-exists=.env src/index.js",
     "sync": "node --env-file-if-exists=.env src/run-once.js"
   },
+  "bin": {
+    "galaxy-worker": "./bin.js"
+  },
   "engines": {
     "node": ">=20"
   },
