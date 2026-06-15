@@ -261,11 +261,11 @@ export default async function HomePage({
       </section>
 
       {/* Plans Section */}
-      <section id="plans" className="scroll-mt-24 px-4 max-w-6xl mx-auto w-full">
+      <section id="plans" className="scroll-mt-24 px-4 max-w-5xl mx-auto w-full">
         <FadeIn direction="up">
           <PlansHeader />
         </FadeIn>
-        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
           {PLANS.map((p, i) => (
             <FadeIn key={p.id} delay={i * 0.15} direction="up" className="h-full">
               <PlanCard plan={p} featured={p.id === 3} href="/login" />

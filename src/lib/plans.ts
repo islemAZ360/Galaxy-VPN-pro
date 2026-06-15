@@ -16,10 +16,10 @@ export type Plan = {
 };
 
 export const PLANS: Plan[] = [
-  { id: 1, durationKey: 'month1',  durationDays: 30,  wifi: { priceRub: 100, serverCount: 10 }, lte: { priceRub: 200, serverCount: 5 },  gemini: { priceRub: 300,  serverCount: 3 } },
-  { id: 2, durationKey: 'months3', durationDays: 90,  wifi: { priceRub: 150, serverCount: 20 }, lte: { priceRub: 300, serverCount: 10 }, gemini: { priceRub: 400,  serverCount: 6 } },
-  { id: 3, durationKey: 'months6', durationDays: 180, wifi: { priceRub: 300, serverCount: 30 }, lte: { priceRub: 600, serverCount: 15 }, gemini: { priceRub: 700,  serverCount: 13 } },
-  { id: 4, durationKey: 'year1',   durationDays: 365, wifi: { priceRub: 450, serverCount: 40 }, lte: { priceRub: 900, serverCount: 20 }, gemini: { priceRub: 1000, serverCount: 17 } },
+  { id: 1, durationKey: 'month1',  durationDays: 30,  wifi: { priceRub: 50, serverCount: 10 }, lte: { priceRub: 150, serverCount: 5 },  gemini: { priceRub: 250,  serverCount: 3 } },
+  { id: 2, durationKey: 'months3', durationDays: 90,  wifi: { priceRub: 100, serverCount: 20 }, lte: { priceRub: 250, serverCount: 10 }, gemini: { priceRub: 350,  serverCount: 6 } },
+  { id: 3, durationKey: 'months6', durationDays: 180, wifi: { priceRub: 250, serverCount: 30 }, lte: { priceRub: 550, serverCount: 15 }, gemini: { priceRub: 650,  serverCount: 13 } },
+  { id: 4, durationKey: 'year1',   durationDays: 365, wifi: { priceRub: 400, serverCount: 40 }, lte: { priceRub: 850, serverCount: 20 }, gemini: { priceRub: 950, serverCount: 17 } },
 ];
 
 export const getPlan = (id: number) => PLANS.find((p) => p.id === id);
