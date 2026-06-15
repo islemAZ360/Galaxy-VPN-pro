@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { addRepo, deleteRepo, requestSync } from '@/lib/admin-actions';
+import { addRepo, deleteRepo, requestSync, triggerGithubScan, checkGithubScanStatus } from '@/lib/admin-actions';
 import { useWorkerPresence } from '@/hooks/useWorkerPresence';
 
 type Repo = { id: string; repo_url: string; enabled: boolean };
@@ -52,6 +52,32 @@ export function RepoManager({
   const [showHistory, setShowHistory] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { online: isLive, syncing: isBusy } = useWorkerPresence();
+  
+  // GitHub Action Status
+  const [ghRunning, setGhRunning] = useState(false);
+  const [ghError, setGhError] = useState('');
+
+  // Poll GitHub Action Status every 15 seconds
+  import { useEffect } from 'react';
+  useEffect(() => {
+    let mounted = true;
+    const checkGh = async () => {
+      try {
+        const res = await checkGithubScanStatus();
+        if (!mounted) return;
+        if (res.error) setGhError(res.error);
+        else setGhRunning(!!res.isRunning);
+      } catch {
+        // silently ignore
+      }
+    };
+    checkGh();
+    const interval = setInterval(checkGh, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Build a map for quick lookup and filter out ghost stats
   const statsMap = useMemo(() => {
@@ -108,6 +134,19 @@ export function RepoManager({
   const wifiRecheck = () => requestKind('wifi');
   const lteRecheck = () => requestKind('lte');
 
+  const runGithubScan = () => {
+    startTransition(async () => {
+      setSyncMsg(null);
+      try {
+        await triggerGithubScan();
+        setGhRunning(true);
+        setSyncMsg({ type: 'success', text: 'GitHub Actions scan triggered successfully! The background scan will run for a few minutes.' });
+      } catch (e) {
+        setSyncMsg({ type: 'error', text: 'Failed to trigger GitHub Scan: ' + (e instanceof Error ? e.message : 'Unknown error') });
+      }
+    });
+  };
+
   return (
     <div className="glass p-5">
       <div className="flex items-start justify-between gap-3">
@@ -116,6 +155,14 @@ export function RepoManager({
           <p className="mt-1 text-sm text-white/60">{t('hint')}</p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            onClick={runGithubScan}
+            disabled={isPending || ghRunning}
+            title="Force GitHub to scan all repos right now"
+            className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/20 disabled:opacity-60 flex items-center gap-1"
+          >
+            {ghRunning ? '⚙️ Scanning...' : '🤖 Run GitHub Scan'}
+          </button>
           <button
             onClick={wifiRecheck}
             disabled={isPending}
@@ -146,6 +193,19 @@ export function RepoManager({
           </button>
         </div>
       </div>
+      
+      {/* Smart Indicator for GitHub Actions */}
+      {ghRunning && (
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-purple-500/30 bg-purple-500/10 p-3 text-sm text-purple-200">
+          <div className="relative flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-75"></span>
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-purple-500"></span>
+          </div>
+          <div>
+            <strong>GitHub is extracting servers right now.</strong> This usually takes 2-5 minutes. The list of candidates will update automatically when finished.
+          </div>
+        </div>
+      )}
       
       {showInstructions && (
         <div className="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 text-sm text-sky-100 leading-relaxed space-y-3">

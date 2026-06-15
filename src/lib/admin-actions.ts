@@ -238,6 +238,15 @@ export async function addRepo(repoUrl: string) {
   if (!/github\.com\//i.test(url)) throw new Error('invalid github url');
   const admin = createAdminClient();
   await admin.from('repos').upsert({ repo_url: url, enabled: true }, { onConflict: 'repo_url' });
+  
+  // Attempt to trigger a GitHub scan automatically
+  try {
+    await triggerGithubScan();
+  } catch (e) {
+    // Ignore error if token is missing or API fails, just let it be
+    console.error('Failed to auto-trigger GitHub scan:', e);
+  }
+
   revalidatePath('/', 'layout');
 }
 
@@ -271,4 +280,47 @@ export async function requestSync(kind: 'wifi' | 'lte' = 'wifi') {
     .single();
   if (error) throw new Error(error.message);
   return { id: data.id };
+}
+
+// ---- GitHub Actions Integration ----
+export async function triggerGithubScan() {
+  await assertAdmin();
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) throw new Error('GITHUB_TOKEN environment variable is not set. Please add it to your .env.local file.');
+
+  const res = await fetch('https://api.github.com/repos/islemAZ360/Galaxy-VPN-pro/actions/workflows/liveness.yml/dispatches', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/vnd.github.v3+json',
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ref: 'main' }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GitHub API error: ${res.status} ${text}`);
+  }
+}
+
+export async function checkGithubScanStatus() {
+  await assertAdmin();
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return { isRunning: false, error: 'No GITHUB_TOKEN configured' };
+
+  // Check for queued or in_progress runs
+  const res = await fetch('https://api.github.com/repos/islemAZ360/Galaxy-VPN-pro/actions/runs?status=in_progress', {
+    headers: {
+      'Accept': 'application/vnd.github.v3+json',
+      'Authorization': `Bearer ${token}`,
+    },
+    cache: 'no-store', // Always fetch fresh data
+  });
+
+  if (!res.ok) return { isRunning: false, error: 'Failed to fetch status from GitHub API' };
+  
+  const data = await res.json();
+  const isRunning = data.workflow_runs?.some((r: any) => r.name === 'server-liveness-scan');
+  return { isRunning, count: data.total_count || 0 };
 }
