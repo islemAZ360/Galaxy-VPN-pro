@@ -3,6 +3,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Server } from 'lucide-react';
 
+export const revalidate = 30; // Revalidate every 30 seconds
+
 export default async function PublicServersPage({
   params,
 }: {
