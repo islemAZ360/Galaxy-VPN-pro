@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 function PlansGrid() {
   return (
-    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2">
       {PLANS.map((p) => (
         <PlanCard key={p.id} plan={p} featured={p.id === 3} />
       ))}
