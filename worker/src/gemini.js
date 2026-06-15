@@ -21,6 +21,13 @@ import { log } from './log.js';
 //   • blocked region   -> HTTP 403  "User location is not supported for the
 //                                     API use."
 // We only keep a server if its tunnel lands in a supported region.
+//
+// NOTE ON THE PROXY LISTENER: xray-knife v10's `proxy inbound` opens a SOCKS5
+// listener that REQUIRES a random username/password by default. We force a
+// no-auth listener by passing the inbound link explicitly
+// (`-I socks://127.0.0.1:PORT`). The SOCKS5 client below still negotiates
+// user/pass as a fallback (parsed from xray-knife's stdout) so custom proxy
+// templates keep working.
 // ---------------------------------------------------------------------------
 
 const XK_PATH = process.env.XRAY_KNIFE_PATH || 'xray-knife';
@@ -34,13 +41,12 @@ const GEMINI_PROBE_URL =
 // The exact phrase Google returns when the egress IP is in an unsupported region.
 const BLOCK_SIGNAL = process.env.GEMINI_BLOCK_SIGNAL || 'User location is not supported';
 
-// How we ask xray-knife to expose a single config as a local proxy. Versions
-// differ (v10+ uses `proxy inbound`, older uses `proxy --inbound <scheme>://`),
-// so this is overridable. {URI} and {PORT} are substituted.
-//   v10+ default:  proxy inbound -c {URI} --port {PORT}
-//   older:         proxy -c {URI} --inbound socks5://127.0.0.1:{PORT}
+// How we ask xray-knife to expose a single config as a local proxy. {URI} and
+// {PORT} are substituted. Default forces a NO-AUTH SOCKS5 inbound (verified on
+// xray-knife v10). Override for other versions, e.g.:
+//   older builds:  proxy -c {URI} --inbound socks5://127.0.0.1:{PORT}
 const PROXY_ARGS_TMPL =
-  process.env.XRAY_KNIFE_PROXY_ARGS || 'proxy inbound -c {URI} --port {PORT}';
+  process.env.XRAY_KNIFE_PROXY_ARGS || 'proxy inbound -c {URI} -I socks://127.0.0.1:{PORT}';
 
 // What kind of inbound the command above opens: 'socks5' or 'http'.
 const PROXY_SCHEME = (process.env.GEMINI_PROXY_SCHEME || 'socks5').toLowerCase();
@@ -72,7 +78,14 @@ function buildProxyArgs(uri, port) {
     .map((t) => t.replace('{URI}', uri).replace('{PORT}', String(port)));
 }
 
-// Wait until 127.0.0.1:port accepts a TCP connection (proxy is up).
+// If the inbound printed random credentials, grab them for SOCKS5 user/pass auth.
+function parseCreds(stdout) {
+  const u = stdout.match(/Username:\s*(\S+)/);
+  const p = stdout.match(/Password:\s*(\S+)/);
+  return u && p ? { user: u[1], pass: p[1] } : null;
+}
+
+// Wait until 127.0.0.1:port accepts a TCP connection (proxy listener is up).
 function waitForPort(port, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   return new Promise((resolve) => {
@@ -96,40 +109,60 @@ function waitForPort(port, timeoutMs) {
   });
 }
 
-// --- Minimal SOCKS5 CONNECT (no auth) → returns a raw connected socket. ------
-function socks5Connect(proxyPort, destHost, destPort, timeoutMs) {
+// --- Minimal SOCKS5 CONNECT (no-auth, or user/pass) → connected socket. ------
+function socks5Connect(proxyPort, destHost, destPort, timeoutMs, creds) {
   return new Promise((resolve, reject) => {
     const sock = net.connect(proxyPort, '127.0.0.1');
-    let stage = 0;
+    let stage = 'greet';
     let buf = Buffer.alloc(0);
     const fail = (e) => {
       sock.destroy();
       reject(e instanceof Error ? e : new Error(String(e)));
     };
+    const sendConnect = () => {
+      stage = 'connect';
+      buf = Buffer.alloc(0);
+      const h = Buffer.from(destHost, 'utf8');
+      sock.write(
+        Buffer.concat([
+          Buffer.from([0x05, 0x01, 0x00, 0x03, h.length]),
+          h,
+          Buffer.from([(destPort >> 8) & 0xff, destPort & 0xff]),
+        ])
+      );
+    };
     sock.setTimeout(timeoutMs, () => fail(new Error('socks5 timeout')));
     sock.once('error', fail);
-    sock.on('connect', () => sock.write(Buffer.from([0x05, 0x01, 0x00]))); // greet: no-auth
+    // Offer: no-auth (0x00) and, if we have creds, user/pass (0x02).
+    sock.on('connect', () =>
+      sock.write(creds ? Buffer.from([0x05, 0x02, 0x00, 0x02]) : Buffer.from([0x05, 0x01, 0x00]))
+    );
     sock.on('data', (d) => {
       buf = Buffer.concat([buf, d]);
-      if (stage === 0) {
+      if (stage === 'greet') {
         if (buf.length < 2) return;
-        if (buf[0] !== 0x05 || buf[1] !== 0x00) return fail(new Error('socks5 no-auth rejected'));
-        stage = 1;
-        buf = buf.slice(2);
-        const hostBuf = Buffer.from(destHost, 'utf8');
-        sock.write(
-          Buffer.concat([
-            Buffer.from([0x05, 0x01, 0x00, 0x03, hostBuf.length]),
-            hostBuf,
-            Buffer.from([(destPort >> 8) & 0xff, destPort & 0xff]),
-          ])
-        );
-        return;
+        const method = buf[1];
+        if (buf[0] !== 0x05) return fail(new Error('bad socks version'));
+        if (method === 0x00) return sendConnect();
+        if (method === 0x02 && creds) {
+          stage = 'auth';
+          buf = Buffer.alloc(0);
+          const u = Buffer.from(creds.user, 'utf8');
+          const p = Buffer.from(creds.pass, 'utf8');
+          sock.write(Buffer.concat([Buffer.from([0x01, u.length]), u, Buffer.from([p.length]), p]));
+          return;
+        }
+        return fail(new Error(`socks5 auth method rejected (0x${method.toString(16)})`));
       }
-      if (stage === 1) {
+      if (stage === 'auth') {
+        if (buf.length < 2) return;
+        if (buf[1] !== 0x00) return fail(new Error('socks5 user/pass rejected'));
+        return sendConnect();
+      }
+      if (stage === 'connect') {
         if (buf.length < 2) return;
         if (buf[0] !== 0x05 || buf[1] !== 0x00) return fail(new Error(`socks5 connect failed (code ${buf[1]})`));
-        stage = 2;
+        stage = 'done';
         sock.removeAllListeners('data');
         sock.setTimeout(0);
         resolve(sock);
@@ -138,7 +171,7 @@ function socks5Connect(proxyPort, destHost, destPort, timeoutMs) {
   });
 }
 
-// --- Minimal HTTP-CONNECT tunnel → returns a raw connected socket. -----------
+// --- Minimal HTTP-CONNECT tunnel → connected socket. -------------------------
 function httpConnect(proxyPort, destHost, destPort, timeoutMs) {
   return new Promise((resolve, reject) => {
     const sock = net.connect(proxyPort, '127.0.0.1');
@@ -164,17 +197,17 @@ function httpConnect(proxyPort, destHost, destPort, timeoutMs) {
   });
 }
 
-function tunnelConnect(proxyPort, destHost, destPort, timeoutMs) {
+function tunnelConnect(proxyPort, destHost, destPort, timeoutMs, creds) {
   return PROXY_SCHEME === 'http'
     ? httpConnect(proxyPort, destHost, destPort, timeoutMs)
-    : socks5Connect(proxyPort, destHost, destPort, timeoutMs);
+    : socks5Connect(proxyPort, destHost, destPort, timeoutMs, creds);
 }
 
 // GET an HTTPS URL through the local tunnel; return { status, raw }.
-async function httpsGetThroughTunnel(proxyPort, urlStr, timeoutMs) {
+async function httpsGetThroughTunnel(proxyPort, urlStr, timeoutMs, creds) {
   const u = new URL(urlStr);
   const destPort = u.port ? Number(u.port) : 443;
-  const raw = await tunnelConnect(proxyPort, u.hostname, destPort, timeoutMs);
+  const raw = await tunnelConnect(proxyPort, u.hostname, destPort, timeoutMs, creds);
   return await new Promise((resolve, reject) => {
     const cleanup = () => {
       try { tlsSock.destroy(); } catch {}
@@ -222,25 +255,29 @@ function classify({ status, raw }) {
   // Got past the geo gate: invalid-key 400, or any other non-location answer.
   if (status === 400 && /API[_ ]?key not valid|API_KEY_INVALID/i.test(raw)) return 'available';
   if (status >= 200 && status < 500) return 'available';
-  return 'unknown'; // 5xx / garbage — treat as fail-closed by the caller
+  return 'unknown'; // 5xx / garbage / empty — treated as fail by the caller
 }
 
 // Probe ONE config: spawn proxy → real Gemini request → read body → classify.
 async function probeOne(uri, port, { spawnTimeoutMs, probeTimeoutMs }) {
   const args = buildProxyArgs(uri, port);
-  const child = spawn(XK_PATH, args, { stdio: 'ignore', windowsHide: true });
+  const child = spawn(XK_PATH, args, { windowsHide: true });
   let spawnErr = null;
+  let outBuf = '';
   child.on('error', (e) => { spawnErr = e; });
+  // Drain stdio so the child never blocks; keep a little for cred-parsing/diag.
+  child.stdout?.on('data', (d) => { if (outBuf.length < 8192) outBuf += d.toString(); });
+  child.stderr?.on('data', (d) => { if (outBuf.length < 8192) outBuf += d.toString(); });
   const kill = () => { try { child.kill('SIGKILL'); } catch {} };
   try {
     const up = await waitForPort(port, spawnTimeoutMs);
-    if (spawnErr) return { ok: false, verdict: 'spawn-error', err: spawnErr };
+    if (spawnErr) return { ok: false, verdict: 'spawn-error', detail: spawnErr.message };
     if (!up) return { ok: false, verdict: 'proxy-not-up' };
-    const res = await httpsGetThroughTunnel(port, GEMINI_PROBE_URL, probeTimeoutMs);
+    const res = await httpsGetThroughTunnel(port, GEMINI_PROBE_URL, probeTimeoutMs, parseCreds(outBuf));
     const verdict = classify(res);
     return { ok: verdict === 'available', verdict };
   } catch (e) {
-    return { ok: false, verdict: 'probe-error', err: e };
+    return { ok: false, verdict: 'probe-error', detail: e.message };
   } finally {
     kill();
   }
@@ -253,20 +290,19 @@ async function probeOne(uri, port, { spawnTimeoutMs, probeTimeoutMs }) {
  * @param {object} opts
  * @param {number} [opts.concurrency=8]
  * @param {(uri:string)=>(string|null)} [opts.countryOf]  egress country-code per uri (pre-filter)
- * @param {number} [opts.spawnTimeoutMs=8000]
- * @param {number} [opts.probeTimeoutMs=12000]
+ * @param {number} [opts.spawnTimeoutMs=10000]
+ * @param {number} [opts.probeTimeoutMs=15000]
  * @returns {Promise<{uri:string, ok:boolean, verdict:string}[]>}
  */
 export async function geminiCheckAll(uris, opts = {}) {
   const {
     concurrency = 8,
     countryOf = null,
-    spawnTimeoutMs = 8000,
-    probeTimeoutMs = 12000,
+    spawnTimeoutMs = 10000,
+    probeTimeoutMs = 15000,
   } = opts;
 
   const results = new Array(uris.length);
-  let prefiltered = 0;
   let next = 0;
 
   const workerCount = Math.max(1, Math.min(concurrency, uris.length));
@@ -281,7 +317,6 @@ export async function geminiCheckAll(uris, opts = {}) {
       if (countryOf) {
         const cc = countryOf(uri);
         if (isCountryGeminiBlocked(cc)) {
-          prefiltered++;
           results[idx] = { uri, ok: false, verdict: `prefilter-${cc}` };
           continue;
         }
@@ -299,15 +334,26 @@ export async function geminiCheckAll(uris, opts = {}) {
 
   await Promise.all(workers);
 
-  const spawnErrors = results.filter((r) => r && r.verdict === 'spawn-error').length;
-  if (spawnErrors > 0 && spawnErrors === uris.length) {
+  // Verdict histogram — makes silent, systemic failures obvious in the logs.
+  const hist = {};
+  for (const r of results) {
+    if (!r) continue;
+    const key = r.verdict.startsWith('prefilter-') ? 'prefilter' : r.verdict;
+    hist[key] = (hist[key] || 0) + 1;
+  }
+  const summary = Object.entries(hist).map(([k, v]) => `${k}=${v}`).join(' ');
+  log.info(`Gemini probe verdicts: ${summary}`);
+
+  const setupFails = (hist['proxy-not-up'] || 0) + (hist['spawn-error'] || 0);
+  const probed = uris.length - (hist['prefilter'] || 0);
+  if (probed > 0 && (hist['available'] || 0) === 0 && setupFails / probed > 0.6) {
     log.err(
-      `Gemini probe could not start ANY proxy via "${XK_PATH} ${PROXY_ARGS_TMPL}". ` +
-        `Check XRAY_KNIFE_PATH and that your xray-knife supports the "proxy" command ` +
-        `(override XRAY_KNIFE_PROXY_ARGS / GEMINI_PROXY_SCHEME if your version differs).`
+      `Gemini probe failed to start/connect the local proxy for most servers via ` +
+        `"${XK_PATH} ${PROXY_ARGS_TMPL}". Your xray-knife "proxy" flags likely differ — ` +
+        `override XRAY_KNIFE_PROXY_ARGS / GEMINI_PROXY_SCHEME, then verify with ` +
+        `scripts/gemini-probe-test.mjs.`
     );
   }
-  if (prefiltered) log.info(`Gemini pre-filter skipped ${prefiltered} server(s) in blocked regions.`);
 
   return results;
 }
