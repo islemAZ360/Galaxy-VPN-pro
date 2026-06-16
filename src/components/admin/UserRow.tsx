@@ -27,6 +27,7 @@ type SubData = {
   end_at: string | null;
   plan: number | null;
   network: 'wifi' | 'lte' | 'gemini' | null;
+  server_count: number | null;
   status: string;
   created_at: string;
 };
@@ -124,6 +125,11 @@ export function UserRow({
                 {network && (
                   <span className={network === 'gemini' ? 'text-fuchsia-300' : network === 'lte' ? 'text-amber-300' : 'text-galaxy-accent'}>
                     · {network === 'gemini' ? '✨ Gemini (LTE & Wi-Fi)' : network === 'lte' ? '📶 LTE / Wi-Fi' : '📡 Wi-Fi'}
+                  </span>
+                )}
+                {sub.server_count != null && (
+                  <span className="text-white/80 font-mono">
+                    · {sub.server_count} Servers
                   </span>
                 )}
                 <span className="text-white/50 ml-auto">
