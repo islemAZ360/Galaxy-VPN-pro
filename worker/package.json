@@ -6,7 +6,10 @@
   "description": "GalaxyVPN tester worker: pulls server links from GitHub repos, tests them, syncs working ones to Supabase.",
   "scripts": {
     "start": "node --env-file-if-exists=.env src/index.js",
-    "sync": "node --env-file-if-exists=.env src/run-once.js"
+    "sync": "node --env-file-if-exists=.env src/run-once.js",
+    "sync:wifi": "node --env-file-if-exists=.env src/run-cascade.js wifi",
+    "sync:lte": "node --env-file-if-exists=.env src/run-cascade.js lte",
+    "sync:latency": "node --env-file-if-exists=.env src/run-cascade.js latency"
   },
   "bin": {
     "galaxy-worker": "./bin.js"
