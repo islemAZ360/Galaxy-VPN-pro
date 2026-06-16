@@ -90,11 +90,11 @@ export async function GET(
 
   const { data: rawServers } = await supa
     .from('servers')
-    .select('id, config_uri, network_type')
+    .select('id, config_uri, network_type, country')
     .eq('is_working', true)
     .in('network_type', fetchPools)
     .order('latency_ms', { ascending: true, nullsFirst: false })
-    .limit(balanceMode ? 3000 : sub.server_count); // fetch more if balancing
+    .limit(3000); // Fetch a large pool to ensure we can balance by country
 
   let servers = rawServers || [];
 
@@ -106,8 +106,31 @@ export async function GET(
     });
   }
 
-  // Slice down to requested count after filtering
-  servers = servers.slice(0, sub.server_count);
+  // Country-based Round Robin Distribution
+  // Group servers by country to ensure user gets a diverse set of countries
+  const serversByCountry: Record<string, typeof servers> = {};
+  for (const s of servers) {
+    const c = s.country || 'Unknown';
+    if (!serversByCountry[c]) serversByCountry[c] = [];
+    serversByCountry[c].push(s);
+  }
+
+  const selectedServers: typeof servers = [];
+  const countryKeys = Object.keys(serversByCountry);
+  let added = true;
+
+  while (selectedServers.length < sub.server_count && added) {
+    added = false;
+    for (const c of countryKeys) {
+      if (selectedServers.length >= sub.server_count) break;
+      if (serversByCountry[c].length > 0) {
+        selectedServers.push(serversByCountry[c].shift()!);
+        added = true;
+      }
+    }
+  }
+
+  servers = selectedServers;
 
   const configs = (servers ?? []).map((s) => s.config_uri).filter(Boolean);
   if (configs.length === 0) {
