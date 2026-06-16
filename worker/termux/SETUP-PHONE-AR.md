@@ -98,6 +98,32 @@ other apps ← فعّله.)
 
 ---
 
+## ✅ أسهل طريقة (موصى بها، بدون أي إذن) — أمران wifi / lte
+بعد تشغيل `setup.sh` يتوفّر أمران مختصران. افتح Termux واكتب فقط:
+```
+wifi      ← فحص الواي‑فاي
+lte       ← فحص الـ LTE
+```
+إن لم يعملا أول مرّة: نفّذ `source ~/.bashrc` مرّة واحدة، أو أغلق Termux وافتحه.
+هذه الطريقة تعمل دائماً حتى لو رفض الهاتف إذن الودجت (Realme/Xiaomi).
+
+### إعداد الأمرين يدوياً (لو لم يُنشئهما setup.sh):
+```bash
+cat >> ~/.bashrc << 'EOF'
+alias wifi='cd ~/galaxyvpn/worker && npm run sync:wifi'
+alias lte='cd ~/galaxyvpn/worker && npm run sync:lte'
+EOF
+source ~/.bashrc
+```
+
+### ملاحظة لهواتف Realme (ColorOS):
+لا توجد نقاط ثلاث ⋮. لتفعيل الودجت: صفحة معلومات التطبيق ← أسفلها
+**"You might be looking for: Display over other apps"** ← فعّل المفتاح. إن ظهر
+«restricted … apps from unknown sources»، اضغط **"Learn how to remove
+restrictions"** واتبع الخطوات. وإن بقي مرفوضاً، استعمل أمر `wifi`/`lte` أعلاه.
+
+---
+
 ## الاستخدام اليومي
 | الزر | كن متصلاً بـ | أثناء الفحص |
 |------|------------|------------|
