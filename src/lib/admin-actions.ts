@@ -343,7 +343,6 @@ export async function toggleBalanceMode(enabled: boolean) {
 }
 
 export async function getBalanceModeStatus() {
-  await assertAdmin();
   const admin = createAdminClient();
   const { data } = await admin.from('worker_status').select('last_result').eq('id', 'worker').single();
   return !!data?.last_result?.balance_mode;
