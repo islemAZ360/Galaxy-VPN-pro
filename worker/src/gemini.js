@@ -371,8 +371,8 @@ export async function classifyGeminiPool(uris, opts = {}) {
     done += b.length;
     onProgress?.((done / uris.length) * 60, `country pass ${done}/${uris.length}`);
     
-    // Add short cooling delay to prevent network stack crash
-    if (done < uris.length) await sleep(1000);
+    // Short cooling delay between batches — only Windows needs it; skip elsewhere.
+    if (process.platform === 'win32' && done < uris.length) await sleep(1000);
   }
   if (enoent) {
     log.err(`xray-knife not found at "${XK_PATH}" — cannot run the Gemini check. Set XRAY_KNIFE_PATH.`);

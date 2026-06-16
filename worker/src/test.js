@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execFile, exec } from 'node:child_process';
 import { writeFile, readFile, mkdtemp, rm } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import { parseConfig } from './uri.js';
+import { parseConfig, renameConfig } from './uri.js';
 import { log } from './log.js';
 
 const execAsync = promisify(exec);
@@ -75,7 +75,9 @@ function runXrayKnife(inFile, outFile, threads, url) {
       'http',
       '-f', inFile,
       '-o', outFile,
-      '-x', 'txt', // output valid configs, one per line, sorted fast→slow
+      '-x', 'csv', // CSV (link,status,…,delay,…,location,…) — one pass gives
+                   // pass/fail + latency + egress country, no extra runs needed
+
       '-t', String(threads),
       '-d', String(XK_MDELAY),
       '-z', XK_CORE,
@@ -110,23 +112,130 @@ export async function tcpTestAll(uris, { concurrency, timeoutMs }) {
   return results;
 }
 
-// Main entry used by sync.js. Real test first, TCP fallback.
+// name-independent key so xray-knife's CSV `link` column matches our input URIs
+// even if the display name was normalized.
+const keyOf = (u) => renameConfig(u, '');
+
+// Parse one CSV line, honoring quoted fields with embedded commas / "" escapes.
+function parseCsvLine(line) {
+  const out = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+// xray-knife may print delay as "1234", "1234ms", or "1.23s" — normalize to ms.
+function parseDelayMs(raw) {
+  if (raw == null) return null;
+  const m = String(raw).trim().toLowerCase().match(/([\d.]+)\s*(ms|µs|us|s)?/);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  if (!isFinite(n)) return null;
+  if (m[2] === 's') return Math.round(n * 1000);
+  if (m[2] === 'µs' || m[2] === 'us') return Math.round(n / 1000);
+  return Math.round(n); // ms or unitless
+}
+
+// xray-knife `http -x csv` columns:
+//   link,status,reason,tls,ip,delay,code,download,upload,location,ttfb,connect_time
+// → Map(keyOf(link) -> { alive, delayMs, location }).
+function parseXkCsv(text) {
+  const map = new Map();
+  const lines = text.split(/\r?\n/);
+  for (let i = 1; i < lines.length; i++) { // row 0 is the header
+    if (!lines[i]) continue;
+    const cols = parseCsvLine(lines[i]);
+    if (cols.length < 2) continue;
+    const status = cols[1];
+    const alive = status === 'passed' || status === 'semi-passed';
+    const delayMs = cols.length > 5 ? parseDelayMs(cols[5]) : null;
+    const locRaw = cols.length > 9 ? cols[9] : '';
+    const location = locRaw && locRaw !== 'null' ? locRaw.toUpperCase() : null;
+    map.set(keyOf(cols[0]), { alive, delayMs, location });
+  }
+  return map;
+}
+
+// Which configs are SAFE to TCP-pre-filter: only confirmed TCP transports. UDP
+// transports (hysteria/tuic, or vless/vmess over kcp/quic) would be wrongly
+// dropped by a TCP probe, so they bypass the filter. Anything we can't classify
+// confidently also bypasses — we never risk losing a working server for speed.
+function isTcpPrefilterable(uri) {
+  const scheme = (uri.split('://')[0] || '').toLowerCase();
+  if (['hysteria', 'hysteria2', 'hy2', 'tuic', 'juicity', 'wireguard', 'wg'].includes(scheme)) return false;
+  try {
+    if (scheme === 'vmess') {
+      const json = JSON.parse(Buffer.from(uri.slice('vmess://'.length), 'base64').toString('utf8'));
+      const net = String(json.net || '').toLowerCase();
+      return net !== 'kcp' && net !== 'quic';
+    }
+    const q = uri.includes('?') ? uri.slice(uri.indexOf('?') + 1).split('#')[0] : '';
+    const type = (new URLSearchParams(q).get('type') || '').toLowerCase();
+    return type !== 'kcp' && type !== 'quic';
+  } catch {
+    return false;
+  }
+}
+
+// Fast reachability sweep: drop hosts that can't even TCP-connect BEFORE paying
+// xray-knife's full handshake (up to MDELAY) on each dead one. Generous timeout
+// so slow-but-alive hosts survive. Disable with TCP_PREFILTER=0.
+async function tcpPrefilter(uris) {
+  if (process.env.TCP_PREFILTER === '0') return uris;
+  const conc = Number(process.env.TCP_PREFILTER_CONC) || Math.min(150, (Number(process.env.TEST_CONCURRENCY) || 50) * 2);
+  const timeoutMs = Number(process.env.TCP_PREFILTER_TIMEOUT_MS) || 2500;
+
+  const eligible = [];
+  const bypass = [];
+  for (const u of uris) (isTcpPrefilterable(u) ? eligible : bypass).push(u);
+  if (eligible.length === 0) return uris;
+
+  const reachable = [];
+  let i = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(conc, eligible.length) }, async () => {
+      while (i < eligible.length) {
+        const u = eligible[i++];
+        const { host, port } = parseConfig(u);
+        const r = await tcpPing(host, port, timeoutMs);
+        if (r.ok) reachable.push(u);
+      }
+    })
+  );
+  const kept = reachable.length + bypass.length;
+  log.info(`TCP pre-filter: ${kept}/${uris.length} kept (${uris.length - kept} unreachable dropped · ${bypass.length} udp/unknown bypassed)`);
+  return [...reachable, ...bypass];
+}
+
+// Main entry used by sync.js. ONE xray-knife `-x csv` pass yields pass/fail +
+// latency (delay) + egress country (location) — so callers need no separate
+// latency re-ping, and the Gemini step rarely needs a second run. Falls back to
+// a TCP-only check if the binary is missing.
 export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } = {}) {
   if (uris.length === 0) return [];
 
-  let workingUris = null;
+  const pool = await tcpPrefilter(uris);
+  if (pool.length === 0) return [];
+
+  let rows = null; // Map(keyOf(uri) -> { alive, delayMs, location })
   const dir = await mkdtemp(path.join(os.tmpdir(), 'gv-xk-'));
   const inFile = path.join(dir, 'configs.txt');
-  const outFile = path.join(dir, 'valid.txt');
+  const outFile = path.join(dir, 'valid.csv');
   try {
-    await writeFile(inFile, uris.join('\n'), 'utf8');
+    await writeFile(inFile, pool.join('\n'), 'utf8');
     await runXrayKnife(inFile, outFile, concurrency, url);
     const text = await readFile(outFile, 'utf8').catch(() => '');
-    workingUris = text
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .filter((s) => /:\/\//.test(s));
-    // log.ok removed to prevent overlapping with the progress bar from sync.js
+    rows = parseXkCsv(text);
   } catch (e) {
     if (e.enoent) {
       log.warn(
@@ -136,28 +245,27 @@ export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } 
     } else {
       log.err(`xray-knife failed, falling back to TCP: ${e.message}`);
     }
-    workingUris = null;
+    rows = null;
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
     await cleanupNetwork();
   }
 
-  // Fallback path
-  if (workingUris === null) {
-    return tcpTestAll(uris, { concurrency, timeoutMs });
+  // Fallback: TCP-only over the pre-filtered pool (weaker — no DPI guarantee).
+  if (rows === null) {
+    return tcpTestAll(pool, { concurrency, timeoutMs });
   }
 
-  // For the (small) working set, get a latency number for ordering/display.
+  // Build the working set straight from the CSV — latency (delayMs) and egress
+  // country (exitCc) come for free, no second network round.
+  const byKey = new Map(pool.map((u) => [keyOf(u), u]));
   const results = [];
-  let i = 0;
-  const workers = Array.from({ length: Math.min(concurrency, workingUris.length) }, async () => {
-    while (i < workingUris.length) {
-      const uri = workingUris[i++];
-      const { host, port, name } = parseConfig(uri);
-      const r = await tcpPing(host, port, timeoutMs);
-      results.push({ uri, host, port, name, ok: true, latencyMs: r.latencyMs });
-    }
-  });
-  await Promise.all(workers);
+  for (const [k, info] of rows) {
+    if (!info.alive) continue;
+    const uri = byKey.get(k);
+    if (!uri) continue;
+    const { host, port, name } = parseConfig(uri);
+    results.push({ uri, host, port, name, ok: true, latencyMs: info.delayMs, exitCc: info.location });
+  }
   return results;
 }

@@ -157,9 +157,10 @@ async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 100, phaseLa
     tested += b.length;
     log.progress((tested / Math.max(1, uris.length)) * 100, `${phaseLabel}: ${working.length} passed`);
     
-    // Add a short cooling delay to prevent Windows Wi-Fi driver crash
-    if (tested < uris.length) {
-      await sleep(1000); 
+    // Short cooling delay between batches — only Windows' Wi-Fi driver needs it;
+    // skip it elsewhere (e.g. the phone/Termux on Linux) to save time.
+    if (process.platform === 'win32' && tested < uris.length) {
+      await sleep(1000);
     }
   }
   log.clearProgress();
@@ -239,6 +240,13 @@ export async function runWifiCascade() {
     const working = await deepTest(uris, { conc: CONC, batchSize: 500, phaseLabel: 'Wi-Fi' });
     stats.working = working.length;
     log.ok(`${working.length} / ${stats.total} pass Wi-Fi.`);
+
+    // The Wi-Fi pass (xray-knife -x csv) already reported each server's egress
+    // country — fold it into the Gemini map so Phase 2 rarely needs a probe.
+    for (const w of working) {
+      const k = keyOf(w.uri);
+      if (w.exitCc && !meta.get(k)?.exit_cc) meta.set(k, { ...(meta.get(k) || {}), exit_cc: w.exitCc });
+    }
 
     log.step('Phase 2 — Gemini availability…');
     const geminiKeys = await geminiKeysFor(working.map((w) => w.uri), meta);
@@ -350,6 +358,12 @@ export async function runLteCascade() {
     const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 500, phaseLabel: 'LTE' });
     const lteKeys = new Set(working.map((w) => keyOf(w.uri)));
     log.ok(`${working.length} / ${stats.total} pass LTE.`);
+
+    // Reuse the egress country xray-knife reported this run for the Gemini split.
+    for (const w of working) {
+      const k = keyOf(w.uri);
+      if (w.exitCc && !meta.get(k)?.exit_cc) meta.set(k, { ...(meta.get(k) || {}), exit_cc: w.exitCc });
+    }
 
     log.step('Phase 2 — Gemini availability…');
     const lteUris = existing.filter((s) => lteKeys.has(keyOf(s.config_uri))).map((s) => s.config_uri);
