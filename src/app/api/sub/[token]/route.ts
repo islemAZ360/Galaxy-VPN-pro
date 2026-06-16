@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // How often the client (Happ, v2rayN, …) auto-refreshes the subscription, in
 // HOURS. Frequent refresh means dead/removed servers leave the user's app fast.
 // Tunable via the SUB_UPDATE_INTERVAL_HOURS env var (set 1 for hourly).
-const UPDATE_INTERVAL_HOURS = Number(process.env.SUB_UPDATE_INTERVAL_HOURS) || 6;
+const UPDATE_INTERVAL_HOURS = Number(process.env.SUB_UPDATE_INTERVAL_HOURS) || 1;
 
 // A single "server" the VPN client will display when the subscription is not
 // usable — this is how the link is "boobytrapped" after expiry.
