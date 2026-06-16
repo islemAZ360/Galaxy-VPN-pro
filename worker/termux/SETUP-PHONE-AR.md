@@ -116,11 +116,12 @@ EOF
 source ~/.bashrc
 ```
 
-### ملاحظة لهواتف Realme (ColorOS):
-لا توجد نقاط ثلاث ⋮. لتفعيل الودجت: صفحة معلومات التطبيق ← أسفلها
-**"You might be looking for: Display over other apps"** ← فعّل المفتاح. إن ظهر
-«restricted … apps from unknown sources»، اضغط **"Learn how to remove
-restrictions"** واتبع الخطوات. وإن بقي مرفوضاً، استعمل أمر `wifi`/`lte` أعلاه.
+### تفعيل الودجت على Realme (ColorOS) — رفع قيد الإذن:
+1. الإعدادات ← التطبيقات ← إدارة التطبيقات ← **Termux** ← **Permissions (الأذونات)**.
+2. اضغط **النقاط الثلاث ⋮** أعلى اليمين ← **"Remove permission restrictions"**.
+3. ارجع لصفحة معلومات التطبيق ← أسفلها **"Display over other apps"** ← فعّله،
+   وفعّل أيضاً **Display pop-ups while in background**.
+ثم اضغط الزر من الودجت. وإن بقي مرفوضاً، استعمل أمر `wifi`/`lte` أعلاه (لا يحتاج إذناً).
 
 ---
 
