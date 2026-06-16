@@ -8,6 +8,14 @@ users have. A phone literally **has** real Wi-Fi and real LTE/5G — so tapping 
 shortcut tests on the exact connection it names. Each tap runs once and exits,
 so there's no always-on background process for Android to kill.
 
+**Phone and PC never interfere.** The phone scans run directly from the
+shortcuts; they do **not** listen to the admin dashboard's Wi-Fi/LTE requests
+(`sync_requests`), which reach **only the PC worker** (`npm start` / the
+`start-worker.bat` on Windows). So the PC keeps working exactly as before, the
+phone works even when the PC is off, and a dashboard click never triggers the
+phone. Just don't start a PC scan and a phone scan at the very same moment —
+both rewrite the shared server pool, so use one device at a time.
+
 > The scans test on your raw connection, so you'll be asked to turn your **VPN
 > OFF** for ~15s during testing, then back **ON** to upload results (the worker
 > auto-retries the upload for several minutes while you switch it back).
@@ -94,6 +102,9 @@ cp -f termux/shortcuts/galaxy-*.sh ~/.shortcuts/ && chmod +x ~/.shortcuts/galaxy
 - **Upload hangs / "VPN seems down"** — turn your VPN back ON; it auto-retries.
 - **Phone sleeps mid-scan** — the shortcuts take a `termux-wake-lock`; also
   disable battery optimization for Termux in Android settings.
-- **Run the full live worker** (instead of one-shot shortcuts), so the admin
-  dashboard's "Re-check all" triggers this phone over Realtime:
-  `cd ~/galaxyvpn/worker && npm start` (keep Termux open).
+- **Does the admin dashboard trigger my phone?** No — by design. The phone
+  shortcuts run directly and do **not** listen to the dashboard's requests
+  (`sync_requests`); those reach **only the PC worker**. The PC and the phone
+  never trigger each other. ⚠️ Do **not** run `npm start` on the phone — that
+  would make it listen to the dashboard and double-run with the PC. The phone is
+  meant to use the one-shot shortcuts only.
