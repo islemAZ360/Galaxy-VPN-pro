@@ -258,9 +258,26 @@ async function loadKnownHostGeo() {
       });
     }
     if (statRows.length) {
-      const { error } = await supa.from('repo_stats').upsert(statRows, { onConflict: 'repo_url' });
-      if (error) log.err(`repo_stats upsert failed: ${error.message}`);
-      else log.ok(`repo_stats updated for ${statRows.length} repo(s) (files + extracted).`);
+      let { error } = await supa.from('repo_stats').upsert(statRows, { onConflict: 'repo_url' });
+      if (error) {
+        // An un-migrated table may lack some columns (gemini_wifi_count, etc.),
+        // which fails the whole batch. Retry with ONLY the columns the admin page
+        // reads — guaranteed to exist — so a new repo still gets its row.
+        log.warn(`repo_stats full upsert failed (${error.message}) — retrying with the minimal column set…`);
+        const minimal = statRows.map((s) => ({
+          repo_url: s.repo_url,
+          files_found: s.files_found,
+          configs_extracted: s.configs_extracted,
+          configs_working: s.configs_working,
+          wifi_count: s.wifi_count,
+          lte_count: s.lte_count,
+          gemini_count: s.gemini_count,
+          last_sync_at: s.last_sync_at,
+        }));
+        ({ error } = await supa.from('repo_stats').upsert(minimal, { onConflict: 'repo_url' }));
+      }
+      if (error) log.err(`repo_stats upsert failed: ${error.message} — run supabase/repo_stats.sql once.`);
+      else log.ok(`repo_stats updated for ${statRows.length} repo(s).`);
     }
   } catch (e) {
     log.warn(`repo_stats step failed (non-fatal): ${e.message}`);
