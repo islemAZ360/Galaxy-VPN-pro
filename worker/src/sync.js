@@ -853,22 +853,19 @@ export async function runLatencyCheck() {
 export async function updateRepoStats() {
   log.info('Recomputing per-repo statistics…');
   try {
-    const { data: liveServers } = await supa
-      .from('servers')
-      .select('source_repo, network_type')
-      .eq('is_working', true)
-      .eq('is_deleted', false);
+    const liveServers = await fetchAllPaginated('servers', 'source_repo, network_type', { is_working: true, is_deleted: false });
 
     const liveByRepo = new Map();
     for (const s of liveServers ?? []) {
       const repo = s.source_repo;
       if (!repo) continue;
-      if (!liveByRepo.has(repo)) liveByRepo.set(repo, { working: 0, wifi: 0, lte: 0, gemini: 0 });
+      if (!liveByRepo.has(repo)) liveByRepo.set(repo, { working: 0, wifi: 0, lte: 0, gemini_wifi: 0, gemini_lte: 0 });
       const r = liveByRepo.get(repo);
       r.working++;
       if (s.network_type === 'wifi') r.wifi++;
       else if (s.network_type === 'lte') r.lte++;
-      else if (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte') r.gemini++;
+      else if (s.network_type === 'gemini_wifi') r.gemini_wifi++;
+      else if (s.network_type === 'gemini_lte') r.gemini_lte++;
     }
 
     const { data: existingStats } = await supa.from('repo_stats').select('*');
@@ -876,13 +873,14 @@ export async function updateRepoStats() {
     const statRows = [];
     
     for (const st of existingStats ?? []) {
-      const live = liveByRepo.get(st.repo_url) || { working: 0, wifi: 0, lte: 0, gemini: 0 };
+      const live = liveByRepo.get(st.repo_url) || { working: 0, wifi: 0, lte: 0, gemini_wifi: 0, gemini_lte: 0 };
       statRows.push({
         ...st,
         configs_working: live.working,
         wifi_count: live.wifi,
         lte_count: live.lte,
-        gemini_count: live.gemini,
+        gemini_wifi_count: live.gemini_wifi,
+        gemini_lte_count: live.gemini_lte,
         updated_at: syncTime,
       });
     }
