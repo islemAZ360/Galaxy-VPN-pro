@@ -144,16 +144,15 @@ function runBatch(uris) {
   const aliveCount = [...live.values()].filter((v) => v.alive).length;
   log.ok(`${aliveCount}/${uris.length} alive from the runner`);
 
-  // 3. Russia-host protection: geoip the hosts of NOT-alive configs
-  const deadHosts = new Set();
-  for (const [hash, c] of configs) {
-    const l = live.get(hash);
-    if (!l || !l.alive) { const h = parseConfig(c.uri).host; if (h) deadHosts.add(h); }
-  }
-  let hostCC = new Map();
-  if (deadHosts.size) {
-    try { hostCC = await lookupCountries([...deadHosts]); }
-    catch (e) { log.warn(`host geoip failed (${e.message}) — skipping Russia-host protection this run.`); }
+  // 3. Geoip ALL unique hosts (network-independent — same answer anywhere). Used
+  //    for Russia-host protection AND stored so the LOCAL run reads each server's
+  //    country from here instead of calling ip-api itself (~25-30s saved/scan).
+  const allHosts = new Set();
+  for (const [, c] of configs) { const h = parseConfig(c.uri).host; if (h) allHosts.add(h); }
+  let hostGeo = new Map();
+  if (allHosts.size) {
+    try { hostGeo = await lookupCountries([...allHosts]); }
+    catch (e) { log.warn(`host geoip failed (${e.message}) — flags resolved locally this run.`); }
   }
 
   // 4. build + upsert rows
@@ -163,8 +162,10 @@ function runBatch(uris) {
   for (const [hash, c] of configs) {
     const l = live.get(hash);
     const host = parseConfig(c.uri).host;
-    const hostCountry = host ? (hostCC.get(host)?.country_code ?? null) : null;
-    const keep = hostCountry && KEEP_HOST_CC.has(hostCountry) && !(l && l.alive);
+    const hg = host ? hostGeo.get(host) : null;
+    const hostCC = hg?.country_code ?? null;
+    const hostCountry = hg?.country ?? null;
+    const keep = hostCC && KEEP_HOST_CC.has(hostCC) && !(l && l.alive);
     if (keep) forced++;
     rows.push({
       config_hash: hash,
@@ -172,12 +173,19 @@ function runBatch(uris) {
       source_repo: c.source,
       protocol: PROTOCOL_OF(c.uri),
       exit_cc: l?.exit_cc ?? null,
+      host_cc: hostCC,
+      host_country: hostCountry,
       alive: !!(l && l.alive) || !!keep,
       scanned_at: nowIso,
     });
   }
   for (const part of chunk(rows, 500)) {
-    const { error } = await supa.from('candidates').upsert(part, { onConflict: 'config_hash' });
+    let { error } = await supa.from('candidates').upsert(part, { onConflict: 'config_hash' });
+    if (error && /host_cc|host_country|column/i.test(error.message)) {
+      // host_cc/host_country not migrated yet — retry without them so the scan still works
+      const stripped = part.map(({ host_cc, host_country, ...r }) => r);
+      ({ error } = await supa.from('candidates').upsert(stripped, { onConflict: 'config_hash' }));
+    }
     if (error) log.err(`upsert: ${error.message}`);
   }
   const aliveRows = rows.filter((r) => r.alive).length;

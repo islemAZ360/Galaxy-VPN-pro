@@ -137,12 +137,24 @@ async function fetchAllPaginated(table, select, filters = {}) {
 // Source the Wi-Fi test pool from the GitHub-maintained `candidates` (alive).
 // Returns { uris, meta } where meta maps keyOf(uri) → { exit_cc, source_repo }.
 async function loadAliveCandidates() {
-  const data = await fetchAllPaginated('candidates', 'config_uri, exit_cc, source_repo', { alive: true });
+  let data;
+  try {
+    // host_cc/host_country are precomputed by the GitHub scan so we skip ip-api here.
+    data = await fetchAllPaginated('candidates', 'config_uri, exit_cc, source_repo, host_cc, host_country', { alive: true });
+  } catch {
+    // Columns not migrated yet → fall back; ip-api fills the country gap locally.
+    data = await fetchAllPaginated('candidates', 'config_uri, exit_cc, source_repo', { alive: true });
+  }
   if (!data || data.length === 0) {
     return { uris: [], meta: new Map(), source: 'GitHub candidates (empty)' };
   }
   const meta = new Map();
-  for (const c of data) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null, source_repo: c.source_repo || null });
+  for (const c of data) meta.set(keyOf(c.config_uri), {
+    exit_cc: c.exit_cc || null,
+    source_repo: c.source_repo || null,
+    host_cc: c.host_cc || null,
+    host_country: c.host_country || null,
+  });
   return { uris: data.map((c) => c.config_uri), meta, source: 'GitHub candidates' };
 }
 
@@ -255,7 +267,20 @@ export async function runWifiCascade() {
 
     vpnOnPrompt();
     log.step('Uploading results to Supabase…');
-    const geo = await withVpnRetry(() => lookupCountries(working.map((w) => w.host)), { label: 'geoip' });
+    // Country/flag comes precomputed from the GitHub scan (candidates.host_cc) —
+    // no local ip-api round. Only servers without a precomputed country fall back.
+    const geo = new Map();
+    const geoGaps = [];
+    for (const w of working) {
+      const m = meta.get(keyOf(w.uri));
+      if (m?.host_cc) geo.set(w.host, { country: m.host_country || null, country_code: m.host_cc });
+      else if (w.host) geoGaps.push(w.host);
+    }
+    if (geoGaps.length) {
+      log.info(`Geo: ${geoGaps.length} host(s) not precomputed by GitHub — resolving via ip-api…`);
+      const looked = await withVpnRetry(() => lookupCountries(geoGaps), { label: 'geoip-gaps' });
+      for (const [h, v] of looked) geo.set(h, v);
+    }
     const now = new Date().toISOString();
     const sorted = [...working].sort((a, b) => {
       const ca = geo.get(a.host)?.country || 'ZZZ';

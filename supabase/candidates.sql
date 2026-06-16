@@ -25,6 +25,13 @@ create table if not exists public.candidates (
 create index if not exists candidates_alive_idx on public.candidates (alive);
 create index if not exists candidates_scanned_at_idx on public.candidates (scanned_at);
 
+-- Host (entry) country, precomputed by the GitHub Action via ip-api so the LOCAL
+-- run reads the flag/country from here instead of calling ip-api itself. Same
+-- answer anywhere (geolocation of the host IP is network-independent), so moving
+-- it to CI changes nothing about the result — it just offloads ~25-30s/scan.
+alter table public.candidates add column if not exists host_cc      text;  -- ISO-2
+alter table public.candidates add column if not exists host_country text;  -- display name
+
 -- Service-role only (the worker + the Action both use the service-role key,
 -- which bypasses RLS). Enabling RLS with no policies blocks anon/public access.
 alter table public.candidates enable row level security;
