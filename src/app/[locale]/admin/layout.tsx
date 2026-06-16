@@ -20,10 +20,10 @@ export default async function AdminLayout({
   const t = await getTranslations('admin');
 
   return (
-    <div className="pt-10">
-      <div className="mb-6 flex items-center gap-3">
-        <span className="h-8 w-1 rounded-full bg-gradient-to-b from-galaxy-primary to-galaxy-accent" />
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+    <div className="admin-shell pt-10">
+      <div className="mb-6 flex items-center gap-3.5">
+        <span className="h-10 w-1.5 rounded-full bg-gradient-to-b from-galaxy-primary to-galaxy-accent shadow-[0_0_18px_rgba(124,58,237,0.65)]" />
+        <h1 className="text-gradient text-3xl font-bold tracking-tight sm:text-4xl">{t('title')}</h1>
       </div>
       <AdminTabs />
       <div className="mt-6">{children}</div>

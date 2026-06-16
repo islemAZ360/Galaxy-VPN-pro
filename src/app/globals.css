@@ -49,10 +49,11 @@ body {
 }
 
 .glass {
-  @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;
+  @apply rounded-2xl border border-white/10 backdrop-blur;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 8px 32px rgba(0, 0, 0, 0.25);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 40px -16px rgba(0, 0, 0, 0.55);
 }
 
 /* Card hover: gentle lift + brand glow, used across home + admin */
@@ -225,6 +226,111 @@ body {
 }
 .pressable:active {
   transform: scale(0.97);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Admin dashboard — premium layer (scoped to .admin-shell; additive, safe).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Soft aurora behind the whole admin area — gives depth without extra markup. */
+.admin-shell {
+  position: relative;
+  isolation: isolate;
+}
+.admin-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(55rem 38rem at 10% -12%, rgba(124, 58, 237, 0.18), transparent 60%),
+    radial-gradient(46rem 34rem at 100% -4%, rgba(34, 211, 238, 0.12), transparent 55%),
+    radial-gradient(42rem 42rem at 50% 118%, rgba(99, 102, 241, 0.10), transparent 62%);
+}
+
+/* Elevated card: gradient hairline on top, real depth, glass blur. */
+.admin-panel {
+  position: relative;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(18, 18, 43, 0.5);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 22px 60px -28px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+}
+.admin-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.7), rgba(34, 211, 238, 0.7), transparent);
+  opacity: 0.65;
+}
+
+/* Stat card: sheen + lift + brand glow on hover. */
+.stat-card {
+  position: relative;
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 18px 44px -26px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease, box-shadow 0.4s ease;
+}
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 28px 70px -28px rgba(0, 0, 0, 0.95),
+    0 0 30px rgba(124, 58, 237, 0.16);
+}
+
+/* White → violet → cyan clip text for hero numbers / titles. */
+.text-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #c4b5fd 55%, #67e8f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Premium segmented nav (admin tabs). */
+.seg-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  padding: 0.4rem;
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.seg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.seg-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+.seg-item--active {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  box-shadow: 0 8px 22px -6px rgba(124, 58, 237, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 /* ── Reduced motion ───────────────────────────────────────────────────────

@@ -35,29 +35,29 @@ export default async function AdminStatsPage({
     <div className="space-y-8">
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
-          <div key={c.label} className={`card-lift rounded-2xl border ${c.border} bg-white/[0.02] p-5 shadow-lg relative overflow-hidden group`}>
-            <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${c.bg} blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
-            <div className="relative flex items-start justify-between">
-              <div>
-                <div className="text-sm font-medium text-white/60">{c.label}</div>
-                <div className="mt-2 text-3xl font-bold tracking-tight text-white/90">{c.value}</div>
+          <div key={c.label} className="stat-card group">
+            <div className={`pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full ${c.bg} opacity-40 blur-2xl transition-opacity duration-500 group-hover:opacity-90`} />
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-white/45">{c.label}</div>
+                <div className="text-gradient mt-2.5 truncate text-3xl font-bold tracking-tight">{c.value}</div>
               </div>
-              <div className={`p-3 rounded-xl ${c.bg}`}>
-                <c.icon className={`w-5 h-5 ${c.color}`} />
+              <div className={`shrink-0 rounded-xl border ${c.border} ${c.bg} p-3 shadow-inner transition-transform duration-500 group-hover:scale-110`}>
+                <c.icon className={`h-5 w-5 ${c.color}`} strokeWidth={2.2} />
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="glass animate-fade-up rounded-2xl p-6 relative overflow-hidden" style={{ animationDelay: '0.32s' }}>
+      <div className="admin-panel animate-fade-up p-6" style={{ animationDelay: '0.32s' }}>
         {/* Subtle background glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-galaxy-accent/5 blur-3xl rounded-full" />
-        
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-galaxy-accent/5 blur-3xl" />
+
         <div className="relative">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-galaxy-accent/10 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-galaxy-accent" />
+          <div className="mb-6 flex items-center gap-3">
+            <div className="rounded-lg border border-galaxy-accent/20 bg-galaxy-accent/10 p-2">
+              <TrendingUp className="h-5 w-5 text-galaxy-accent" strokeWidth={2.2} />
             </div>
             <h2 className="text-xl font-semibold">{t('revenueByPlan')}</h2>
           </div>
