@@ -1,4 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getBalanceModeStatus } from '@/lib/admin-actions';
+import { getBalancedType } from '@/lib/balancer';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,13 +78,36 @@ export async function GET(
   else if (sub.network_type === 'lte') pools = ['lte'];
   else if (sub.network_type === 'gemini') pools = ['gemini_wifi', 'gemini_lte'];
 
-  const { data: servers } = await supa
+  const balanceMode = await getBalanceModeStatus();
+  
+  // If balance mode is on, we need to fetch the parent pools as well to find the pseudo-balanced servers
+  let fetchPools = [...pools];
+  if (balanceMode) {
+    if (pools.includes('wifi')) fetchPools.push('gemini_wifi');
+    if (pools.includes('lte')) fetchPools.push('gemini_lte');
+    fetchPools = Array.from(new Set(fetchPools));
+  }
+
+  const { data: rawServers } = await supa
     .from('servers')
-    .select('config_uri')
+    .select('id, config_uri, network_type')
     .eq('is_working', true)
-    .in('network_type', pools)
+    .in('network_type', fetchPools)
     .order('latency_ms', { ascending: true, nullsFirst: false })
-    .limit(sub.server_count);
+    .limit(balanceMode ? 3000 : sub.server_count); // fetch more if balancing
+
+  let servers = rawServers || [];
+
+  if (balanceMode) {
+    // Apply deterministic balancing
+    servers = servers.filter(s => {
+      const balancedType = getBalancedType(s.id, s.network_type);
+      return pools.includes(balancedType);
+    });
+  }
+
+  // Slice down to requested count after filtering
+  servers = servers.slice(0, sub.server_count);
 
   const configs = (servers ?? []).map((s) => s.config_uri).filter(Boolean);
   if (configs.length === 0) {

@@ -2,6 +2,8 @@ import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Server } from 'lucide-react';
+import { getBalanceModeStatus } from '@/lib/admin-actions';
+import { getBalancedType } from '@/lib/balancer';
 
 export const revalidate = 30; // Revalidate every 30 seconds
 
@@ -38,6 +40,29 @@ export default async function PublicServersPage({
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'wifi'),
   ]);
 
+  const balanceMode = await getBalanceModeStatus();
+
+  let dispGeminiLte = geminiLteCount || 0;
+  let dispGeminiWifi = geminiWifiCount || 0;
+  let dispLte = lteCount || 0;
+  let dispWifi = wifiCount || 0;
+
+  if (balanceMode) {
+    const poolWifi = dispGeminiWifi + dispWifi;
+    dispWifi = Math.floor(poolWifi / 2);
+    dispGeminiWifi = poolWifi - dispWifi;
+
+    const poolLte = dispGeminiLte + dispLte;
+    dispLte = Math.floor(poolLte / 2);
+    dispGeminiLte = poolLte - dispLte;
+
+    if (servers) {
+      servers.forEach(s => {
+        s.network_type = getBalancedType(s.id, s.network_type);
+      });
+    }
+  }
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-12 md:py-20 animate-fade-up">
       <div className="mb-12 text-center">
@@ -61,10 +86,10 @@ export default async function PublicServersPage({
             <h2 className="text-xl font-semibold">{t('title')}</h2>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-md border border-fuchsia-500/50 bg-fuchsia-500/10 px-2 py-1 text-fuchsia-300">✨ Gemini / LTE / Wi-Fi · {geminiLteCount}</span>
-            <span className="rounded-md border border-fuchsia-400/40 bg-fuchsia-400/10 px-2 py-1 text-fuchsia-300">✨ Gemini / Wi-Fi · {geminiWifiCount}</span>
-            <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE / Wi-Fi · {lteCount}</span>
-            <span className="rounded-md border border-galaxy-accent/40 bg-galaxy-accent/10 px-2 py-1 text-galaxy-accent">📡 Wi-Fi · {wifiCount}</span>
+            <span className="rounded-md border border-fuchsia-500/50 bg-fuchsia-500/10 px-2 py-1 text-fuchsia-300">✨ Gemini / LTE / Wi-Fi · {dispGeminiLte}</span>
+            <span className="rounded-md border border-fuchsia-400/40 bg-fuchsia-400/10 px-2 py-1 text-fuchsia-300">✨ Gemini / Wi-Fi · {dispGeminiWifi}</span>
+            <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE / Wi-Fi · {dispLte}</span>
+            <span className="rounded-md border border-galaxy-accent/40 bg-galaxy-accent/10 px-2 py-1 text-galaxy-accent">📡 Wi-Fi · {dispWifi}</span>
           </div>
         </div>
 

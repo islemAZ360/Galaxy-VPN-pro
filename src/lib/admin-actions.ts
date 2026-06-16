@@ -330,3 +330,20 @@ export async function checkGithubScanStatus() {
   const isRunning = data.workflow_runs?.some((r: any) => r.name === 'server-liveness-scan');
   return { isRunning, count: data.total_count || 0 };
 }
+
+export async function toggleBalanceMode(enabled: boolean) {
+  await assertAdmin();
+  const admin = createAdminClient();
+  const { data } = await admin.from('worker_status').select('last_result').eq('id', 'worker').single();
+  const last_result = data?.last_result || {};
+  last_result.balance_mode = enabled;
+  await admin.from('worker_status').update({ last_result }).eq('id', 'worker');
+  revalidatePath('/', 'layout');
+}
+
+export async function getBalanceModeStatus() {
+  await assertAdmin();
+  const admin = createAdminClient();
+  const { data } = await admin.from('worker_status').select('last_result').eq('id', 'worker').single();
+  return !!data?.last_result?.balance_mode;
+}
