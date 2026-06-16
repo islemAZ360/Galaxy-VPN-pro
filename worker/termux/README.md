@@ -96,6 +96,11 @@ cp -f termux/shortcuts/galaxy-*.sh ~/.shortcuts/ && chmod +x ~/.shortcuts/galaxy
   freshly-installed nodejs needs a newer openssl. Upgrade everything, then
   re-run setup: `pkg upgrade -y` → `node -v` (should print a version) →
   `cd ~/galaxyvpn/worker && bash termux/setup.sh`.
+- **Tapping a shortcut shows "Termux requires Display over other apps"** — grant
+  it so the widget can open a terminal in the background (Android 10+). Settings
+  → Apps → Termux → *Advanced* → **Display over other apps**. On Xiaomi/HyperOS:
+  Settings → Apps → Manage apps → Termux → **Other permissions** → enable
+  *Display pop-up windows* + *…while running in the background*, and **Autostart**.
 - **Shortcuts don't appear in the widget** — they must be in `~/.shortcuts/` and
   executable. Re-run: `bash ~/galaxyvpn/worker/termux/setup.sh`.
 - **"xray-knife not found"** — re-run setup; confirm with `xray-knife --help`.
