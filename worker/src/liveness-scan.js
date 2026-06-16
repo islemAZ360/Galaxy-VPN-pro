@@ -143,10 +143,12 @@ async function loadKnownHostGeo() {
   log.info(`Reading ${repos?.length ?? 0} enabled repo(s)…`);
 
   const configs = new Map(); // hash -> { uri, source }
+  const perRepo = new Map();  // repo_url -> { files_found, configs_extracted }
   for (const r of repos ?? []) {
     try {
       const { text, fileCount } = await fetchRepoTexts(r.repo_url);
       const found = extractConfigs(text);
+      perRepo.set(r.repo_url, { files_found: fileCount, configs_extracted: found.length });
       log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${found.length} configs`);
       for (const uri of found) configs.set(hashConfig(uri), { uri, source: r.repo_url });
     } catch (e) {
@@ -228,6 +230,41 @@ async function loadKnownHostGeo() {
   }
   const aliveRows = rows.filter((r) => r.alive).length;
   log.ok(`Upserted ${rows.length} candidates — ${aliveRows} alive (incl. ${forced} Russia-hosted protected), ${rows.length - aliveRows} dead.`);
+
+  // 4b. repo_stats: write files_found + configs_extracted for EVERY enabled repo
+  //     (so a newly-added repo stops showing "Not synced yet"). The local cascade
+  //     fills the working/network counters — preserve them here so we don't zero
+  //     them between local runs.
+  try {
+    const { data: existingStats } = await supa.from('repo_stats').select('*');
+    const prevByUrl = new Map((existingStats ?? []).map((s) => [s.repo_url, s]));
+    const statRows = [];
+    for (const r of repos ?? []) {
+      const p = perRepo.get(r.repo_url);
+      if (!p) continue; // repo failed to fetch this run — leave its row untouched
+      const prev = prevByUrl.get(r.repo_url) || {};
+      statRows.push({
+        repo_url: r.repo_url,
+        files_found: p.files_found,
+        configs_extracted: p.configs_extracted,
+        configs_working: prev.configs_working ?? 0,
+        wifi_count: prev.wifi_count ?? 0,
+        lte_count: prev.lte_count ?? 0,
+        gemini_count: prev.gemini_count ?? 0,
+        gemini_wifi_count: prev.gemini_wifi_count ?? 0,
+        gemini_lte_count: prev.gemini_lte_count ?? 0,
+        last_sync_at: prev.last_sync_at ?? null,
+        updated_at: nowIso,
+      });
+    }
+    if (statRows.length) {
+      const { error } = await supa.from('repo_stats').upsert(statRows, { onConflict: 'repo_url' });
+      if (error) log.err(`repo_stats upsert failed: ${error.message}`);
+      else log.ok(`repo_stats updated for ${statRows.length} repo(s) (files + extracted).`);
+    }
+  } catch (e) {
+    log.warn(`repo_stats step failed (non-fatal): ${e.message}`);
+  }
 
   // 5. prune configs that vanished from the repos (not re-scanned this run)
   const cutoff = new Date(Date.now() - STALE_HOURS * 3600 * 1000).toISOString();
