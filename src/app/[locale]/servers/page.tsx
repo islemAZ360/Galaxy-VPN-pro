@@ -25,10 +25,18 @@ export default async function PublicServersPage({
     .order('latency_ms', { ascending: true, nullsFirst: false })
     .limit(1000);
 
-  const geminiLteCount = servers?.filter((s) => s.network_type === 'gemini_lte').length ?? 0;
-  const geminiWifiCount = servers?.filter((s) => s.network_type === 'gemini_wifi').length ?? 0;
-  const lteCount = servers?.filter((s) => s.network_type === 'lte').length ?? 0;
-  const wifiCount = servers?.filter((s) => s.network_type === 'wifi').length ?? 0;
+  // Fetch accurate global counts independent of the 1000 limit display
+  const [
+    { count: geminiLteCount },
+    { count: geminiWifiCount },
+    { count: lteCount },
+    { count: wifiCount }
+  ] = await Promise.all([
+    admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_lte'),
+    admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_wifi'),
+    admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'lte'),
+    admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'wifi'),
+  ]);
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-12 md:py-20 animate-fade-up">
