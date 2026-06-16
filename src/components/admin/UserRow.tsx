@@ -93,7 +93,7 @@ export function UserRow({
   const btnCls = 'rounded-md border border-white/15 px-2 py-1 text-xs hover:bg-white/5 disabled:opacity-50';
 
   return (
-    <div className="glass p-4 flex flex-col gap-4">
+    <div className="admin-panel p-4 sm:p-5 flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-lg" dir="ltr">{email}</div>
@@ -117,7 +117,7 @@ export function UserRow({
           const isExpired = sub.status === 'expired' || (sub.end_at && new Date(sub.end_at).getTime() < Date.now());
 
           return (
-            <div key={sub.id} className="rounded-lg bg-white/5 border border-white/10 p-3">
+            <div key={sub.id} className="rounded-xl bg-white/[0.03] border border-white/[0.08] p-3.5 transition-colors hover:border-white/15">
               <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
                 <span className={`px-1.5 py-0.5 rounded ${isExpired || sub.status === 'rejected' ? 'bg-red-400/20 text-red-300' : 'bg-emerald-400/20 text-emerald-300'}`}>
                   {sub.status.toUpperCase()}
@@ -208,7 +208,7 @@ export function UserRow({
         )}
         
         {!isAdmin && (
-          <div className="rounded-lg bg-white/5 border border-white/10 p-3 mt-2">
+          <div className="rounded-xl bg-white/[0.03] border border-white/[0.08] p-3.5 mt-2">
             <div className="text-xs text-white/60 mb-2">Grant New Subscription</div>
             <div className="flex flex-wrap items-center gap-2">
               <input

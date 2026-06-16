@@ -151,7 +151,7 @@ export function RepoManager({
   };
 
   return (
-    <div className="glass p-5">
+    <div className="admin-panel p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">{t('title')}</h2>
@@ -365,7 +365,7 @@ export function RepoManager({
         {repos.map((r) => {
           const s = statsMap.get(r.repo_url);
           return (
-            <div key={r.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <div key={r.id} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4 transition-colors hover:border-white/15 hover:bg-white/[0.04]">
               {/* Header: URL + delete */}
               <div className="flex items-center gap-3">
                 <span className="me-auto truncate text-sm font-medium" dir="ltr">
