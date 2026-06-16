@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { toggleBalanceMode } from '@/lib/admin-actions';
 import { Scale } from 'lucide-react';
 
 export function BalanceToggle({ initialEnabled }: { initialEnabled: boolean }) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setEnabled(initialEnabled);
+  }, [initialEnabled]);
 
   const handleToggle = () => {
     const newState = !enabled;
