@@ -92,6 +92,10 @@ cp -f termux/shortcuts/galaxy-*.sh ~/.shortcuts/ && chmod +x ~/.shortcuts/galaxy
 
 ## Troubleshooting
 
+- **`node` fails: "cannot locate symbol OSSL_PROVIDER_add_conf_parameter"** — a
+  freshly-installed nodejs needs a newer openssl. Upgrade everything, then
+  re-run setup: `pkg upgrade -y` → `node -v` (should print a version) →
+  `cd ~/galaxyvpn/worker && bash termux/setup.sh`.
 - **Shortcuts don't appear in the widget** — they must be in `~/.shortcuts/` and
   executable. Re-run: `bash ~/galaxyvpn/worker/termux/setup.sh`.
 - **"xray-knife not found"** — re-run setup; confirm with `xray-knife --help`.

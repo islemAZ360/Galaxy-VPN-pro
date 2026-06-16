@@ -23,7 +23,13 @@ echo "==================================================="
 
 echo
 echo "▸ [1/5] Installing system packages (nodejs, git, wget, unzip)…"
-yes | pkg update -y || true
+# Refresh lists AND upgrade installed packages first. The upgrade is essential:
+# a freshly-pulled nodejs links against a newer openssl, and leaving an old
+# openssl behind makes node die with
+#   "CANNOT LINK EXECUTABLE node: cannot locate symbol OSSL_PROVIDER_add_conf_parameter".
+# --force-confold keeps your existing config files so the upgrade stays non-interactive.
+pkg update -y || true
+pkg upgrade -y -o Dpkg::Options::="--force-confold" || true
 pkg install -y nodejs git wget unzip
 
 if [ ! -f "$WORKER_DIR/package.json" ]; then
