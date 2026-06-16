@@ -89,8 +89,13 @@ export async function GET(
   const uniqueIps = new Set((recentDevices || []).map(d => d.ip_address));
   uniqueIps.add(cleanIp);
   
-  // Non-blocking upsert to track devices even if blocked
-  supa.from('sub_devices').upsert(
+  // Track this device (even if we're about to block — so the count stays honest).
+  // AWAITED, not fire-and-forget: on Vercel the function can freeze right after the
+  // Response is returned, dropping a pending write — which would undercount IPs and
+  // silently weaken the limit. onConflict must match the unique index in
+  // supabase/sub_devices.sql EXACTLY, with no spaces (PostgREST treats the value as
+  // a literal comma-separated column list, so "a, b" would look for a column " b").
+  const { error: trackErr } = await supa.from('sub_devices').upsert(
     {
       subscription_id: sub.id,
       ip_address: cleanIp,
@@ -98,8 +103,9 @@ export async function GET(
       device_type: parseDeviceType(ua),
       last_seen_at: new Date().toISOString(),
     },
-    { onConflict: 'subscription_id, ip_address, user_agent' }
-  ).then(() => {});
+    { onConflict: 'subscription_id,ip_address,user_agent' }
+  );
+  if (trackErr) console.error('[sub] device tracking upsert failed:', trackErr.message);
 
   if (uniqueIps.size > 20) {
     return toSubscription([noticeConfig('Suspended (Exceeded 20 IP Limit in 24h)')]);
