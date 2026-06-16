@@ -879,6 +879,7 @@ export async function updateRepoStats() {
         configs_working: live.working,
         wifi_count: live.wifi,
         lte_count: live.lte,
+        gemini_count: live.gemini_wifi + live.gemini_lte,
         gemini_wifi_count: live.gemini_wifi,
         gemini_lte_count: live.gemini_lte,
         updated_at: syncTime,
