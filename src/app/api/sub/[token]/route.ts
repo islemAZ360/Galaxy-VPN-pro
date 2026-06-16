@@ -4,6 +4,11 @@ import { getBalancedType } from '@/lib/balancer';
 
 export const dynamic = 'force-dynamic';
 
+// How often the client (Happ, v2rayN, …) auto-refreshes the subscription, in
+// HOURS. Frequent refresh means dead/removed servers leave the user's app fast.
+// Tunable via the SUB_UPDATE_INTERVAL_HOURS env var (set 1 for hourly).
+const UPDATE_INTERVAL_HOURS = Number(process.env.SUB_UPDATE_INTERVAL_HOURS) || 6;
+
 // A single "server" the VPN client will display when the subscription is not
 // usable — this is how the link is "boobytrapped" after expiry.
 function noticeConfig(text: string) {
@@ -17,6 +22,9 @@ function toSubscription(lines: string[], expireUnix?: number) {
     'Content-Type': 'text/plain; charset=utf-8',
     'Cache-Control': 'no-store',
     'Profile-Title': 'GalaxyVPN',
+    // Auto-update: Happ/v2ray clients re-fetch the sub every N hours, so a server
+    // we remove (dead, too slow, Russia-hosted) leaves the user's app on its own.
+    'Profile-Update-Interval': String(UPDATE_INTERVAL_HOURS),
   };
   if (expireUnix) {
     // standard header read by Hiddify / v2ray clients to show expiry

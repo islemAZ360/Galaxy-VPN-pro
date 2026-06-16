@@ -6,6 +6,18 @@ import { lookupCountries } from './geoip.js';
 import { classifyGeminiPool, isCountryGeminiBlocked } from './gemini.js';
 import { log, C } from './log.js';
 
+// ── User-pool quality gate (applied when the Wi-Fi cascade builds the live pool).
+// Drops servers users should never receive, using data we ALREADY have (host
+// country + the LOCAL Russia-measured latency) — so it adds no scan time.
+//   EXCLUDE_HOST_CC: hosts in these countries are pointless for bypassing Russia's
+//     censorship (Russia/Belarus). Set EXCLUDE_HOST_CC='' to disable.
+//   MAX_LATENCY_MS: servers slower than this (measured HERE, from Russia — not
+//     GitHub's US runner) never enter the pool; a 5000ms server is dead-on-arrival.
+const EXCLUDE_HOST_CC = new Set(
+  (process.env.EXCLUDE_HOST_CC ?? 'RU,BY').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
+);
+const MAX_LATENCY_MS = Number(process.env.MAX_LATENCY_MS) || 1000;
+
 let running = false;
 
 export function isRunning() {
@@ -281,8 +293,24 @@ export async function runWifiCascade() {
       const looked = await withVpnRetry(() => lookupCountries(geoGaps), { label: 'geoip-gaps' });
       for (const [h, v] of looked) geo.set(h, v);
     }
+
+    // Quality gate — uses the LOCAL (Russia-measured) latency, NEVER GitHub's US
+    // one: drop excluded countries (Russia is pointless here) and servers slower
+    // than MAX_LATENCY_MS. Excluded servers fall out of `keep` below, so they are
+    // also removed from the live pool. Costs no extra time (data already in hand).
+    const eligible = working.filter((w) => {
+      const cc = geo.get(w.host)?.country_code;
+      if (cc && EXCLUDE_HOST_CC.has(cc)) return false;
+      if (w.latencyMs != null && w.latencyMs > MAX_LATENCY_MS) return false;
+      return true;
+    });
+    if (eligible.length !== working.length) {
+      log.info(`Quality gate: kept ${eligible.length}/${working.length} (dropped ${working.length - eligible.length} — excl. ${[...EXCLUDE_HOST_CC].join('/') || 'none'} · ping > ${MAX_LATENCY_MS}ms)`);
+    }
+    stats.eligible = eligible.length;
+
     const now = new Date().toISOString();
-    const sorted = [...working].sort((a, b) => {
+    const sorted = [...eligible].sort((a, b) => {
       const ca = geo.get(a.host)?.country || 'ZZZ';
       const cb = geo.get(b.host)?.country || 'ZZZ';
       if (ca !== cb) return ca < cb ? -1 : 1;
@@ -338,7 +366,7 @@ export async function runWifiCascade() {
 
     await updateRepoStats();
     stats.finishedAt = new Date().toISOString();
-    log.done(`Wi-Fi re-check done — ${working.length} live · ${stats.gemini} Gemini · ${stats.deleted} removed · took ${elapsed(stats)}s`);
+    log.done(`Wi-Fi re-check done — ${eligible.length} live · ${stats.gemini} Gemini · ${stats.deleted} removed · took ${elapsed(stats)}s`);
     return stats;
   } catch (e) {
     log.err(`Wi-Fi re-check failed: ${e.message}`);
