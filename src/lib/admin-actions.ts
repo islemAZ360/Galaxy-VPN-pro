@@ -126,7 +126,8 @@ export async function setSubscriptionTime(
   userId: string, 
   ms: number, 
   mode: 'set' | 'add',
-  networkType: 'wifi' | 'lte' | 'gemini' = 'lte'
+  networkType: 'wifi' | 'lte' | 'gemini' = 'lte',
+  customServerCount?: number
 ) {
   await assertAdmin();
   if (!Number.isFinite(ms) || ms <= 0) throw new Error('invalid duration');
@@ -168,7 +169,7 @@ export async function setSubscriptionTime(
       user_id: userId,
       plan: plan.id,
       network_type: networkType,
-      server_count: plan[networkType].serverCount,
+      server_count: customServerCount && customServerCount > 0 ? customServerCount : plan[networkType].serverCount,
       price_rub: 0,
       duration_days: Math.max(1, Math.round(ms / DAY)),
       status: 'active',

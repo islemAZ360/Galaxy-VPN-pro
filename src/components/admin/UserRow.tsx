@@ -66,6 +66,7 @@ export function UserRow({
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [units, setUnits] = useState<Record<string, keyof typeof UNIT_MS>>({});
   const [newNetwork, setNewNetwork] = useState<'wifi' | 'lte' | 'gemini'>('lte');
+  const [newServerCount, setNewServerCount] = useState<string>('');
 
   const banned = bannedUntil ? new Date(bannedUntil).getTime() > Date.now() : false;
   const isAdmin = role === 'admin';
@@ -81,7 +82,9 @@ export function UserRow({
     const u = units[subId ?? 'new'] || 'days';
     const ms = Number(amt) * UNIT_MS[u];
     if (!ms || ms <= 0) return;
-    run(() => setSubscriptionTime(subId, userId, ms, mode, newNetwork));
+    
+    const customCount = subId === null && newServerCount.trim() !== '' ? parseInt(newServerCount, 10) : undefined;
+    run(() => setSubscriptionTime(subId, userId, ms, mode, newNetwork, customCount));
   };
 
   const inputCls = 'rounded-md border border-white/15 bg-galaxy-surface px-2 py-1 text-xs';
@@ -224,6 +227,14 @@ export function UserRow({
                 <option value="lte">📶 LTE / Wi-Fi</option>
                 <option value="gemini">✨ Gemini (LTE & Wi-Fi)</option>
               </select>
+              <input
+                type="number" min="1"
+                placeholder="Servers (Default)"
+                value={newServerCount}
+                onChange={(e) => setNewServerCount(e.target.value)}
+                className={`${inputCls} w-32`}
+                title="Number of servers. Leave empty to use plan default."
+              />
               <button onClick={() => applyTime(null, 'add')} disabled={isPending} className={btnCls}>Grant</button>
             </div>
           </div>
