@@ -101,6 +101,9 @@ cp -f termux/shortcuts/galaxy-*.sh ~/.shortcuts/ && chmod +x ~/.shortcuts/galaxy
   → Apps → Termux → *Advanced* → **Display over other apps**. On Xiaomi/HyperOS:
   Settings → Apps → Manage apps → Termux → **Other permissions** → enable
   *Display pop-up windows* + *…while running in the background*, and **Autostart**.
+  If "Display over other apps" is greyed out ("restricted … apps from unknown
+  sources"), first lift it: Termux app info → **⋮** → **Remove restrictions**.
+  (No-permission fallback: open Termux and run `cd ~/galaxyvpn/worker && npm run sync:wifi`.)
 - **Shortcuts don't appear in the widget** — they must be in `~/.shortcuts/` and
   executable. Re-run: `bash ~/galaxyvpn/worker/termux/setup.sh`.
 - **"xray-knife not found"** — re-run setup; confirm with `xray-knife --help`.

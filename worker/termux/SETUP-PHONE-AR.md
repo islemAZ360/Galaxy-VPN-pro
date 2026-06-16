@@ -73,16 +73,28 @@ npm run sync:wifi
      أضفه مرّة ثانية واختر `galaxy-lte.sh` (أيقونة الـ LTE) ← زرّان منفصلان.
    - **حجم أكبر** → يعرض قائمة فيها الاثنان معاً، تضغط أيّهما لتشغيله.
 
-## 9) امنح Termux إذن "العرض فوق التطبيقات الأخرى" (ضروري للودجت)
-بدون هذا الإذن يظهر تنبيه: «Termux requires Display over other apps permission»
-ولا يفتح الفحص. الحل:
-- **Xiaomi / HyperOS:** الإعدادات ← التطبيقات ← إدارة التطبيقات ← **Termux** ←
-  **أذونات أخرى (Other permissions)** ← فعّل **عرض النوافذ المنبثقة** و **عرض
-  النوافذ المنبثقة أثناء التشغيل في الخلفية**. ويُفضّل تفعيل **التشغيل التلقائي
-  (Autostart)** لـ Termux أيضاً.
-- **أندرويد عادي:** الإعدادات ← التطبيقات ← Termux ← Advanced ← **Display over
-  other apps** ← فعّله.
+## 9) فعّل "العرض فوق التطبيقات الأخرى" لـ Termux (ضروري للودجت)
+بدون هذا الإذن يظهر «Termux requires Display over other apps permission» ولا يفتح الفحص.
+
+في Xiaomi/HyperOS قد يكون هذا الإذن **مقيّداً (رمادي)** مع رسالة:
+«App restricted from using the "Display over other apps" permission … apps from
+unknown sources». لرفع القيد أولاً:
+1. الإعدادات ← التطبيقات ← إدارة التطبيقات ← **Termux**.
+2. اضغط النقاط الثلاث **⋮** أعلى اليمين ← **إزالة القيود (Remove restrictions)** ← أكّد.
+3. الآن ادخل **Special app access / أذونات خاصة** ← **Display over other apps** ←
+   فعّله (صار قابلاً للتفعيل). فعّل أيضاً **Display pop-ups while in background**.
+4. يُفضّل تفعيل **التشغيل التلقائي (Autostart)** لـ Termux.
+
+(أندرويد عادي بلا قيود: الإعدادات ← التطبيقات ← Termux ← Advanced ← Display over
+other apps ← فعّله.)
+
 ثم ارجع للشاشة الرئيسية واضغط الزر من جديد.
+
+💡 بديل دائم لا يحتاج أي إذن: افتح Termux واكتب:
+   cd ~/galaxyvpn/worker && npm run sync:wifi
+
+ℹ️ إغلاق Termux لا يحذف شيئاً! رسالة "Welcome to Termux" تظهر مع كل جلسة جديدة،
+   لكن ملفاتك في ~/galaxyvpn تبقى محفوظة. تأكّد في أي وقت بـ:  ls ~/galaxyvpn/worker
 
 ---
 
