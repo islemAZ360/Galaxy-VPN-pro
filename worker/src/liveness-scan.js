@@ -105,6 +105,35 @@ function runBatch(uris) {
   });
 }
 
+// Host geolocation rarely changes, so reuse what prior runs already resolved
+// (cached in candidates.host_cc) instead of re-querying ip-api every scan. Returns
+// host -> { country, country_code }. Empty if the columns don't exist yet.
+async function loadKnownHostGeo() {
+  const cache = new Map();
+  let from = 0;
+  const size = 1000;
+  while (true) {
+    const { data, error } = await supa
+      .from('candidates')
+      .select('config_uri, host_cc, host_country')
+      .not('host_cc', 'is', null)
+      .range(from, from + size - 1);
+    if (error) {
+      if (/host_cc|host_country|column/i.test(error.message)) return cache; // not migrated yet
+      log.warn(`host-geo cache read failed: ${error.message}`);
+      return cache;
+    }
+    if (!data || data.length === 0) break;
+    for (const r of data) {
+      const h = parseConfig(r.config_uri).host;
+      if (h && !cache.has(h)) cache.set(h, { country: r.host_country || null, country_code: r.host_cc });
+    }
+    if (data.length < size) break;
+    from += size;
+  }
+  return cache;
+}
+
 (async () => {
   log.step('GitHub liveness scan — testing the whole pool from a permissive network…');
 
@@ -144,15 +173,24 @@ function runBatch(uris) {
   const aliveCount = [...live.values()].filter((v) => v.alive).length;
   log.ok(`${aliveCount}/${uris.length} alive from the runner`);
 
-  // 3. Geoip ALL unique hosts (network-independent — same answer anywhere). Used
-  //    for Russia-host protection AND stored so the LOCAL run reads each server's
-  //    country from here instead of calling ip-api itself (~25-30s saved/scan).
+  // 3. Host country (network-independent — same answer anywhere). Reuse what prior
+  //    runs already resolved (candidates.host_cc) and ip-api ONLY the new/unknown
+  //    hosts — this stays inside ip-api's rate limit and converges to ~100%
+  //    coverage over a few runs. Stored so the LOCAL run never calls ip-api itself.
   const allHosts = new Set();
   for (const [, c] of configs) { const h = parseConfig(c.uri).host; if (h) allHosts.add(h); }
-  let hostGeo = new Map();
-  if (allHosts.size) {
-    try { hostGeo = await lookupCountries([...allHosts]); }
-    catch (e) { log.warn(`host geoip failed (${e.message}) — flags resolved locally this run.`); }
+
+  const hostGeo = await loadKnownHostGeo(); // host -> { country, country_code }
+  const unknownHosts = [...allHosts].filter((h) => !hostGeo.has(h));
+  log.info(`Host geo: ${allHosts.size - unknownHosts.length} cached · ${unknownHosts.length} new to resolve`);
+  if (unknownHosts.length) {
+    try {
+      const fresh = await lookupCountries(unknownHosts);
+      // Only cache successful resolutions; unresolved hosts retry next run.
+      for (const [h, v] of fresh) if (v && v.country_code) hostGeo.set(h, v);
+    } catch (e) {
+      log.warn(`host geoip failed (${e.message}) — uncovered hosts resolved locally this run.`);
+    }
   }
 
   // 4. build + upsert rows
