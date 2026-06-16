@@ -113,6 +113,15 @@ export default async function ProfilePage({
           const subUrl = `${base}/api/sub/${sub.sub_token}`;
           const adminMessage = adminMessages.get(sub.id);
           const devices = allDevs.filter(d => d.subscription_id === sub.id);
+          
+          const oneDayAgoMs = Date.now() - 24 * 60 * 60 * 1000;
+          const recentIps = new Set(
+            devices
+              .filter(d => new Date(d.last_seen_at).getTime() > oneDayAgoMs)
+              .map(d => d.ip_address)
+          );
+          const activeIpCount = recentIps.size;
+          const isSuspended = activeIpCount > 20;
 
           return (
             <div key={sub.id} className="relative">
@@ -182,6 +191,28 @@ export default async function ProfilePage({
                     <div className="mb-2 text-sm text-white/60">{t('remaining')}</div>
                     <CountdownTimer endAt={sub.end_at as string} />
                   </div>
+                  
+                  {/* Anti-Sharing Warning */}
+                  <div className={`mt-2 rounded-xl border p-4 ${isSuspended ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className={`text-sm font-semibold ${isSuspended ? 'text-red-400' : 'text-galaxy-accent'}`}>
+                        {isSuspended ? '⛔ Subscription Suspended (24h)' : 'Device Limit (24h)'}
+                      </div>
+                      <div className="text-sm font-mono text-white/80">{activeIpCount} / 20 IPs</div>
+                    </div>
+                    <div className="w-full bg-black/40 rounded-full h-1.5 mb-2 overflow-hidden">
+                      <div 
+                        className={`h-1.5 rounded-full ${isSuspended ? 'bg-red-500' : activeIpCount > 15 ? 'bg-amber-400' : 'bg-emerald-400'}`} 
+                        style={{ width: `${Math.min(100, (activeIpCount / 20) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-white/50">
+                      {isSuspended 
+                        ? 'You exceeded the limit of 20 unique IP addresses in 24 hours. Wait for older IPs to expire to restore access.'
+                        : 'Your subscription can be used on up to 20 unique IPs in a rolling 24-hour window. Do not share your link publicly.'}
+                    </p>
+                  </div>
+
                   <SubLink url={subUrl} />
                   
                   <div className="mt-4 border-t border-white/5 pt-6">

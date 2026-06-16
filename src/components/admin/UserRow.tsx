@@ -28,6 +28,7 @@ type SubData = {
   plan: number | null;
   network: 'wifi' | 'lte' | 'gemini' | null;
   server_count: number | null;
+  active_ip_count: number;
   status: string;
   created_at: string;
 };
@@ -132,6 +133,9 @@ export function UserRow({
                     · {sub.server_count} Servers
                   </span>
                 )}
+                <span className={`font-mono ${sub.active_ip_count > 20 ? 'text-red-400 font-bold' : 'text-white/80'}`}>
+                  · 🌐 {sub.active_ip_count}/20 IPs (24h)
+                </span>
                 <span className="text-white/50 ml-auto">
                   {t('subEnds')}: {sub.end_at ? new Date(sub.end_at).toLocaleString() : t('none')}
                 </span>

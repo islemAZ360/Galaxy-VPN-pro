@@ -5,7 +5,7 @@ import { UserRow } from '@/components/admin/UserRow';
 
 export const dynamic = 'force-dynamic';
 
-export type SubData = { id: string; end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null; server_count: number | null; status: string; created_at: string; };
+export type SubData = { id: string; end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null; server_count: number | null; active_ip_count: number; status: string; created_at: string; };
 
 type Device = {
   subscription_id: string;
@@ -50,14 +50,26 @@ export default async function AdminUsersPage({
 
   // All subscriptions per user
   const userSubs = new Map<string, SubData[]>();
+  const oneDayAgoMs = Date.now() - 24 * 60 * 60 * 1000;
+  
   for (const s of subs ?? []) {
     if (!userSubs.has(s.user_id)) userSubs.set(s.user_id, []);
+    
+    // Calculate active IP count for this sub
+    const subDevices = allDevices.filter(d => d.subscription_id === s.id);
+    const recentIps = new Set(
+      subDevices
+        .filter(d => new Date(d.last_seen_at).getTime() > oneDayAgoMs)
+        .map(d => d.ip_address)
+    );
+    
     userSubs.get(s.user_id)!.push({
       id: s.id,
       end_at: s.end_at,
       plan: s.plan,
       network: (s.network_type as 'wifi' | 'lte' | 'gemini' | null) ?? null,
       server_count: s.server_count,
+      active_ip_count: recentIps.size,
       status: s.status,
       created_at: s.created_at,
     });

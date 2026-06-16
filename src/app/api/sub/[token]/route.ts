@@ -73,6 +73,39 @@ export async function GET(
     return toSubscription([noticeConfig(reason)]);
   }
 
+  // --- ANTI-SHARING (24H SLIDING WINDOW) ---
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+  const ua = req.headers.get('user-agent') || 'unknown';
+  const cleanIp = ip.split(',')[0].trim();
+
+  // Check active IPs in the last 24h
+  const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentDevices } = await supa
+    .from('sub_devices')
+    .select('ip_address')
+    .eq('subscription_id', sub.id)
+    .gte('last_seen_at', oneDayAgo);
+    
+  const uniqueIps = new Set((recentDevices || []).map(d => d.ip_address));
+  uniqueIps.add(cleanIp);
+  
+  // Non-blocking upsert to track devices even if blocked
+  supa.from('sub_devices').upsert(
+    {
+      subscription_id: sub.id,
+      ip_address: cleanIp,
+      user_agent: ua,
+      device_type: parseDeviceType(ua),
+      last_seen_at: new Date().toISOString(),
+    },
+    { onConflict: 'subscription_id, ip_address, user_agent' }
+  ).then(() => {});
+
+  if (uniqueIps.size > 20) {
+    return toSubscription([noticeConfig('Suspended (Exceeded 20 IP Limit in 24h)')]);
+  }
+  // -----------------------------------------
+
   let pools = ['wifi']; // fallback
   if (sub.network_type === 'wifi') pools = ['wifi'];
   else if (sub.network_type === 'lte') pools = ['lte'];
@@ -138,24 +171,6 @@ export async function GET(
   }
 
   const expireUnix = Math.floor(new Date(sub.end_at as string).getTime() / 1000);
-
-  // Track the device accessing this link
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-  const ua = req.headers.get('user-agent') || 'unknown';
-  // Vercel comma separates IPs if there are proxies. Grab the first one.
-  const cleanIp = ip.split(',')[0].trim();
-  
-  // Non-blocking upsert to track devices
-  supa.from('sub_devices').upsert(
-    {
-      subscription_id: sub.id,
-      ip_address: cleanIp,
-      user_agent: ua,
-      device_type: parseDeviceType(ua),
-      last_seen_at: new Date().toISOString(),
-    },
-    { onConflict: 'subscription_id, ip_address, user_agent' }
-  ).then(() => {});
 
   return toSubscription(configs, expireUnix);
 }
