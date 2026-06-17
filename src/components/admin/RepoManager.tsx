@@ -31,6 +31,7 @@ const KIND_LABELS: Record<string, { emoji: string; label: string; color: string 
   wifi:        { emoji: '📡', label: 'Wi-Fi → Gemini', color: 'text-galaxy-accent' },
   full:        { emoji: '📡', label: 'Wi-Fi',        color: 'text-galaxy-accent' },
   lte:         { emoji: '📶', label: 'LTE → Gemini', color: 'text-amber-300' },
+  whitelist:   { emoji: '🛡️', label: 'White-List', color: 'text-white' },
   gemini_wifi: { emoji: '✨', label: 'Gemini / Wi-Fi', color: 'text-fuchsia-300' },
   gemini_lte:  { emoji: '✨', label: 'Gemini / LTE / Wi-Fi', color: 'text-purple-300' },
   latency:     { emoji: '⏱️', label: 'Latency',      color: 'text-cyan-300' },
@@ -110,7 +111,7 @@ export function RepoManager({
     });
 
   const [syncMsg, setSyncMsg] = useState<{ type: 'error' | 'success' | 'warning', text: string } | null>(null);
-  const requestKind = (kind: 'wifi' | 'lte') => {
+  const requestKind = (kind: 'wifi' | 'lte' | 'whitelist') => {
     if (!isLive) {
       setSyncMsg({ type: 'error', text: 'Worker is offline! Please start the Tester Worker first.' });
       return;
@@ -124,7 +125,7 @@ export function RepoManager({
       setSyncMsg(null);
       try {
         await requestSync(kind);
-        setSyncMsg({ type: 'success', text: kind === 'lte' ? t('lteRequested') : t('syncRequested') });
+        setSyncMsg({ type: 'success', text: kind === 'lte' ? t('lteRequested') : kind === 'whitelist' ? 'White-list re-check requested — run it while the LTE white-list block is active.' : t('syncRequested') });
       } catch (e) {
         setSyncMsg({ type: 'error', text: t('syncFailed') + ' ' + (e instanceof Error ? e.message : '') });
       }
@@ -132,6 +133,7 @@ export function RepoManager({
   };
   const wifiRecheck = () => requestKind('wifi');
   const lteRecheck = () => requestKind('lte');
+  const whitelistRecheck = () => requestKind('whitelist');
 
   const runGithubScan = () => {
     startTransition(async () => {
@@ -181,6 +183,14 @@ export function RepoManager({
             className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/20 disabled:opacity-60"
           >
             📶 {t('lteCascade')}
+          </button>
+          <button
+            onClick={whitelistRecheck}
+            disabled={isPending}
+            title="Run while the government white-list block is active on LTE — re-tests the LTE pool and tags the survivors as White-List (served to LTE & Gemini subscribers)."
+            className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20 disabled:opacity-60"
+          >
+            🛡️ WhiteList
           </button>
           <button
             onClick={() => setShowInstructions(!showInstructions)}

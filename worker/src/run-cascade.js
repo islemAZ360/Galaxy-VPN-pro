@@ -14,13 +14,14 @@
 // clobber other keys like balance_mode) so the admin dashboard's "last sync"
 // still updates when you trigger a scan from your phone.
 
-import { runWifiCascade, runLteCascade, runLatencyCheck } from './sync.js';
+import { runWifiCascade, runLteCascade, runWhitelistCascade, runLatencyCheck } from './sync.js';
 import { supa, closeSupa } from './supa.js';
 import { banner, log } from './log.js';
 
 const CASCADES = {
   wifi: { fn: runWifiCascade, reason: 'phone-wifi' },
   lte: { fn: runLteCascade, reason: 'phone-lte' },
+  whitelist: { fn: runWhitelistCascade, reason: 'phone-whitelist' },
   latency: { fn: runLatencyCheck, reason: 'phone-latency' },
 };
 

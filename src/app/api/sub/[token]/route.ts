@@ -120,18 +120,21 @@ export async function GET(
   }
   // -----------------------------------------
 
+  // White-list servers are LTE-capable + extra-resilient, so they ship to LTE
+  // (and Gemini) subscribers alongside the normal pool.
   let pools = ['wifi']; // fallback
   if (sub.network_type === 'wifi') pools = ['wifi'];
-  else if (sub.network_type === 'lte') pools = ['lte'];
-  else if (sub.network_type === 'gemini') pools = ['gemini_wifi', 'gemini_lte'];
+  else if (sub.network_type === 'lte') pools = ['lte', 'whitelist'];
+  else if (sub.network_type === 'gemini') pools = ['gemini_wifi', 'gemini_lte', 'gemini_whitelist'];
 
   const balanceMode = await getBalanceModeStatus();
-  
+
   // If balance mode is on, we need to fetch the parent pools as well to find the pseudo-balanced servers
   let fetchPools = [...pools];
   if (balanceMode) {
     if (pools.includes('wifi')) fetchPools.push('gemini_wifi');
     if (pools.includes('lte')) fetchPools.push('gemini_lte');
+    if (pools.includes('whitelist')) fetchPools.push('gemini_whitelist');
     fetchPools = Array.from(new Set(fetchPools));
   }
 

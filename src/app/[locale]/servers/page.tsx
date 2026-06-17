@@ -32,12 +32,16 @@ export default async function PublicServersPage({
     { count: geminiLteCount },
     { count: geminiWifiCount },
     { count: lteCount },
-    { count: wifiCount }
+    { count: wifiCount },
+    { count: whitelistCount },
+    { count: geminiWhitelistCount }
   ] = await Promise.all([
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_lte'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_wifi'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'lte'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'wifi'),
+    admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'whitelist'),
+    admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_whitelist'),
   ]);
 
   const balanceMode = await getBalanceModeStatus();
@@ -46,6 +50,8 @@ export default async function PublicServersPage({
   let dispGeminiWifi = geminiWifiCount || 0;
   let dispLte = lteCount || 0;
   let dispWifi = wifiCount || 0;
+  let dispWhitelist = whitelistCount || 0;
+  let dispGeminiWhitelist = geminiWhitelistCount || 0;
 
   if (balanceMode) {
     const poolWifi = dispGeminiWifi + dispWifi;
@@ -55,6 +61,10 @@ export default async function PublicServersPage({
     const poolLte = dispGeminiLte + dispLte;
     dispLte = Math.floor(poolLte / 2);
     dispGeminiLte = poolLte - dispLte;
+
+    const poolWl = dispGeminiWhitelist + dispWhitelist;
+    dispWhitelist = Math.floor(poolWl / 2);
+    dispGeminiWhitelist = poolWl - dispWhitelist;
 
     if (servers) {
       servers.forEach(s => {
@@ -88,6 +98,8 @@ export default async function PublicServersPage({
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="rounded-md border border-fuchsia-500/50 bg-fuchsia-500/10 px-2 py-1 text-fuchsia-300">✨ Gemini / LTE / Wi-Fi · {dispGeminiLte}</span>
             <span className="rounded-md border border-fuchsia-400/40 bg-fuchsia-400/10 px-2 py-1 text-fuchsia-300">✨ Gemini / Wi-Fi · {dispGeminiWifi}</span>
+            <span className="rounded-md border border-fuchsia-300/40 bg-fuchsia-300/10 px-2 py-1 text-fuchsia-200">✨🛡️ Gemini / WhiteList · {dispGeminiWhitelist}</span>
+            <span className="rounded-md border border-white/25 bg-white/10 px-2 py-1 text-white">🛡️ WhiteList / LTE / Wi-Fi · {dispWhitelist}</span>
             <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-amber-300">📶 LTE / Wi-Fi · {dispLte}</span>
             <span className="rounded-md border border-galaxy-accent/40 bg-galaxy-accent/10 px-2 py-1 text-galaxy-accent">📡 Wi-Fi · {dispWifi}</span>
           </div>
@@ -117,6 +129,10 @@ export default async function PublicServersPage({
                         <span className="rounded bg-fuchsia-500/15 px-2 py-1 text-xs text-fuchsia-400">✨ Gemini / LTE / Wi-Fi</span>
                       ) : s.network_type === 'gemini_wifi' ? (
                         <span className="rounded bg-fuchsia-400/15 px-2 py-1 text-xs text-fuchsia-300">✨ Gemini / Wi-Fi</span>
+                      ) : s.network_type === 'gemini_whitelist' ? (
+                        <span className="rounded bg-fuchsia-300/15 px-2 py-1 text-xs text-fuchsia-200">✨🛡️ Gemini / WhiteList</span>
+                      ) : s.network_type === 'whitelist' ? (
+                        <span className="rounded bg-white/10 px-2 py-1 text-xs text-white">🛡️ WhiteList / LTE / Wi-Fi</span>
                       ) : s.network_type === 'lte' ? (
                         <span className="rounded bg-amber-400/15 px-2 py-1 text-xs text-amber-300">📶 LTE / Wi-Fi</span>
                       ) : (

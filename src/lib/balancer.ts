@@ -7,5 +7,6 @@ export function getBalancedType(id: string, originalType: string): string {
   
   if (originalType === 'gemini_wifi') return isEven ? 'wifi' : 'gemini_wifi';
   if (originalType === 'gemini_lte') return isEven ? 'lte' : 'gemini_lte';
+  if (originalType === 'gemini_whitelist') return isEven ? 'whitelist' : 'gemini_whitelist';
   return originalType;
 }

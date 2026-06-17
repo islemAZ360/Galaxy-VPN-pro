@@ -12,6 +12,8 @@ import { getBalancedType } from '@/lib/balancer';
 const NET: Record<string, { label: string; cls: string }> = {
   gemini_lte: { label: '✨ Gemini / LTE / Wi-Fi', cls: 'border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-300' },
   gemini_wifi: { label: '✨ Gemini / Wi-Fi', cls: 'border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-300' },
+  gemini_whitelist: { label: '✨🛡️ Gemini / WhiteList', cls: 'border-fuchsia-300/40 bg-fuchsia-300/10 text-fuchsia-200' },
+  whitelist: { label: '🛡️ WhiteList / LTE / Wi-Fi', cls: 'border-white/25 bg-white/10 text-white' },
   lte: { label: '📶 LTE / Wi-Fi', cls: 'border-amber-400/30 bg-amber-400/10 text-amber-300' },
   wifi: { label: '📡 Wi-Fi', cls: 'border-galaxy-accent/30 bg-galaxy-accent/10 text-galaxy-accent' },
 };
@@ -54,12 +56,16 @@ export default async function AdminServersPage({
     { count: geminiLteCount },
     { count: geminiWifiCount },
     { count: lteCount },
-    { count: wifiCount }
+    { count: wifiCount },
+    { count: whitelistCount },
+    { count: geminiWhitelistCount }
   ] = await Promise.all([
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_lte'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_wifi'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'lte'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'wifi'),
+    admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'whitelist'),
+    admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_whitelist'),
   ]);
 
   const balanceMode = await getBalanceModeStatus();
@@ -68,6 +74,8 @@ export default async function AdminServersPage({
   let dispGeminiWifi = geminiWifiCount || 0;
   let dispLte = lteCount || 0;
   let dispWifi = wifiCount || 0;
+  let dispWhitelist = whitelistCount || 0;
+  let dispGeminiWhitelist = geminiWhitelistCount || 0;
 
   if (balanceMode) {
     const poolWifi = dispGeminiWifi + dispWifi;
@@ -77,6 +85,10 @@ export default async function AdminServersPage({
     const poolLte = dispGeminiLte + dispLte;
     dispLte = Math.floor(poolLte / 2);
     dispGeminiLte = poolLte - dispLte;
+
+    const poolWl = dispGeminiWhitelist + dispWhitelist;
+    dispWhitelist = Math.floor(poolWl / 2);
+    dispGeminiWhitelist = poolWl - dispWhitelist;
 
     if (servers) {
       servers.forEach(s => {
@@ -88,6 +100,8 @@ export default async function AdminServersPage({
   const tiers = [
     ['gemini_lte', dispGeminiLte],
     ['gemini_wifi', dispGeminiWifi],
+    ['gemini_whitelist', dispGeminiWhitelist],
+    ['whitelist', dispWhitelist],
     ['lte', dispLte],
     ['wifi', dispWifi],
   ] as const;

@@ -95,11 +95,13 @@ async function withVpnRetry(fn, { label = 'upload', intervalMs = 5000, maxAttemp
 }
 
 // Naming: "🇩🇿 Algeria #2 | WIFI | LTE". The capability tags are cumulative —
-const TIER_TAGS = { 
-  wifi: ' | WIFI', 
-  lte: ' | WIFI/LTE', 
-  gemini_wifi: ' | WIFI/GEMINI', 
-  gemini_lte: ' | WIFI/LTE/GEMINI' 
+const TIER_TAGS = {
+  wifi: ' | WIFI',
+  lte: ' | WIFI/LTE',
+  gemini_wifi: ' | WIFI/GEMINI',
+  gemini_lte: ' | WIFI/LTE/GEMINI',
+  whitelist: ' | WIFI/LTE/WhiteList',
+  gemini_whitelist: ' | WIFI/LTE/GEMINI/WhiteList',
 };
 
 // Smart label: real flag+country when known; a neutral 🌐 + "Server" otherwise
@@ -478,6 +480,92 @@ export async function runLteCascade() {
 }
 
 
+
+// ───────────────────────── White-List button cascade ──────────────────────
+// Run this WHILE the government's white-list blocking is active on LTE. It
+// re-tests the LTE-capable pool over that restricted connection; the servers
+// that STILL work are promoted to the white-list tier (served to LTE & Gemini
+// subscribers as extra-resilient servers). Non-survivors fall back to plain LTE
+// — they still work on normal mobile data. The Gemini dimension is preserved
+// (it depends on the server's exit country, not the network condition).
+export async function runWhitelistCascade() {
+  if (running) return { skipped: true, reason: 'already running' };
+  running = true;
+  const stats = { startedAt: new Date().toISOString(), mode: 'whitelist' };
+  console.log('');
+  log.step('White-List re-check  ·  re-testing the LTE pool under government white-list blocking');
+  try {
+    log.info('Loading the LTE-capable pool (keep VPN ON)…');
+    const all = await withVpnRetry(
+      async () => fetchAllPaginated('servers', 'id, config_uri, network_type'),
+      { label: 'select-pool' },
+    );
+    const eligible = ['lte', 'gemini_lte', 'whitelist', 'gemini_whitelist'];
+    const existing = (all || []).filter((s) => eligible.includes(s.network_type));
+    stats.total = existing.length;
+    if (!stats.total) {
+      log.warn('No LTE servers in the pool — run the LTE re-check first.');
+      stats.finishedAt = new Date().toISOString();
+      return stats;
+    }
+
+    await vpnOffGate('Make sure you are on the WHITE-LISTED LTE connection (government white-list mode active).');
+
+    const CONC = Number(process.env.TEST_CONCURRENCY || 50);
+    log.step('Phase 1 — White-list reachability…');
+    const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 500, phaseLabel: 'WhiteList' });
+    const wlKeys = new Set(working.map((w) => keyOf(w.uri)));
+    log.ok(`${working.length} / ${stats.total} survive the white-list.`);
+
+    vpnOnPrompt();
+    log.step('Uploading results to Supabase…');
+    // Survivors → white-list tier; the rest revert to plain LTE. Gemini dimension preserved.
+    const buckets = { gemini_whitelist: [], whitelist: [], gemini_lte: [], lte: [] };
+    for (const s of existing) {
+      const survived = wlKeys.has(keyOf(s.config_uri));
+      const gem = s.network_type === 'gemini_lte' || s.network_type === 'gemini_whitelist';
+      const tier = survived ? (gem ? 'gemini_whitelist' : 'whitelist') : (gem ? 'gemini_lte' : 'lte');
+      buckets[tier].push(s.id);
+    }
+    const now = new Date().toISOString();
+    const classify = async (ids, type) => {
+      if (!ids.length) return;
+      await withVpnRetry(async () => {
+        let cCount = 0;
+        for (const idBatch of chunk(ids, 100)) {
+          const { data: cur, error: se } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
+          if (se) throw new Error(se.message);
+          if (!cur || cur.length === 0) continue;
+          const updates = cur.map((c) => {
+            const nn = retag(c.name, type);
+            return { id: c.id, name: nn, config_uri: renameConfig(c.config_uri, nn), config_hash: c.config_hash, network_type: type, last_checked_at: now };
+          });
+          const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
+          if (error) throw new Error(error.message);
+          cCount += updates.length;
+          log.progress((cCount / ids.length) * 100, `Uploading ${type} (${cCount}/${ids.length})`);
+        }
+        log.clearProgress();
+      }, { label: `classify-${type}` });
+    };
+    await classify(buckets.gemini_whitelist, 'gemini_whitelist');
+    await classify(buckets.whitelist, 'whitelist');
+    await classify(buckets.gemini_lte, 'gemini_lte');
+    await classify(buckets.lte, 'lte');
+
+    await updateRepoStats();
+    stats.whitelist = buckets.whitelist.length + buckets.gemini_whitelist.length;
+    stats.gemini_whitelist = buckets.gemini_whitelist.length;
+    stats.finishedAt = new Date().toISOString();
+    log.done(`White-list re-check done — ${stats.whitelist} white-listed (${buckets.gemini_whitelist.length} Gemini) · took ${elapsed(stats)}s`);
+    return stats;
+  } catch (e) {
+    log.err(`White-list re-check failed: ${e.message}`);
+    return { error: e.message, ...stats };
+  } finally {
+    running = false;
+  }
+}
 
 // LTE re-check: retest the servers ALREADY in the pool over the worker's current
 // (LTE) connection. Those that still pass become 'lte' (work on mobile + Wi-Fi);

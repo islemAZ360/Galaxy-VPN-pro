@@ -3,6 +3,7 @@ import { supa } from './supa.js';
 import {
   runWifiCascade,
   runLteCascade,
+  runWhitelistCascade,
   runLatencyCheck,
   isRunning
 } from './sync.js';
@@ -58,6 +59,7 @@ async function runWithStatus(reason, fn) {
 
 const wifiWithStatus = (reason) => runWithStatus(reason, runWifiCascade);
 const lteWithStatus = (reason) => runWithStatus(reason, runLteCascade);
+const whitelistWithStatus = (reason) => runWithStatus(reason, runWhitelistCascade);
 const latencyWithStatus = (reason) => runWithStatus(reason, runLatencyCheck);
 
 // --- Process admin sync requests --------------------------------------------
@@ -77,16 +79,18 @@ async function drainPending(source) {
     //   wifi  (+ legacy full / gemini_wifi) → Wi-Fi cascade (Wi-Fi DPI → Gemini)
     //   lte   (+ legacy gemini_lte)         → LTE cascade   (LTE DPI → Gemini)
     const latencyReqs = pending.filter((p) => p.kind === 'latency');
+    const whitelistReqs = pending.filter((p) => p.kind === 'whitelist');
     const lteReqs = pending.filter((p) => p.kind === 'lte' || p.kind === 'gemini_lte');
-    const wifiReqs = pending.filter((p) => !latencyReqs.includes(p) && !lteReqs.includes(p));
-    log.bell(`${pending.length} request(s) pending (${source}) — wifi:${wifiReqs.length} lte:${lteReqs.length} latency:${latencyReqs.length}`);
+    const wifiReqs = pending.filter((p) => !latencyReqs.includes(p) && !lteReqs.includes(p) && !whitelistReqs.includes(p));
+    log.bell(`${pending.length} request(s) pending (${source}) — wifi:${wifiReqs.length} lte:${lteReqs.length} whitelist:${whitelistReqs.length} latency:${latencyReqs.length}`);
 
     const markDone = (ids, result) =>
       supa.from('sync_requests').update({ processed_at: new Date().toISOString(), result }).in('id', ids);
 
-    // Order: Wi-Fi (rebuilds the base pool) → LTE (refines) → latency
+    // Order: Wi-Fi (rebuilds the base pool) → LTE (refines) → White-list → latency
     if (wifiReqs.length) await markDone(wifiReqs.map((p) => p.id), await wifiWithStatus('admin-wifi'));
     if (lteReqs.length) await markDone(lteReqs.map((p) => p.id), await lteWithStatus('admin-lte'));
+    if (whitelistReqs.length) await markDone(whitelistReqs.map((p) => p.id), await whitelistWithStatus('admin-whitelist'));
     if (latencyReqs.length) await markDone(latencyReqs.map((p) => p.id), await latencyWithStatus('admin-latency'));
   } catch (e) {
     log.err(`drain failed: ${e.message}`);
