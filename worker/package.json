@@ -9,6 +9,7 @@
     "sync": "node --env-file-if-exists=.env src/run-once.js",
     "sync:wifi": "node --env-file-if-exists=.env src/run-cascade.js wifi",
     "sync:lte": "node --env-file-if-exists=.env src/run-cascade.js lte",
+    "sync:whitelist": "node --env-file-if-exists=.env src/run-cascade.js whitelist",
     "sync:latency": "node --env-file-if-exists=.env src/run-cascade.js latency"
   },
   "bin": {

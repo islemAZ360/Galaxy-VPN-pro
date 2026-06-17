@@ -112,6 +112,7 @@ lte       ← فحص الـ LTE
 cat >> ~/.bashrc << 'EOF'
 alias wifi='cd ~/galaxyvpn/worker && npm run sync:wifi'
 alias lte='cd ~/galaxyvpn/worker && npm run sync:lte'
+alias whitelist='cd ~/galaxyvpn/worker && npm run sync:whitelist'
 EOF
 source ~/.bashrc
 ```

@@ -66,10 +66,11 @@ echo "  ✓ installed → $(command -v xray-knife)"
 echo
 echo "▸ [4/5] Installing home-screen shortcuts into ~/.shortcuts/ …"
 mkdir -p "$HOME/.shortcuts"
-cp "$WORKER_DIR/termux/shortcuts/galaxy-wifi.sh" "$HOME/.shortcuts/galaxy-wifi.sh"
-cp "$WORKER_DIR/termux/shortcuts/galaxy-lte.sh"  "$HOME/.shortcuts/galaxy-lte.sh"
-chmod +x "$HOME/.shortcuts/galaxy-wifi.sh" "$HOME/.shortcuts/galaxy-lte.sh"
-echo "  ✓ galaxy-wifi.sh  +  galaxy-lte.sh"
+cp "$WORKER_DIR/termux/shortcuts/galaxy-wifi.sh"      "$HOME/.shortcuts/galaxy-wifi.sh"
+cp "$WORKER_DIR/termux/shortcuts/galaxy-lte.sh"       "$HOME/.shortcuts/galaxy-lte.sh"
+cp "$WORKER_DIR/termux/shortcuts/galaxy-whitelist.sh" "$HOME/.shortcuts/galaxy-whitelist.sh"
+chmod +x "$HOME/.shortcuts/galaxy-wifi.sh" "$HOME/.shortcuts/galaxy-lte.sh" "$HOME/.shortcuts/galaxy-whitelist.sh"
+echo "  ✓ galaxy-wifi.sh  +  galaxy-lte.sh  +  galaxy-whitelist.sh"
 
 # Quick interactive commands so scans work even WITHOUT the home-screen widget
 # (handy on phones — e.g. Realme/Xiaomi — that restrict the widget's overlay
@@ -78,12 +79,13 @@ touch "$HOME/.bashrc"
 if ! grep -q 'galaxyvpn-aliases' "$HOME/.bashrc" 2>/dev/null; then
   cat >> "$HOME/.bashrc" << 'ALIASEOF'
 
-# galaxyvpn-aliases — type 'wifi' or 'lte' in Termux to run a scan
+# galaxyvpn-aliases — type 'wifi', 'lte' or 'whitelist' in Termux to run a scan
 alias wifi='cd ~/galaxyvpn/worker && npm run sync:wifi'
 alias lte='cd ~/galaxyvpn/worker && npm run sync:lte'
+alias whitelist='cd ~/galaxyvpn/worker && npm run sync:whitelist'
 ALIASEOF
 fi
-echo "  ✓ quick commands: type 'wifi' or 'lte' in Termux"
+echo "  ✓ quick commands: type 'wifi', 'lte' or 'whitelist' in Termux"
 
 echo
 echo "▸ [5/5] Checking configuration (.env)…"
