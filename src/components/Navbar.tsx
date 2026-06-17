@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { SignOutButton } from './SignOutButton';
 import { MobileMenu } from './MobileMenu';
+import { NavLinks } from './NavLinks';
 
 const ADMIN_EMAIL = 'islamazaizia360@gmail.com';
 
@@ -15,27 +16,35 @@ export async function Navbar() {
   } = await supabase.auth.getUser();
   const isAdmin = user?.email === ADMIN_EMAIL;
 
+  const navItems = [
+    { href: '/', label: t('home') },
+    ...(!isAdmin ? [{ href: '/#why', label: t('features') }] : []),
+    ...(!isAdmin ? [{ href: '/#plans', label: t('plans') }] : []),
+    ...(!isAdmin ? [{ href: '/servers', label: t('servers') }] : []),
+    ...(!isAdmin ? [{ href: '/#faq', label: t('faq') }] : []),
+    ...(user && !isAdmin ? [{ href: '/profile', label: t('profile') }] : []),
+    ...(user ? [{ href: '/support', label: t('support') }] : []),
+    ...(isAdmin ? [{ href: '/admin', label: t('admin'), accent: true }] : []),
+  ];
+
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-galaxy-bg/70 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-galaxy-bg/70 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.3)] relative">
+      {/* gradient hairline along the bottom edge */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-galaxy-accent/40 to-transparent" />
       <nav className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4">
-        <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight transition-opacity hover:opacity-80">
-          <img src="/icon-192x192.png" alt="GalaxyVPN Icon" className="h-7 w-7 rounded-md" />
-          <span><span className="bg-gradient-to-r from-galaxy-accent to-violet-400 bg-clip-text text-transparent">Galaxy</span>VPN</span>
+        <Link href="/" className="flex items-center gap-2.5 text-lg font-bold tracking-tight transition-opacity hover:opacity-80">
+          <img
+            src="/icon-192x192.png"
+            alt="GalaxyVPN Icon"
+            className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/15 shadow-[0_0_16px_rgba(124,58,237,0.45)]"
+          />
+          <span>
+            <span className="bg-gradient-to-r from-galaxy-accent to-violet-400 bg-clip-text text-transparent">Galaxy</span>VPN
+          </span>
         </Link>
-        <div className="hidden gap-1 text-sm text-white/75 md:flex [&>a]:rounded-lg [&>a]:px-3 [&>a]:py-1.5 [&>a]:transition-colors [&>a:hover]:bg-white/5 [&>a:hover]:text-white">
-          <Link href="/">{t('home')}</Link>
-          {!isAdmin && <Link href="/#why">{t('features')}</Link>}
-          {!isAdmin && <Link href="/#plans">{t('plans')}</Link>}
-          {!isAdmin && <Link href="/servers">{t('servers')}</Link>}
-          {!isAdmin && <Link href="/#faq">{t('faq')}</Link>}
-          {user && !isAdmin && <Link href="/profile">{t('profile')}</Link>}
-          {user && <Link href="/support">{t('support')}</Link>}
-          {isAdmin && (
-            <Link href="/admin" className="text-galaxy-accent">
-              {t('admin')}
-            </Link>
-          )}
-        </div>
+
+        <NavLinks items={navItems} />
+
         <div className="ms-auto flex items-center gap-3">
           <LocaleSwitcher />
           {user ? (
@@ -50,8 +59,8 @@ export async function Navbar() {
               {t('login')}
             </Link>
           )}
-          
-          <MobileMenu 
+
+          <MobileMenu
             links={[
               { href: '/', label: t('home') },
               ...(!isAdmin ? [{ href: '/#why', label: t('features') }] : []),
@@ -62,7 +71,7 @@ export async function Navbar() {
               ...(user ? [{ href: '/support', label: t('support') }] : []),
               ...(isAdmin ? [{ href: '/admin', label: t('admin'), accent: true }] : []),
               ...(user ? [] : [{ href: '/login', label: t('login'), accent: true }]),
-            ]} 
+            ]}
             signOutNode={user ? <SignOutButton label={t('logout')} /> : undefined}
           />
         </div>
