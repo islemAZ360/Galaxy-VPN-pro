@@ -92,7 +92,7 @@ export default async function ProfilePage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="h-8 w-1 rounded-full bg-gradient-to-b from-galaxy-primary to-galaxy-accent" />
-          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <h1 className="text-gradient text-3xl font-bold tracking-tight">{t('title')}</h1>
         </div>
         <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 break-all sm:self-auto">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />

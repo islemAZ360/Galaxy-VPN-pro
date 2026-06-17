@@ -83,7 +83,7 @@ export default async function HomePage({
       <section id="why" className="px-4 max-w-6xl mx-auto w-full scroll-mt-24">
         <FadeIn direction="up" className="text-center mb-12">
           <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('whyLabel')}</p>
-          <h2 className="text-3xl md:text-5xl font-bold">{t('whyTitle')}</h2>
+          <h2 className="text-gradient text-3xl md:text-5xl font-bold">{t('whyTitle')}</h2>
           <p className="mt-4 text-white/60 max-w-2xl mx-auto">{t('whySubtitle')}</p>
         </FadeIn>
 
@@ -110,7 +110,7 @@ export default async function HomePage({
       <section className="px-4 max-w-5xl mx-auto w-full">
         <FadeIn direction="up" className="text-center mb-12">
           <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('stepsLabel')}</p>
-          <h2 className="text-3xl md:text-5xl font-bold">{t('stepsTitle')}</h2>
+          <h2 className="text-gradient text-3xl md:text-5xl font-bold">{t('stepsTitle')}</h2>
           <p className="mt-4 text-white/60">{t('stepsSubtitle')}</p>
         </FadeIn>
 
@@ -139,7 +139,7 @@ export default async function HomePage({
       <section className="px-4 max-w-6xl mx-auto w-full">
         <FadeIn direction="up" className="text-center mb-12">
           <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('serversLabel')}</p>
-          <h2 className="text-3xl md:text-5xl font-bold">{t('serversTitle')}</h2>
+          <h2 className="text-gradient text-3xl md:text-5xl font-bold">{t('serversTitle')}</h2>
           <p className="mt-4 text-white/60 max-w-2xl mx-auto">{t('serversSubtitle')}</p>
         </FadeIn>
 
@@ -170,7 +170,7 @@ export default async function HomePage({
       <section className="w-full text-center overflow-hidden">
         <FadeIn direction="up">
           <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('blocksLabel')}</p>
-          <h2 className="text-3xl md:text-4xl font-bold mb-10">{t('blocksTitle')}</h2>
+          <h2 className="text-gradient text-3xl md:text-4xl font-bold mb-10">{t('blocksTitle')}</h2>
         </FadeIn>
 
         <FadeIn direction="up" delay={0.2}>
@@ -232,7 +232,7 @@ export default async function HomePage({
       <section className="w-full text-center overflow-hidden">
         <FadeIn direction="up">
           <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">{t('networkLabel')}</p>
-          <h2 className="text-3xl md:text-4xl font-bold mb-10">{t('networkTitle')}</h2>
+          <h2 className="text-gradient text-3xl md:text-4xl font-bold mb-10">{t('networkTitle')}</h2>
         </FadeIn>
 
         <FadeIn direction="up" delay={0.2}>
@@ -291,7 +291,7 @@ async function PlansHeader() {
   const t = await getTranslations('plans');
   return (
     <div className="text-center">
-      <h2 className="text-3xl md:text-5xl font-bold">{t('title')}</h2>
+      <h2 className="text-gradient text-3xl md:text-5xl font-bold">{t('title')}</h2>
       <p className="mt-4 text-white/60 max-w-2xl mx-auto">{t('subtitle')}</p>
     </div>
   );
@@ -302,7 +302,7 @@ async function FAQHeader() {
   return (
     <div className="text-center mb-10">
       <p className="text-sm font-bold tracking-widest text-galaxy-primary uppercase mb-3">FAQ</p>
-      <h2 className="text-3xl md:text-4xl font-bold">{t('title')}</h2>
+      <h2 className="text-gradient text-3xl md:text-4xl font-bold">{t('title')}</h2>
       <p className="mt-3 text-white/70">{t('subtitle')}</p>
     </div>
   );

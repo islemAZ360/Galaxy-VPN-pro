@@ -28,10 +28,13 @@ export function FAQ() {
         return (
           <div
             key={key}
-            className={`rounded-2xl border transition-colors ${
+            className={`relative overflow-hidden rounded-2xl border transition-colors ${
               isOpen ? 'border-galaxy-primary/30 bg-white/[0.06]' : 'border-white/10 bg-white/[0.03]'
             }`}
           >
+            {isOpen && (
+              <span className="absolute inset-y-0 start-0 w-0.5 bg-gradient-to-b from-galaxy-accent to-galaxy-primary" />
+            )}
             <button
               onClick={() => setOpenIndex(isOpen ? null : i)}
               className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
