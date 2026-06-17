@@ -483,81 +483,163 @@ export async function runLteCascade() {
 
 // ───────────────────────── White-List button cascade ──────────────────────
 // Run this WHILE the government's white-list blocking is active on LTE. It
-// re-tests the LTE-capable pool over that restricted connection; the servers
-// that STILL work are promoted to the white-list tier (served to LTE & Gemini
-// subscribers as extra-resilient servers). Non-survivors fall back to plain LTE
-// — they still work on normal mobile data. The Gemini dimension is preserved
-// (it depends on the server's exit country, not the network condition).
+// pulls ALL GitHub-verified candidates (same pool as the Wi-Fi button) and
+// tests them over the restricted white-list connection. Servers that pass are
+// promoted to the white-list tier. The Gemini dimension is determined by the
+// server's egress country (same as Wi-Fi/LTE cascades).
 export async function runWhitelistCascade() {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'whitelist' };
   console.log('');
-  log.step('White-List re-check  ·  re-testing the LTE pool under government white-list blocking');
+  log.step('White-List re-check  ·  testing ALL GitHub candidates under government white-list blocking');
   try {
-    log.info('Loading the LTE-capable pool (keep VPN ON)…');
-    const all = await withVpnRetry(
-      async () => fetchAllPaginated('servers', 'id, config_uri, network_type'),
-      { label: 'select-pool' },
-    );
-    const eligible = ['lte', 'gemini_lte', 'whitelist', 'gemini_whitelist'];
-    const existing = (all || []).filter((s) => eligible.includes(s.network_type));
-    stats.total = existing.length;
+    log.info('Loading GitHub-verified candidates (keep VPN ON)…');
+    const { uris, meta, source } = await withVpnRetry(loadAliveCandidates, { label: 'load-candidates' });
+    stats.total = uris.length;
     if (!stats.total) {
-      log.warn('No LTE servers in the pool — run the LTE re-check first.');
+      log.warn('No candidates to test — run the GitHub liveness scan first.');
       stats.finishedAt = new Date().toISOString();
       return stats;
     }
+    log.ok(`${stats.total} candidate(s) from ${source}.`);
+
+    // Capture existing server tiers before going offline (to preserve non-whitelist tiers).
+    const existingBefore = await withVpnRetry(async () => {
+      return await fetchAllPaginated('servers', 'config_hash, network_type, is_deleted');
+    }, { label: 'select-existing' });
+    const existingTiers = new Map(existingBefore.map((s) => [s.config_hash, s.network_type]));
+    const existingDeleted = new Set(existingBefore.filter((s) => s.is_deleted).map((s) => s.config_hash));
 
     await vpnOffGate('Make sure you are on the WHITE-LISTED LTE connection (government white-list mode active).');
 
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     log.step('Phase 1 — White-list reachability…');
-    const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 500, phaseLabel: 'WhiteList' });
-    const wlKeys = new Set(working.map((w) => keyOf(w.uri)));
+    const working = await deepTest(uris, { conc: CONC, batchSize: 500, phaseLabel: 'WhiteList' });
+    stats.working = working.length;
     log.ok(`${working.length} / ${stats.total} survive the white-list.`);
+
+    // Fold egress country info from xray-knife results into meta for Gemini split.
+    for (const w of working) {
+      const k = keyOf(w.uri);
+      if (w.exitCc && !meta.get(k)?.exit_cc) meta.set(k, { ...(meta.get(k) || {}), exit_cc: w.exitCc });
+    }
+
+    log.step('Phase 2 — Gemini availability…');
+    const geminiKeys = await geminiKeysFor(working.map((w) => w.uri), meta);
+    stats.gemini = working.filter((w) => geminiKeys.has(keyOf(w.uri))).length;
+    log.ok(`${stats.gemini} of the WhiteList servers reach Gemini.`);
 
     vpnOnPrompt();
     log.step('Uploading results to Supabase…');
-    // Survivors → white-list tier; the rest revert to plain LTE. Gemini dimension preserved.
-    const buckets = { gemini_whitelist: [], whitelist: [], gemini_lte: [], lte: [] };
-    for (const s of existing) {
-      const survived = wlKeys.has(keyOf(s.config_uri));
-      const gem = s.network_type === 'gemini_lte' || s.network_type === 'gemini_whitelist';
-      const tier = survived ? (gem ? 'gemini_whitelist' : 'whitelist') : (gem ? 'gemini_lte' : 'lte');
-      buckets[tier].push(s.id);
+
+    // Country/flag from GitHub's precomputed data.
+    const geo = new Map();
+    const geoGaps = [];
+    for (const w of working) {
+      const m = meta.get(keyOf(w.uri));
+      if (m?.host_cc) geo.set(w.host, { country: m.host_country || null, country_code: m.host_cc });
+      else if (w.host) geoGaps.push(w.host);
     }
+    if (geoGaps.length) {
+      log.info(`Geo: ${geoGaps.length} host(s) not precomputed by GitHub — resolving via ip-api…`);
+      const looked = await withVpnRetry(() => lookupCountries(geoGaps), { label: 'geoip-gaps' });
+      for (const [h, v] of looked) geo.set(h, v);
+    }
+
+    // Quality gate — drop excluded countries and high-latency servers.
+    const eligible = working.filter((w) => {
+      const cc = geo.get(w.host)?.country_code;
+      if (cc && EXCLUDE_HOST_CC.has(cc)) return false;
+      if (w.latencyMs != null && w.latencyMs > MAX_LATENCY_MS) return false;
+      return true;
+    });
+    if (eligible.length !== working.length) {
+      log.info(`Quality gate: kept ${eligible.length}/${working.length} (dropped ${working.length - eligible.length} — excl. ${[...EXCLUDE_HOST_CC].join('/') || 'none'} · ping > ${MAX_LATENCY_MS}ms)`);
+    }
+    stats.eligible = eligible.length;
+
     const now = new Date().toISOString();
-    const classify = async (ids, type) => {
-      if (!ids.length) return;
-      await withVpnRetry(async () => {
-        let cCount = 0;
-        for (const idBatch of chunk(ids, 100)) {
-          const { data: cur, error: se } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
-          if (se) throw new Error(se.message);
-          if (!cur || cur.length === 0) continue;
-          const updates = cur.map((c) => {
-            const nn = retag(c.name, type);
-            return { id: c.id, name: nn, config_uri: renameConfig(c.config_uri, nn), config_hash: c.config_hash, network_type: type, last_checked_at: now };
-          });
-          const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
-          if (error) throw new Error(error.message);
-          cCount += updates.length;
-          log.progress((cCount / ids.length) * 100, `Uploading ${type} (${cCount}/${ids.length})`);
-        }
-        log.clearProgress();
-      }, { label: `classify-${type}` });
-    };
-    await classify(buckets.gemini_whitelist, 'gemini_whitelist');
-    await classify(buckets.whitelist, 'whitelist');
-    await classify(buckets.gemini_lte, 'gemini_lte');
-    await classify(buckets.lte, 'lte');
+    const sorted = [...eligible].sort((a, b) => {
+      const ca = geo.get(a.host)?.country || 'ZZZ';
+      const cb = geo.get(b.host)?.country || 'ZZZ';
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      return (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity);
+    });
+    const counters = {};
+    const wlKeys = new Set(sorted.map((w) => hashConfig(w.uri)));
+    const rows = sorted
+      .filter((w) => !existingDeleted.has(hashConfig(w.uri)))
+      .map((w) => {
+        const hash = hashConfig(w.uri);
+        const g = geo.get(w.host) || {};
+        const country = g.country || 'Server';
+        const cc = g.country_code ?? null;
+        counters[country] = (counters[country] || 0) + 1;
+        const base = `${flagEmoji(cc)} ${country} #${counters[country]}`;
+        const gem = geminiKeys.has(keyOf(w.uri));
+        const tier = gem ? 'gemini_whitelist' : 'whitelist';
+        const name = retag(base, tier);
+        return {
+          name, country: g.country ?? null, country_code: cc, protocol: PROTOCOL_OF(w.uri),
+          config_uri: renameConfig(w.uri, name), config_hash: hash, latency_ms: w.latencyMs,
+          is_working: true, network_type: tier,
+          source_repo: meta.get(keyOf(w.uri))?.source_repo ?? null,
+          last_checked_at: now, updated_at: now,
+        };
+      });
+
+    // Upsert whitelist servers.
+    await withVpnRetry(async () => {
+      let cCount = 0;
+      for (const part of chunk(rows, 500)) {
+        const { error } = await supa.from('servers').upsert(part, { onConflict: 'config_hash' });
+        if (error) throw new Error(error.message);
+        cCount += part.length;
+        log.progress((cCount / rows.length) * 100, `Uploading whitelist (${cCount}/${rows.length})`);
+      }
+      log.clearProgress();
+    }, { label: 'upsert-whitelist' });
+
+    // Demote existing whitelist/gemini_whitelist servers that did NOT survive this run
+    // back to lte/gemini_lte (they still work on normal mobile data, just not on whitelist).
+    const existingWl = await withVpnRetry(async () => {
+      return await fetchAllPaginated('servers', 'id, config_hash, network_type');
+    }, { label: 'select-demote' });
+    const demotable = existingWl.filter((s) =>
+      (s.network_type === 'whitelist' || s.network_type === 'gemini_whitelist') &&
+      !wlKeys.has(s.config_hash)
+    );
+    if (demotable.length) {
+      log.info(`Demoting ${demotable.length} previous whitelist servers back to LTE…`);
+      const demoteClassify = async (ids, type) => {
+        if (!ids.length) return;
+        await withVpnRetry(async () => {
+          for (const idBatch of chunk(ids, 100)) {
+            const { data: cur, error: se } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
+            if (se) throw new Error(se.message);
+            if (!cur || cur.length === 0) continue;
+            const updates = cur.map((c) => {
+              const nn = retag(c.name, type);
+              return { id: c.id, name: nn, config_uri: renameConfig(c.config_uri, nn), config_hash: c.config_hash, network_type: type, last_checked_at: now };
+            });
+            const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
+            if (error) throw new Error(error.message);
+          }
+        }, { label: `demote-${type}` });
+      };
+      const gemDemote = demotable.filter((s) => s.network_type === 'gemini_whitelist').map((s) => s.id);
+      const plainDemote = demotable.filter((s) => s.network_type === 'whitelist').map((s) => s.id);
+      await demoteClassify(gemDemote, 'gemini_lte');
+      await demoteClassify(plainDemote, 'lte');
+    }
 
     await updateRepoStats();
-    stats.whitelist = buckets.whitelist.length + buckets.gemini_whitelist.length;
-    stats.gemini_whitelist = buckets.gemini_whitelist.length;
+    stats.whitelist = rows.filter((r) => r.network_type === 'whitelist' || r.network_type === 'gemini_whitelist').length;
+    stats.gemini_whitelist = rows.filter((r) => r.network_type === 'gemini_whitelist').length;
+    stats.demoted = demotable.length;
     stats.finishedAt = new Date().toISOString();
-    log.done(`White-list re-check done — ${stats.whitelist} white-listed (${buckets.gemini_whitelist.length} Gemini) · took ${elapsed(stats)}s`);
+    log.done(`White-list re-check done — ${stats.whitelist} white-listed (${stats.gemini_whitelist} Gemini) · ${stats.demoted} demoted · took ${elapsed(stats)}s`);
     return stats;
   } catch (e) {
     log.err(`White-list re-check failed: ${e.message}`);
