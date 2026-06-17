@@ -4,6 +4,7 @@ import { redirect } from '@/i18n/routing';
 import { createClient } from '@/lib/supabase/server';
 import { getPlan, isNetworkType, type NetworkType } from '@/lib/plans';
 import { PaymentPanel } from '@/components/PaymentPanel';
+import { GgselRedeem } from '@/components/GgselRedeem';
 
 export default async function CheckoutPage({
   params,
@@ -66,7 +67,11 @@ export default async function CheckoutPage({
         </div>
 
         {/* Payment + receipt */}
-        <PaymentPanel plan={plan} net={net} amountLabel={t('amount')} />
+        <div>
+          <PaymentPanel plan={plan} net={net} amountLabel={t('amount')} />
+          {/* GGSel code redemption — instant activation, anti-fraud matched to this plan */}
+          <GgselRedeem plan={plan.id} net={net} />
+        </div>
       </div>
     </div>
   );
