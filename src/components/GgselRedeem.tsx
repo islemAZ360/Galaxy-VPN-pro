@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/routing';
-import { Ticket } from 'lucide-react';
 import { redeemGgselCode } from '@/lib/ggsel-actions';
 import type { NetworkType } from '@/lib/plans';
 
@@ -45,8 +44,9 @@ export function GgselRedeem({ plan, net }: { plan: number; net: NetworkType }) {
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-3 px-5 py-4 text-start transition-colors hover:bg-white/[0.04]"
       >
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-orange-500/30 to-amber-500/20 ring-1 ring-white/10">
-          <Ticket className="h-5 w-5 text-amber-300" strokeWidth={2.2} />
+        <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-white ring-1 ring-white/10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/ggsel.png" alt="GGSel" className="h-7 w-7 object-contain" />
         </span>
         <span className="flex-1">
           <span className="block text-sm font-semibold">Bought on GGSel?</span>

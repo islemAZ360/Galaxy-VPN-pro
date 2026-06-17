@@ -100,7 +100,10 @@ export function GgselManager({ batches }: { batches: Batch[] }) {
       {/* Generator */}
       <div className="admin-panel p-5 sm:p-6">
         <div className="flex items-center gap-2.5">
-          <span className="icon-tile"><Ticket className="h-5 w-5 text-galaxy-accent" strokeWidth={2.2} /></span>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white ring-1 ring-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/ggsel.png" alt="GGSel" className="h-7 w-7 object-contain" />
+          </span>
           <div>
             <h2 className="text-lg font-semibold">GGSel Codes</h2>
             <p className="mt-0.5 text-sm text-white/55">
