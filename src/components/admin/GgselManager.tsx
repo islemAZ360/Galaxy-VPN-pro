@@ -78,7 +78,7 @@ export function GgselManager({ batches }: { batches: Batch[] }) {
         // pure codes, one per line — ready to upload to GGSel
         downloadFile(`${base}.txt`, res.codes.map((c) => c.code).join('\n') + '\n', 'text/plain');
       } else {
-        const csv = ['code,status,redeemed_at', ...res.codes.map((c) => `${c.code},${c.status},${c.redeemed_at ?? ''}`)].join('\n');
+        const csv = res.codes.map((c) => `${c.code},${c.status},${c.redeemed_at ?? ''}`).join('\n');
         downloadFile(`${base}.csv`, csv + '\n', 'text/csv');
       }
     });
