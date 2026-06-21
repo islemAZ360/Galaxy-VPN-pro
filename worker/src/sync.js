@@ -144,14 +144,18 @@ const keyOf = (u) => renameConfig(u, '');
 //     LTE+VPN link DPI stalls are frequent and can last several pages in a
 //     row; 8 attempts × 12s = 96s budget per page before handing to the outer
 //     withVpnRetry(). Most stalls clear within 2-3 retries.
-//   - a 400ms pause between SUCCESSFUL pages so the request pattern doesn't
-//     look like a tight burst (DPI is pattern-sensitive). Tunable via
-//     SUPA_PAGE_DELAY_MS; set to 0 to disable.
+//   - a randomized pause between SUCCESSFUL pages so the request pattern
+//     doesn't look like a tight burst (DPI is pattern-sensitive). A fixed
+//     delay is itself a detectable pattern, so we jitter ±50% around the
+//     base. Tunable via SUPA_PAGE_DELAY_MS (base, default 500); set to 0 to
+//     disable. Also pause briefly after a failed page's retry to let any
+//     DPI state cool down.
 async function fetchAllPaginated(table, select, filters = {}) {
   let allData = [];
   let from = 0;
   const size = Math.max(1, Number(process.env.SUPA_PAGE_SIZE) || 20);
-  const pageDelay = Math.max(0, Number(process.env.SUPA_PAGE_DELAY_MS) || 400);
+  const baseDelay = Math.max(0, Number(process.env.SUPA_PAGE_DELAY_MS) || 500);
+  const jitter = () => baseDelay ? baseDelay * (0.5 + Math.random()) : 0;
   log.info(`Fetching ${table} (page ${size})…`);
   while (true) {
     const fromIdx = from;
@@ -161,13 +165,13 @@ async function fetchAllPaginated(table, select, filters = {}) {
       const r = await q;
       if (r.error) throw new Error(r.error.message);
       return r;
-    }, { attempts: 8, baseMs: 1000, label: `paginate ${table}@${fromIdx}` });
+    }, { attempts: 8, baseMs: 1500, label: `paginate ${table}@${fromIdx}` });
     if (!data || data.length === 0) break;
     allData.push(...data);
     if (allData.length % 200 < size) log.info(`Loaded ${allData.length} ${table} rows…`);
     if (data.length < size) break;
     from += size;
-    if (pageDelay) await sleep(pageDelay);
+    if (jitter()) await sleep(jitter());
   }
   return allData;
 }
