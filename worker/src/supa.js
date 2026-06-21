@@ -57,13 +57,14 @@ const dispatcher = new Agent({
   pipelining: 0,
 });
 
-// Shorter than the old 60s: on a flaky VPN the call either succeeds in a few
-// seconds or stalls silently (carrier DPI drops packets without RST). A 30s
-// ceiling makes withVpnRetry retry sooner with a fresh socket instead of hanging
-// the whole run for a minute per attempt. Generous enough that a healthy large
-// upsert (buffered, so the body is already in memory before we rebuild it) still
-// completes — the body is no longer streamed, so body transfer is near-instant.
-const CALL_TIMEOUT = num(process.env.SUPA_CALL_TIMEOUT_MS, 30000); // last-resort per-call ceiling
+// Short: on a flaky Russian LTE+VPN link the DPI stalls requests inconsistently
+// (even small ones), so we want a hung request detected FAST and retried rather
+// than waiting 30s per hang. A healthy request is <1s, so 12s never trips a
+// working call — but a stalled one is caught at 12s instead of 30s, letting
+// withRetry absorb transient DPI stalls silently (4 attempts × 12s = 48s budget
+// before the outer withVpnRetry shows its "VPN down" panel). Body is buffered
+// (no streaming), so body transfer is near-instant once headers arrive.
+const CALL_TIMEOUT = num(process.env.SUPA_CALL_TIMEOUT_MS, 12000); // last-resort per-call ceiling
 
 const customFetch = async (input, init = {}) => {
   const ctrl = new AbortController();
@@ -73,33 +74,54 @@ const customFetch = async (input, init = {}) => {
     if (caller.aborted) ctrl.abort(caller.reason);
     else caller.addEventListener('abort', relay, { once: true });
   }
-  const timer = setTimeout(
-    () => ctrl.abort(new Error(`Supabase call exceeded ${CALL_TIMEOUT}ms hard timeout`)),
-    CALL_TIMEOUT,
-  );
+  // Race the whole operation (fetch + body buffer) against a HARD timeout that
+  // rejects explicitly. We do NOT rely on ctrl.abort() alone to end the call:
+  // on a DPI-stalled link the fetch/arrayBuffer can hang forever without undici's
+  // headersTimeout/bodyTimeout ever firing, and ctrl.abort() does not abort an
+  // already-pending body read in all undici versions. Without this race the
+  // caller (postgrest-js → withRetry → withVpnRetry) never sees an error and the
+  // worker freezes at "Fetching servers…". The race guarantees an error within
+  // CALL_TIMEOUT so withVpnRetry can surface its "VPN down" panel and retry.
+  // The timeout error is tagged AbortError so postgrest-js skips its own 3×
+  // retry (which would otherwise burn 3×CALL_TIMEOUT before giving up).
+  let timer;
+  const timeoutErr = new Error(`Supabase call exceeded ${CALL_TIMEOUT}ms hard timeout`);
+  timeoutErr.name = 'AbortError';
+  timeoutErr.code = 'ABORT_ERR';
+  const timeoutP = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      ctrl.abort(timeoutErr); // best-effort cleanup of the underlying socket
+      reject(timeoutErr);     // but the race rejects here regardless
+    }, CALL_TIMEOUT);
+  });
+  const op = (async () => {
+    try {
+      // NOTE: headers are passed through untouched so apikey/Authorization survive.
+      const res = await fetch(input, { ...init, dispatcher, signal: ctrl.signal });
+      // Buffer the response body HERE, inside the try/catch. Without this, a socket
+      // terminated mid-body surfaces as a bare "TypeError: terminated" thrown from
+      // postgrest-js's own res.text() — OUTSIDE this wrapper — so the cause-surfacing
+      // below never runs. By reading the body now and rebuilding the Response, a
+      // body-stream termination is caught and wrapped with its cause just like a
+      // connect/headers failure. Supabase REST responses are small JSON, so
+      // buffering is cheap and never blocks streaming.
+      const buf = new Uint8Array(await res.arrayBuffer());
+      return new Response(buf.length ? buf : null, {
+        status: res.status,
+        statusText: res.statusText,
+        headers: res.headers,
+      });
+    } catch (err) {
+      // undici hides the real reason in err.cause — surface it so logs are useful.
+      const c = err?.cause;
+      const detail = c ? ` (cause: ${c.code || c.name || c.message})` : '';
+      const wrapped = new Error(`${err.message}${detail}`);
+      wrapped.cause = err;
+      throw wrapped;
+    }
+  })();
   try {
-    // NOTE: headers are passed through untouched so apikey/Authorization survive.
-    const res = await fetch(input, { ...init, dispatcher, signal: ctrl.signal });
-    // Buffer the response body HERE, inside the try/catch. Without this, a socket
-    // terminated mid-body surfaces as a bare "TypeError: terminated" thrown from
-    // postgrest-js's own res.text() — OUTSIDE this wrapper — so the cause-surfacing
-    // below never runs and the §4.3 diagnosability goal is defeated. By reading the
-    // body now and rebuilding the Response, a body-stream termination is caught and
-    // wrapped with its cause just like a connect/headers failure. Supabase REST
-    // responses are small JSON, so buffering is cheap and never blocks streaming.
-    const buf = new Uint8Array(await res.arrayBuffer());
-    return new Response(buf.length ? buf : null, {
-      status: res.status,
-      statusText: res.statusText,
-      headers: res.headers,
-    });
-  } catch (err) {
-    // undici hides the real reason in err.cause — surface it so logs are useful.
-    const c = err?.cause;
-    const detail = c ? ` (cause: ${c.code || c.name || c.message})` : '';
-    const wrapped = new Error(`${err.message}${detail}`);
-    wrapped.cause = err;
-    throw wrapped;
+    return await Promise.race([op, timeoutP]);
   } finally {
     clearTimeout(timer);
     if (caller) caller.removeEventListener?.('abort', relay);

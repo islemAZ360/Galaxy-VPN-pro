@@ -133,18 +133,22 @@ const keyOf = (u) => renameConfig(u, '');
 
 // Helper to paginate any Supabase fetch to avoid payload/connection crashes.
 // Each page is wrapped in withRetry() so a single page dropped by a flaky VPN
-// is retried instead of aborting the whole load. Page size is 500 — smaller
-// bodies are less likely to be killed mid-stream.
-//   - attempts: 2 (one retry) so a persistently-down link hands off to the
-//     outer withVpnRetry() quickly (which shows the "VPN down" panel) instead
-//     of hanging silently for minutes on 5×30s timeouts.
-//   - a progress log per page so the user sees the pool load advancing rather
-//     than a blank "Loading the Wi-Fi pool…" line that looks like a hang.
+// is retried instead of aborting the whole load.
+//
+// PAGE SIZE = 20 (env: SUPA_PAGE_SIZE). Empirically, Russian DPI on LTE+VPN
+// lets response payloads up to ~6KB through and stalls larger ones mid-stream
+// (20 rows × ~300-char config_uri ≈ 6KB succeeds; 30 rows hangs forever). A
+// ~4000-server pool → 200 requests × ~330ms ≈ 66s, acceptable. If DPI relaxes,
+// raise SUPA_PAGE_SIZE; if it tightens, lower it.
+//   - attempts: 4 (three silent retries) so a transient DPI stall is absorbed
+//     without surfacing the outer withVpnRetry() "VPN down" panel. On a flaky
+//     link most stalls succeed on the 2nd/3rd attempt; only a persistently-down
+//     link (all 4 fail) hands off to withVpnRetry().
 async function fetchAllPaginated(table, select, filters = {}) {
   let allData = [];
   let from = 0;
-  const size = 500;
-  log.info(`Fetching ${table}…`);
+  const size = Math.max(1, Number(process.env.SUPA_PAGE_SIZE) || 20);
+  log.info(`Fetching ${table} (page ${size})…`);
   while (true) {
     const fromIdx = from;
     const { data, error } = await withRetry(async () => {
@@ -153,10 +157,10 @@ async function fetchAllPaginated(table, select, filters = {}) {
       const r = await q;
       if (r.error) throw new Error(r.error.message);
       return r;
-    }, { attempts: 2, baseMs: 1000, label: `paginate ${table}@${fromIdx}` });
+    }, { attempts: 4, baseMs: 500, label: `paginate ${table}@${fromIdx}` });
     if (!data || data.length === 0) break;
     allData.push(...data);
-    log.info(`Loaded ${allData.length} ${table} rows…`);
+    if (allData.length % 200 < size) log.info(`Loaded ${allData.length} ${table} rows…`);
     if (data.length < size) break;
     from += size;
   }
