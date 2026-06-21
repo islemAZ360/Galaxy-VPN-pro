@@ -219,27 +219,51 @@ async function fetchAllPaginated(table, select, filters = {}) {
 
   let skipped = 0; // pages we gave up on (handled below)
 
+  // Fetch one range [from, from+size-1] with retries. Returns the rows or null
+  // if it permanently failed (so the caller can skip without throwing).
+  const fetchRange = async (from, sz, label) => {
+    try {
+      const { data } = await withRetry(async () => {
+        let q = supa.from(table).select(select).range(from, from + sz - 1);
+        for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+        const r = await q;
+        if (r.error) throw new Error(r.error.message);
+        return r;
+      }, { attempts: 2, baseMs: 800, maxMs: 4000, label });
+      return data ?? [];
+    } catch {
+      return null;
+    }
+  };
+
   const worker = async () => {
     while (true) {
       const idx = next++;
       if (idx >= pageCount) break;
       const from = idx * size;
-      try {
-        const { data } = await withRetry(async () => {
-          let q = supa.from(table).select(select).range(from, from + size - 1);
-          for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-          const r = await q;
-          if (r.error) throw new Error(r.error.message);
-          return r;
-        }, { attempts: 4, baseMs: 1500, maxMs: 10000, label: `paginate ${table}@${from}` });
-        pages[idx] = data ?? [];
-      } catch (e) {
-        // Page refused to load after all retries — skip it instead of hanging
-        // the whole load. A handful of skipped pages (~200 rows) is better than
-        // blocking the LTE re-check forever; the test still covers the other
-        // ~3,000 servers. We don't add null/[] here (handled at flat()).
-        log.warn(`  ⏭  Skipping ${table}@${from} after retries — ${e.message.substring(0, 50)}`);
+
+      // 1) Try the full page (fast path: succeeds in ~400ms on ~95% of pages).
+      let rows = await fetchRange(from, size, `paginate ${table}@${from}`);
+
+      // 2) DPI blocked the full page — split into two HALF pages (10 rows each).
+      //    Smaller payloads sail through DPI where the 20-row page stalled. This
+      //    recovers blocked pages instead of skipping them (verified: 10-row
+      //    requests succeed even when the 20-row @offset@520 was unreachable).
+      if (rows === null && size >= 4) {
+        const half = size >> 1;
+        const a = await fetchRange(from, half, `paginate ${table}@${from}½a`);
+        const b = await fetchRange(from + half, half, `paginate ${table}@${from}½b`);
+        rows = (a && b) ? [...a, ...b] : (a || b);
+      }
+
+      // 3) Still null — half pages also blocked. Skip and move on; the test
+      //    still covers the other ~3,000 servers.
+      if (rows === null) {
+        log.warn(`  ⏭  Skipping ${table}@${from} (DPI-blocked)`);
         skipped++;
+        pages[idx] = [];
+      } else {
+        pages[idx] = rows;
       }
       done++;
       report();
