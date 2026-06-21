@@ -217,19 +217,30 @@ async function fetchAllPaginated(table, select, filters = {}) {
     }
   };
 
+  let skipped = 0; // pages we gave up on (handled below)
+
   const worker = async () => {
     while (true) {
       const idx = next++;
       if (idx >= pageCount) break;
       const from = idx * size;
-      const { data, error } = await withRetry(async () => {
-        let q = supa.from(table).select(select).range(from, from + size - 1);
-        for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-        const r = await q;
-        if (r.error) throw new Error(r.error.message);
-        return r;
-      }, { attempts: 8, baseMs: 1500, maxMs: 20000, label: `paginate ${table}@${from}` });
-      pages[idx] = data ?? [];
+      try {
+        const { data } = await withRetry(async () => {
+          let q = supa.from(table).select(select).range(from, from + size - 1);
+          for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+          const r = await q;
+          if (r.error) throw new Error(r.error.message);
+          return r;
+        }, { attempts: 4, baseMs: 1500, maxMs: 10000, label: `paginate ${table}@${from}` });
+        pages[idx] = data ?? [];
+      } catch (e) {
+        // Page refused to load after all retries — skip it instead of hanging
+        // the whole load. A handful of skipped pages (~200 rows) is better than
+        // blocking the LTE re-check forever; the test still covers the other
+        // ~3,000 servers. We don't add null/[] here (handled at flat()).
+        log.warn(`  ⏭  Skipping ${table}@${from} after retries — ${e.message.substring(0, 50)}`);
+        skipped++;
+      }
       done++;
       report();
     }
@@ -237,8 +248,9 @@ async function fetchAllPaginated(table, select, filters = {}) {
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
-  const allData = pages.flat();
-  log.info(`Loaded ${allData.length}/${total} ${table} rows total.`);
+  const allData = pages.filter(Boolean).flat();
+  if (skipped > 0) log.warn(`Loaded ${allData.length}/${total} ${table} rows (${skipped} page(s) skipped — DPI-blocked).`);
+  else log.info(`Loaded ${allData.length}/${total} ${table} rows total.`);
   return allData;
 }
 
