@@ -27,7 +27,12 @@ export function isRunning() {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Retry transient failures (e.g. brief DNS/network blips on long runs).
-async function withRetry(fn, { attempts = 4, baseMs = 1000, label = 'op' } = {}) {
+// Exponential backoff with a cap: baseMs * 2^i, capped at maxMs (default 30s)
+// so later retries don't wait forever. For DPI stalls on a flaky VPN, a longer
+// backoff between retries gives the DPI state time to reset — short retries
+// just hammer the same blocked path and fail again. Jitter ±25% so a burst of
+// parallel retries from different calls can't synchronize into a pattern.
+async function withRetry(fn, { attempts = 4, baseMs = 1000, maxMs = 30000, label = 'op' } = {}) {
   let lastErr;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -35,7 +40,11 @@ async function withRetry(fn, { attempts = 4, baseMs = 1000, label = 'op' } = {})
     } catch (e) {
       lastErr = e;
       log.warn(`${label} attempt ${i + 1}/${attempts} failed: ${e.message}`);
-      if (i < attempts - 1) await sleep(baseMs * Math.pow(2, i));
+      if (i < attempts - 1) {
+        const raw = Math.min(baseMs * Math.pow(2, i), maxMs);
+        const jittered = raw * (0.75 + Math.random() * 0.5);
+        await sleep(jittered);
+      }
     }
   }
   throw lastErr;
