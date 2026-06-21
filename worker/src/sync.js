@@ -76,6 +76,7 @@ async function skipKnownDead(uris) {
 // results upload automatically — no data is lost.
 async function withVpnRetry(fn, { label = 'upload', intervalMs = 5000, maxAttempts = 120 } = {}) {
   for (let i = 1; i <= maxAttempts; i++) {
+    if (i === 1) log.info(`Connecting to Supabase (${label})…`);
     try {
       return await fn();
     } catch (e) {
@@ -132,14 +133,18 @@ const keyOf = (u) => renameConfig(u, '');
 
 // Helper to paginate any Supabase fetch to avoid payload/connection crashes.
 // Each page is wrapped in withRetry() so a single page dropped by a flaky VPN
-// (the "keep VPN ON" phase is exactly when mid-stream terminations happen) is
-// retried instead of aborting the whole load. Page size is 500 — smaller than
-// 1000 so each request body is shorter and less likely to be killed mid-stream,
-// while still keeping the request count reasonable for pools of ~800 servers.
+// is retried instead of aborting the whole load. Page size is 500 — smaller
+// bodies are less likely to be killed mid-stream.
+//   - attempts: 2 (one retry) so a persistently-down link hands off to the
+//     outer withVpnRetry() quickly (which shows the "VPN down" panel) instead
+//     of hanging silently for minutes on 5×30s timeouts.
+//   - a progress log per page so the user sees the pool load advancing rather
+//     than a blank "Loading the Wi-Fi pool…" line that looks like a hang.
 async function fetchAllPaginated(table, select, filters = {}) {
   let allData = [];
   let from = 0;
   const size = 500;
+  log.info(`Fetching ${table}…`);
   while (true) {
     const fromIdx = from;
     const { data, error } = await withRetry(async () => {
@@ -148,9 +153,10 @@ async function fetchAllPaginated(table, select, filters = {}) {
       const r = await q;
       if (r.error) throw new Error(r.error.message);
       return r;
-    }, { attempts: 5, baseMs: 1500, label: `paginate ${table}@${fromIdx}` });
+    }, { attempts: 2, baseMs: 1000, label: `paginate ${table}@${fromIdx}` });
     if (!data || data.length === 0) break;
     allData.push(...data);
+    log.info(`Loaded ${allData.length} ${table} rows…`);
     if (data.length < size) break;
     from += size;
   }
