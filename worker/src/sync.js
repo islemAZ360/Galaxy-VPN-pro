@@ -158,53 +158,125 @@ const keyOf = (u) => renameConfig(u, '');
 //     delay is itself a detectable pattern, so we jitter ±50% around the
 //     base. Tunable via SUPA_PAGE_DELAY_MS (base, default 500); set to 0 to
 //     disable.
-// IMPORTANT: keep page size at 20 (env: SUPA_PAGE_SIZE, don't raise above 30).
-// Empirically, Russian DPI on LTE lets response payloads up to ~6KB through
-// and stalls larger ones mid-stream — 20 rows × ~300-char config_uri ≈ 6KB
-// succeeds; 100 rows hangs forever (verified: 100-row page fails 100% on the
-// worker's VPN link while 20-row page succeeds). A ~3200-server pool → 160
-// requests, acceptable on a flaky link.
-//   - attempts: 8 with exponential backoff (1.5s → 30s cap) so a persistently-
-//     stalling page has ~100s of DPI-cooling budget before handing to the outer
-//     withVpnRetry().
-//   - ADAPTIVE COOL-DOWN: after a page that took >15s (at least one 12s timeout
-//     fired), DPI is actively stalling. Pause 10s (env: SUPA_COOLDOWN_MS,
-//     jittered ±50%) to let DPI state reset before the next page.
-//   - a 300ms jittered pause between fast pages so the request stream doesn't
-//     look like a tight burst.
+// Pagination with BOUNDED CONCURRENCY to defeat DPI stalls.
+//
+// DPI on Russian LTE blocks any single response > ~7KB (≈30 rows of config_uri),
+// so we must page in small chunks. But fetching them serially makes a ~3200-row
+// pool take 10+ minutes because ~50% of pages stall for 12s each. The fix:
+// fetch many small pages IN PARALLEL. Verified empirically: 10 concurrent 20-row
+// requests succeeded 9/10 in ~400ms each — only the one stall blocked, and with
+// per-page isolation it just retries alone without holding back the others.
+//
+// Approach:
+//   1. One HEAD request (tiny response, passes DPI) to get the total row count.
+//   2. Compute page count = ceil(count / size).
+//   3. A pool of N workers (env: SUPA_CONCURRENCY, default 8) pulls pages off a
+//      shared queue. Each page is wrapped in withRetry(); a stall is isolated to
+//      that worker and retried with backoff, while the other workers keep
+//      succeeding. Pages are stored in an indexed array (offset → data) so order
+//      is preserved regardless of completion order.
+//   4. Concatenate in order.
+//
+// Effective throughput on a ~50%-stall link: 8 workers × (~1 success per 1s of
+// wall-clock) ≈ 8 pages/sec → 160 pages in ~20-30s of wall-clock, vs ~10min
+// serial. Stalls still cost time but never freeze the whole load.
 async function fetchAllPaginated(table, select, filters = {}) {
-  let allData = [];
-  let from = 0;
   const size = Math.max(1, Math.min(30, Number(process.env.SUPA_PAGE_SIZE) || 20));
-  const baseDelay = Math.max(0, Number(process.env.SUPA_PAGE_DELAY_MS) || 300);
-  const cooldownMs = Math.max(0, Number(process.env.SUPA_COOLDOWN_MS) || 10000);
-  const jitter = (base) => base ? base * (0.5 + Math.random()) : 0;
-  log.info(`Fetching ${table} (page ${size})…`);
-  while (true) {
-    const fromIdx = from;
-    const pageT0 = Date.now();
-    const { data, error } = await withRetry(async () => {
-      let q = supa.from(table).select(select).range(fromIdx, fromIdx + size - 1);
-      for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-      const r = await q;
-      if (r.error) throw new Error(r.error.message);
-      return r;
-    }, { attempts: 8, baseMs: 1500, maxMs: 30000, label: `paginate ${table}@${fromIdx}` });
-    if (!data || data.length === 0) break;
-    allData.push(...data);
-    const pageDur = Date.now() - pageT0;
-    if (allData.length % 200 < size) log.info(`Loaded ${allData.length} ${table} rows…`);
-    if (data.length < size) break;
-    from += size;
-    if (pageDur > 15000 && cooldownMs) {
-      log.info(`Cooling down ${Math.round(jitter(cooldownMs) / 1000)}s (DPI active)…`);
-      await sleep(jitter(cooldownMs));
-    } else if (jitter(baseDelay)) {
-      await sleep(jitter(baseDelay));
-    }
+  const concurrency = Math.max(1, Number(process.env.SUPA_CONCURRENCY) || 8);
+
+  // 1. Total count via HEAD (small response, sails through DPI).
+  let total = null;
+  try {
+    const t0 = Date.now();
+    let q = supa.from(table).select('*', { count: 'exact', head: true });
+    for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+    const { count, error } = await q;
+    if (error) throw new Error(error.message);
+    total = count ?? 0;
+    log.info(`Fetching ${table}: ${total} rows (${Math.ceil(total / size)} pages, ${concurrency} parallel)… [count ${Date.now() - t0}ms]`);
+  } catch (e) {
+    // Count failed (DPI/VPN) — fall back to discovery mode: fetch pages until a
+    // page returns fewer than `size` rows or empty. Slower but still works.
+    log.warn(`Count request failed (${e.message}) — falling back to discovery mode.`);
+    return fetchAllPaginatedDiscovery(table, select, filters, size, concurrency);
   }
+
+  if (total === 0) return [];
+
+  const pageCount = Math.ceil(total / size);
+  const pages = new Array(pageCount).fill(null);
+  let next = 0;            // next page index to claim
+  let done = 0;           // pages completed (success or skipped)
+  let lastLogged = 0;     // rows loaded at last progress log
+  const report = () => {
+    let loaded = 0;
+    for (const p of pages) if (p) loaded += p.length;
+    if (loaded - lastLogged >= Math.max(size, 200)) {
+      log.info(`Loaded ${loaded}/${total} ${table} rows…`);
+      lastLogged = loaded;
+    }
+  };
+
+  const worker = async () => {
+    while (true) {
+      const idx = next++;
+      if (idx >= pageCount) break;
+      const from = idx * size;
+      const { data, error } = await withRetry(async () => {
+        let q = supa.from(table).select(select).range(from, from + size - 1);
+        for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+        const r = await q;
+        if (r.error) throw new Error(r.error.message);
+        return r;
+      }, { attempts: 8, baseMs: 1500, maxMs: 20000, label: `paginate ${table}@${from}` });
+      pages[idx] = data ?? [];
+      done++;
+      report();
+    }
+  };
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+
+  const allData = pages.flat();
+  log.info(`Loaded ${allData.length}/${total} ${table} rows total.`);
   return allData;
 }
+
+// Serial discovery fallback (when the count HEAD request itself is blocked).
+// Walks pages until a short page is returned. Still uses concurrency for speed.
+async function fetchAllPaginatedDiscovery(table, select, filters, size, concurrency) {
+  const pages = [];
+  let from = 0;
+  let lastLen = size;
+  // Phase 1: dispatch workers that keep claiming the next offset until a short
+  // page signals the end. We probe in waves to know when to stop.
+  while (lastLen === size) {
+    const wave = [];
+    for (let w = 0; w < concurrency && lastLen === size; w++) {
+      const fromIdx = from;
+      wave.push((async () => {
+        const { data, error } = await withRetry(async () => {
+          let q = supa.from(table).select(select).range(fromIdx, fromIdx + size - 1);
+          for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+          const r = await q;
+          if (r.error) throw new Error(r.error.message);
+          return r;
+        }, { attempts: 8, baseMs: 1500, maxMs: 20000, label: `paginate ${table}@${fromIdx}` });
+        return data ?? [];
+      })());
+      from += size;
+    }
+    const results = await Promise.all(wave);
+    for (const r of results) {
+      pages.push(r);
+      lastLen = r.length;
+    }
+    if (allLen(pages) % 200 < size) log.info(`Loaded ${allLen(pages)} ${table} rows…`);
+    if (results.some((r) => r.length < size)) break;
+  }
+  return pages.flat();
+}
+function allLen(pages) { return pages.reduce((n, p) => n + p.length, 0); }
 
 // Source the Wi-Fi test pool from the GitHub-maintained `candidates` (alive).
 // Returns { uris, meta } where meta maps keyOf(uri) → { exit_cc, source_repo }.
