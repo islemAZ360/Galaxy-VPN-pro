@@ -73,7 +73,20 @@ const customFetch = async (input, init = {}) => {
   );
   try {
     // NOTE: headers are passed through untouched so apikey/Authorization survive.
-    return await fetch(input, { ...init, dispatcher, signal: ctrl.signal });
+    const res = await fetch(input, { ...init, dispatcher, signal: ctrl.signal });
+    // Buffer the response body HERE, inside the try/catch. Without this, a socket
+    // terminated mid-body surfaces as a bare "TypeError: terminated" thrown from
+    // postgrest-js's own res.text() — OUTSIDE this wrapper — so the cause-surfacing
+    // below never runs and the §4.3 diagnosability goal is defeated. By reading the
+    // body now and rebuilding the Response, a body-stream termination is caught and
+    // wrapped with its cause just like a connect/headers failure. Supabase REST
+    // responses are small JSON, so buffering is cheap and never blocks streaming.
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return new Response(buf.length ? buf : null, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+    });
   } catch (err) {
     // undici hides the real reason in err.cause — surface it so logs are useful.
     const c = err?.cause;
