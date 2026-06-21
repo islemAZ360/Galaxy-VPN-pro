@@ -140,14 +140,18 @@ const keyOf = (u) => renameConfig(u, '');
 // (20 rows × ~300-char config_uri ≈ 6KB succeeds; 30 rows hangs forever). A
 // ~4000-server pool → 200 requests × ~330ms ≈ 66s, acceptable. If DPI relaxes,
 // raise SUPA_PAGE_SIZE; if it tightens, lower it.
-//   - attempts: 4 (three silent retries) so a transient DPI stall is absorbed
-//     without surfacing the outer withVpnRetry() "VPN down" panel. On a flaky
-//     link most stalls succeed on the 2nd/3rd attempt; only a persistently-down
-//     link (all 4 fail) hands off to withVpnRetry().
+//   - attempts: 8 (seven silent retries) with 1s base backoff. On a Russian
+//     LTE+VPN link DPI stalls are frequent and can last several pages in a
+//     row; 8 attempts × 12s = 96s budget per page before handing to the outer
+//     withVpnRetry(). Most stalls clear within 2-3 retries.
+//   - a 400ms pause between SUCCESSFUL pages so the request pattern doesn't
+//     look like a tight burst (DPI is pattern-sensitive). Tunable via
+//     SUPA_PAGE_DELAY_MS; set to 0 to disable.
 async function fetchAllPaginated(table, select, filters = {}) {
   let allData = [];
   let from = 0;
   const size = Math.max(1, Number(process.env.SUPA_PAGE_SIZE) || 20);
+  const pageDelay = Math.max(0, Number(process.env.SUPA_PAGE_DELAY_MS) || 400);
   log.info(`Fetching ${table} (page ${size})…`);
   while (true) {
     const fromIdx = from;
@@ -157,12 +161,13 @@ async function fetchAllPaginated(table, select, filters = {}) {
       const r = await q;
       if (r.error) throw new Error(r.error.message);
       return r;
-    }, { attempts: 4, baseMs: 500, label: `paginate ${table}@${fromIdx}` });
+    }, { attempts: 8, baseMs: 1000, label: `paginate ${table}@${fromIdx}` });
     if (!data || data.length === 0) break;
     allData.push(...data);
     if (allData.length % 200 < size) log.info(`Loaded ${allData.length} ${table} rows…`);
     if (data.length < size) break;
     from += size;
+    if (pageDelay) await sleep(pageDelay);
   }
   return allData;
 }
