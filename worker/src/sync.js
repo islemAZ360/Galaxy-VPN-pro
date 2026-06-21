@@ -130,16 +130,25 @@ const retag = (name, tier) => `${(name || '').split(' | ')[0]}${TIER_TAGS[tier] 
 // name-independent key so test output matches our (renamed) DB rows
 const keyOf = (u) => renameConfig(u, '');
 
-// Helper to paginate any Supabase fetch to avoid payload/connection crashes
+// Helper to paginate any Supabase fetch to avoid payload/connection crashes.
+// Each page is wrapped in withRetry() so a single page dropped by a flaky VPN
+// (the "keep VPN ON" phase is exactly when mid-stream terminations happen) is
+// retried instead of aborting the whole load. Page size is 500 — smaller than
+// 1000 so each request body is shorter and less likely to be killed mid-stream,
+// while still keeping the request count reasonable for pools of ~800 servers.
 async function fetchAllPaginated(table, select, filters = {}) {
   let allData = [];
   let from = 0;
-  const size = 1000;
+  const size = 500;
   while (true) {
-    let q = supa.from(table).select(select).range(from, from + size - 1);
-    for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-    const { data, error } = await q;
-    if (error) throw new Error(error.message);
+    const fromIdx = from;
+    const { data, error } = await withRetry(async () => {
+      let q = supa.from(table).select(select).range(fromIdx, fromIdx + size - 1);
+      for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+      const r = await q;
+      if (r.error) throw new Error(r.error.message);
+      return r;
+    }, { attempts: 5, baseMs: 1500, label: `paginate ${table}@${fromIdx}` });
     if (!data || data.length === 0) break;
     allData.push(...data);
     if (data.length < size) break;

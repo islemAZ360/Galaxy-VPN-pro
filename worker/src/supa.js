@@ -57,7 +57,13 @@ const dispatcher = new Agent({
   pipelining: 0,
 });
 
-const CALL_TIMEOUT = num(process.env.SUPA_CALL_TIMEOUT_MS, 60000); // last-resort per-call ceiling
+// Shorter than the old 60s: on a flaky VPN the call either succeeds in a few
+// seconds or stalls silently (carrier DPI drops packets without RST). A 30s
+// ceiling makes withVpnRetry retry sooner with a fresh socket instead of hanging
+// the whole run for a minute per attempt. Generous enough that a healthy large
+// upsert (buffered, so the body is already in memory before we rebuild it) still
+// completes — the body is no longer streamed, so body transfer is near-instant.
+const CALL_TIMEOUT = num(process.env.SUPA_CALL_TIMEOUT_MS, 30000); // last-resort per-call ceiling
 
 const customFetch = async (input, init = {}) => {
   const ctrl = new AbortController();
@@ -101,8 +107,15 @@ const customFetch = async (input, init = {}) => {
 };
 
 // Service-role client: bypasses RLS. NEVER expose this key to the browser.
+//
+// Realtime heartbeat: supabase-js defaults to 25s. On a flaky Russian VPN the
+// heartbeat reply frequently gets lost, forcing a websocket reconnect every
+// ~20-45s (visible in the worker log as "Realtime reconnecting…"). A longer
+// interval tolerates delayed replies and drastically cuts reconnect churn.
+// Tunable via SUPA_REALTIME_HEARTBEAT_MS; set to 25000 to restore the default.
 export const supa = createClient(url ?? '', serviceKey ?? '', {
   auth: { persistSession: false, autoRefreshToken: false },
+  realtime: { heartbeatIntervalMs: num(process.env.SUPA_REALTIME_HEARTBEAT_MS, 60000) },
   global: { fetch: customFetch },
 });
 
