@@ -158,16 +158,25 @@ const keyOf = (u) => renameConfig(u, '');
 //     delay is itself a detectable pattern, so we jitter ±50% around the
 //     base. Tunable via SUPA_PAGE_DELAY_MS (base, default 500); set to 0 to
 //     disable.
-//   - ADAPTIVE COOL-DOWN: after a page that took >15s to load (i.e. at least
-//     one 12s timeout happened), DPI is actively stalling us. Pause 10s
-//     (env: SUPA_COOLDOWN_MS) to let the DPI state reset before the next
-//     page instead of hammering through and triggering more stalls. The
-//     cool-down is jittered too so it doesn't become a new pattern.
+// IMPORTANT: keep page size at 20 (env: SUPA_PAGE_SIZE, don't raise above 30).
+// Empirically, Russian DPI on LTE lets response payloads up to ~6KB through
+// and stalls larger ones mid-stream — 20 rows × ~300-char config_uri ≈ 6KB
+// succeeds; 100 rows hangs forever (verified: 100-row page fails 100% on the
+// worker's VPN link while 20-row page succeeds). A ~3200-server pool → 160
+// requests, acceptable on a flaky link.
+//   - attempts: 8 with exponential backoff (1.5s → 30s cap) so a persistently-
+//     stalling page has ~100s of DPI-cooling budget before handing to the outer
+//     withVpnRetry().
+//   - ADAPTIVE COOL-DOWN: after a page that took >15s (at least one 12s timeout
+//     fired), DPI is actively stalling. Pause 10s (env: SUPA_COOLDOWN_MS,
+//     jittered ±50%) to let DPI state reset before the next page.
+//   - a 300ms jittered pause between fast pages so the request stream doesn't
+//     look like a tight burst.
 async function fetchAllPaginated(table, select, filters = {}) {
   let allData = [];
   let from = 0;
-  const size = Math.max(1, Number(process.env.SUPA_PAGE_SIZE) || 20);
-  const baseDelay = Math.max(0, Number(process.env.SUPA_PAGE_DELAY_MS) || 500);
+  const size = Math.max(1, Math.min(30, Number(process.env.SUPA_PAGE_SIZE) || 20));
+  const baseDelay = Math.max(0, Number(process.env.SUPA_PAGE_DELAY_MS) || 300);
   const cooldownMs = Math.max(0, Number(process.env.SUPA_COOLDOWN_MS) || 10000);
   const jitter = (base) => base ? base * (0.5 + Math.random()) : 0;
   log.info(`Fetching ${table} (page ${size})…`);
@@ -180,7 +189,7 @@ async function fetchAllPaginated(table, select, filters = {}) {
       const r = await q;
       if (r.error) throw new Error(r.error.message);
       return r;
-    }, { attempts: 8, baseMs: 1500, label: `paginate ${table}@${fromIdx}` });
+    }, { attempts: 8, baseMs: 1500, maxMs: 30000, label: `paginate ${table}@${fromIdx}` });
     if (!data || data.length === 0) break;
     allData.push(...data);
     const pageDur = Date.now() - pageT0;
@@ -188,7 +197,6 @@ async function fetchAllPaginated(table, select, filters = {}) {
     if (data.length < size) break;
     from += size;
     if (pageDur > 15000 && cooldownMs) {
-      // This page hit at least one 12s timeout — DPI is hot. Cool down.
       log.info(`Cooling down ${Math.round(jitter(cooldownMs) / 1000)}s (DPI active)…`);
       await sleep(jitter(cooldownMs));
     } else if (jitter(baseDelay)) {
