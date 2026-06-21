@@ -148,17 +148,23 @@ const keyOf = (u) => renameConfig(u, '');
 //     doesn't look like a tight burst (DPI is pattern-sensitive). A fixed
 //     delay is itself a detectable pattern, so we jitter ±50% around the
 //     base. Tunable via SUPA_PAGE_DELAY_MS (base, default 500); set to 0 to
-//     disable. Also pause briefly after a failed page's retry to let any
-//     DPI state cool down.
+//     disable.
+//   - ADAPTIVE COOL-DOWN: after a page that took >15s to load (i.e. at least
+//     one 12s timeout happened), DPI is actively stalling us. Pause 10s
+//     (env: SUPA_COOLDOWN_MS) to let the DPI state reset before the next
+//     page instead of hammering through and triggering more stalls. The
+//     cool-down is jittered too so it doesn't become a new pattern.
 async function fetchAllPaginated(table, select, filters = {}) {
   let allData = [];
   let from = 0;
   const size = Math.max(1, Number(process.env.SUPA_PAGE_SIZE) || 20);
   const baseDelay = Math.max(0, Number(process.env.SUPA_PAGE_DELAY_MS) || 500);
-  const jitter = () => baseDelay ? baseDelay * (0.5 + Math.random()) : 0;
+  const cooldownMs = Math.max(0, Number(process.env.SUPA_COOLDOWN_MS) || 10000);
+  const jitter = (base) => base ? base * (0.5 + Math.random()) : 0;
   log.info(`Fetching ${table} (page ${size})…`);
   while (true) {
     const fromIdx = from;
+    const pageT0 = Date.now();
     const { data, error } = await withRetry(async () => {
       let q = supa.from(table).select(select).range(fromIdx, fromIdx + size - 1);
       for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
@@ -168,10 +174,17 @@ async function fetchAllPaginated(table, select, filters = {}) {
     }, { attempts: 8, baseMs: 1500, label: `paginate ${table}@${fromIdx}` });
     if (!data || data.length === 0) break;
     allData.push(...data);
+    const pageDur = Date.now() - pageT0;
     if (allData.length % 200 < size) log.info(`Loaded ${allData.length} ${table} rows…`);
     if (data.length < size) break;
     from += size;
-    if (jitter()) await sleep(jitter());
+    if (pageDur > 15000 && cooldownMs) {
+      // This page hit at least one 12s timeout — DPI is hot. Cool down.
+      log.info(`Cooling down ${Math.round(jitter(cooldownMs) / 1000)}s (DPI active)…`);
+      await sleep(jitter(cooldownMs));
+    } else if (jitter(baseDelay)) {
+      await sleep(jitter(baseDelay));
+    }
   }
   return allData;
 }
