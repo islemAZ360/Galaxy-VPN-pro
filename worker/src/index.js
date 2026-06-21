@@ -30,6 +30,26 @@ async function trackPresence(state) {
       await presenceChannel.track({ state, online_at: new Date().toISOString() });
     } catch { /* best-effort */ }
   }
+  // DB heartbeat: write last_seen + state so the dashboard can fall back to
+  // polling worker_status when the realtime websocket is flaky (common on
+  // LTE+VPN in Russia — presence drops every ~20-45s). This is a tiny single-
+  // row upsert through the resilient customFetch (buffered + retried), so it
+  // survives transient network blips that kill the websocket. Best-effort.
+  heartbeat().catch(() => {});
+}
+
+// Single-row DB heartbeat. Called from trackPresence() and on a 15s interval.
+// The dashboard treats last_seen < 40s as "online" even if the presence
+// channel is empty, decoupling online-detection from the flaky websocket.
+async function heartbeat() {
+  try {
+    await supa.from('worker_status').upsert({
+      id: 'worker',
+      state: currentState,
+      last_seen: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+  } catch { /* best-effort — retried on the next tick */ }
 }
 
 presenceChannel.subscribe(async (status) => {
@@ -48,6 +68,8 @@ async function runWithStatus(reason, fn) {
   try {
     await supa.from('worker_status').upsert({
       id: 'worker',
+      state: 'idle',
+      last_seen: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       last_sync_at: new Date().toISOString(),
       last_result: { reason, ...result },
@@ -118,6 +140,12 @@ supa
 
 // Poll fallback
 setInterval(() => drainPending('poll'), POLL_MS);
+
+// DB heartbeat every 15s — keeps worker_status.last_seen fresh so the admin
+// dashboard can show "Online" via REST polling even when the realtime presence
+// websocket is flaky (LTE+VPN). Best-effort; a missed tick just retries next.
+const HEARTBEAT_MS = Number(process.env.WORKER_HEARTBEAT_MS || 15_000);
+setInterval(() => { heartbeat().catch(() => {}); }, HEARTBEAT_MS);
 
 // --- Scheduled background sync ----------------------------------------------
 // Disabled per user request - scans only run manually now.
