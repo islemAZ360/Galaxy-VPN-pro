@@ -13,6 +13,7 @@ import {
   sendUserMessage,
   changeSubscriptionNetwork,
 } from '@/lib/admin-actions';
+import { Copy, Check } from 'lucide-react';
 
 const UNIT_MS: Record<string, number> = {
   seconds: 1_000,
@@ -137,8 +138,22 @@ export function UserRow({
                 <span className={`font-mono ${sub.active_ip_count > 20 ? 'text-red-400 font-bold' : 'text-white/80'}`}>
                   · 🌐 {sub.active_ip_count}/20 IPs (24h)
                 </span>
-                <span className="text-white/50 ml-auto">
+                <span className="text-white/50 ml-auto flex items-center gap-2">
                   {t('subEnds')}: {sub.end_at ? new Date(sub.end_at).toLocaleString() : t('none')}
+                  <button 
+                    onClick={(e) => {
+                      const url = `${window.location.origin}/sub/${sub.id}`;
+                      navigator.clipboard.writeText(url);
+                      const btn = e.currentTarget;
+                      const originalHTML = btn.innerHTML;
+                      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
+                    }}
+                    title="Copy Subscription Link"
+                    className="p-1 rounded-md border border-white/10 hover:bg-white/10 transition-colors text-white/50 hover:text-white"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
                 </span>
               </div>
 
