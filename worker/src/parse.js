@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const SCHEMES = ['vless://', 'vmess://', 'trojan://', 'ss://', 'ssr://', 'hysteria2://', 'hy2://', 'tuic://'];
+const SCHEMES = ['vless://'];
 
 function looksLikeConfig(line) {
   return SCHEMES.some((s) => line.startsWith(s));
