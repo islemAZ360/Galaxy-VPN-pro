@@ -176,9 +176,12 @@ export function UserRow({
               {!isAdmin && (
                 <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-white/5">
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
                       navigator.clipboard.writeText(`${window.location.origin}/api/sub/${sub.token}`);
-                      alert('Link copied to clipboard!');
+                      const btn = e.currentTarget;
+                      const originalText = btn.innerText;
+                      btn.innerText = 'Copied! ✔';
+                      setTimeout(() => { btn.innerText = originalText; }, 1500);
                     }}
                     className={`${btnCls} !text-galaxy-accent !border-galaxy-accent/40 hover:!bg-galaxy-accent/10`}
                   >
