@@ -1,67 +1,107 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/icon-192x192.png" alt="GalaxyVPN Logo" width="120" />
 
-  # 🌌 GalaxyVPN Pro
-  
-  **The ultimate, censorship-resistant VPN subscription platform.**
-  
-  <br />
+  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/icon-192x192.png" alt="GalaxyVPN Logo" width="160" style="border-radius: 50%; box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);" />
+
+  <br/><br/>
+
+  # 🌌 G A L A X Y &nbsp; V P N &nbsp; P R O
+
+  <p align="center">
+    <b>The Ultimate, Censorship-Resistant VPN Subscription Engine.</b> <br/>
+    <i>Engineered for scale, speed, and absolute freedom.</i>
+  </p>
+
+  <br/>
 
   [![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
   [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+  
+  <br/>
 
-  <br />
 </div>
-
-> **GalaxyVPN Pro** is a modern, full-stack platform designed to manage and sell VPN subscriptions efficiently. Built with the latest technologies, it features an automated server testing engine, a built-in billing system, and a comprehensive admin dashboard.
 
 ---
 
-## 🚀 Key Features
+<div align="center">
+  <p>
+    Welcome to <b>GalaxyVPN Pro</b> — not just a VPN app, but an entire autonomous ecosystem. It automatically hunts for live servers, tests their latency across multiple network tiers, provisions access, handles billing, and provides enterprise-grade analytics in three different languages.
+  </p>
+</div>
 
-*   ⚡ **Lightning Fast VLESS/Reality:** Built specifically for speed and to bypass severe DPI (Deep Packet Inspection) blocks.
-*   🤖 **Automated Server Testing:** A background worker constantly tests servers for liveness, latency, and connectivity (Wi-Fi, LTE, Gemini).
-*   💳 **Built-in Billing System:** Support for manual payments (Sber Bank), admin approval, and automated subscriptions.
-*   🌍 **Tri-lingual Support:** Full native support for English, Arabic, and Russian.
-*   📊 **Advanced Admin Dashboard:** Manage users, payments, GitHub repos (for servers), and view rich analytics including MRR and ARPU.
+---
 
-<br />
+## ✨ Supernatural Features
 
-## 🏗️ Architecture
+<table style="width: 100%; border-collapse: collapse;">
+<tr>
+<td width="50%" valign="top">
+  <h3>🚀 Warp-Speed VLESS</h3>
+  <p>Built specifically to shatter the strictest DPI (Deep Packet Inspection) blocks. Next-generation VLESS & Reality protocols ensure invisible, high-speed routing.</p>
+</td>
+<td width="50%" valign="top">
+  <h3>🤖 Autonomous Testing</h3>
+  <p>A relentless background Node.js worker continuously fetches configs from GitHub, tests them in real-time (ping, reachability), and categorizes them by network type.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+  <h3>💳 Smart Billing Engine</h3>
+  <p>End-to-end subscription management. Users upload receipts, admins approve via the dashboard, and time-locks automatically grant or revoke server access.</p>
+</td>
+<td width="50%" valign="top">
+  <h3>📊 Enterprise Analytics</h3>
+  <p>A breathtaking admin dashboard tracking MRR (Monthly Recurring Revenue), ARPU (Average Revenue Per User), daily sales, and real-time server health distribution.</p>
+</td>
+</tr>
+</table>
 
-The platform is designed with a robust and scalable architecture, divided into three main components:
+<br/>
 
-| Component | Description |
-| :--- | :--- |
-| 🌐 **Web App** (`galaxyvpn/`) | The main **Next.js** platform handling landing pages, user profiles, payments, and the admin dashboard. |
-| 🛠️ **Worker** (`galaxyvpn/worker/`) | A Node.js background process that fetches VPN configs from GitHub repos, tests their ping/connectivity, and syncs them to Supabase. |
-| 📱 **Client App** (`../hiddify/`) | A modified Hiddify app used as an admin tool to push server configs to GitHub repositories. |
+## 🪐 Ecosystem Architecture
 
-<br />
+GalaxyVPN is built on a distributed, highly-scalable architecture:
 
-## 💻 Tech Stack
+```mermaid
+graph TD;
+    %% Styling
+    classDef web fill:#000000,stroke:#38B2AC,stroke-width:2px,color:#fff;
+    classDef worker fill:#1E1E1E,stroke:#F59E0B,stroke-width:2px,color:#fff;
+    classDef db fill:#1C2E2A,stroke:#3ECF8E,stroke-width:2px,color:#fff;
+    classDef ext fill:#0D1117,stroke:#58A6FF,stroke-width:2px,color:#fff;
 
-We utilize a modern and powerful technology stack to ensure performance and reliability:
+    User((👤 Client)) -->|Buys & Connects| Web
+    Admin((👑 Admin)) -->|Manages| Web
+    
+    Web[🌌 Next.js Web Platform]:::web <-->|Auth & Data| DB[(🗄️ Supabase)]:::db
+    
+    Worker[🤖 Tester Worker]:::worker -->|Updates Alive Nodes| DB
+    Worker -->|Scrapes Configs| GitHub[🐙 GitHub Repos]:::ext
+    Worker -->|Pings & Tests| Servers[⚡ VPN Servers]:::ext
+    
+    Admin -->|Pushes Servers| Hiddify[📱 Hiddify App]:::ext
+    Hiddify -->|Syncs| GitHub
+```
 
-*   **Frontend:** Next.js 15 (App Router), React, Tailwind CSS, Lucide Icons, Recharts
-*   **Backend:** Supabase (PostgreSQL, Auth, Realtime, Edge Functions)
-*   **Localization:** `next-intl`
-*   **Testing Engine:** `xray-knife`
+<br/>
 
-<br />
+## 🛰️ Mission Control (Quick Start)
 
-## 🛠️ Quick Start
+<details>
+<summary><b>1️⃣ System Prerequisites</b> <i>(Click to expand)</i></summary>
+<br/>
 
-Follow these steps to get a local development environment up and running.
+- Node.js 20+
+- A Supabase Project
+- Google Cloud Console Project (for OAuth)
 
-### 1️⃣ Prerequisites
-*   Node.js 20+
-*   A Supabase Project
-*   A Google Cloud Console project (for OAuth)
+</details>
 
-### 2️⃣ Installation
+<details>
+<summary><b>2️⃣ Lift-Off (Installation)</b> <i>(Click to expand)</i></summary>
+<br/>
+
 Clone the repository and install the required dependencies:
 ```bash
 git clone https://github.com/islemAZ360/Galaxy-VPN-pro.git
@@ -69,34 +109,54 @@ cd Galaxy-VPN-pro
 npm install
 ```
 
-### 3️⃣ Environment Setup
+</details>
+
+<details>
+<summary><b>3️⃣ Core Ignition (Environment)</b> <i>(Click to expand)</i></summary>
+<br/>
+
 Copy the example environment file and fill in your keys:
 ```bash
 cp .env.example .env.local
 ```
-*(See `SETUP.md` for detailed Supabase + Google OAuth configuration).*
+*(See `SETUP.md` for detailed configuration).*
 
-### 4️⃣ Database Setup
+</details>
+
+<details>
+<summary><b>4️⃣ Database Sync</b> <i>(Click to expand)</i></summary>
+<br/>
+
 Run the SQL schema located in `supabase/schema.sql` in your Supabase SQL Editor. This sets up all necessary tables, RLS policies, and triggers.
 
-### 5️⃣ Run Locally
+</details>
+
+<details>
+<summary><b>5️⃣ Launch Server</b> <i>(Click to expand)</i></summary>
+<br/>
+
 Start the development server:
 ```bash
 npm run dev
 ```
-Visit `http://localhost:3000` in your browser to see the app in action!
+Visit `http://localhost:3000` to enter the Galaxy.
 
-<br />
+</details>
 
-## ☁️ Deployment
+<br/>
 
-This project includes a Render Blueprint, making deployment a breeze. You can easily deploy the web app and the background worker by connecting your repository to Render:
+## 🌠 Deployment
 
-1.  Use the `render.yaml` file.
-2.  Set your environment variables in the Render dashboard.
+Deploying the GalaxyVPN ecosystem is streamlined via a Render Blueprint. 
+
+1. Simply connect your GitHub repository to Render.
+2. Use the included `render.yaml` file to spin up both the **Web Service** and the **Background Worker** simultaneously.
+3. Configure your environment secrets in the dashboard.
 
 ---
 
 <div align="center">
-  <i>Built with ❤️ for a free and open internet.</i>
+  <img src="https://img.shields.io/badge/Made%20for-Freedom-blueviolet?style=for-the-badge" alt="Made for Freedom" />
+  <br/><br/>
+  <i>Crafted with ❤️ and code to keep the internet open and free.</i>
 </div>
