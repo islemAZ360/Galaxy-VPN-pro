@@ -152,8 +152,31 @@ async function loadKnownHostGeo() {
       const MAX_CONFIGS_PER_REPO = 15000;
       if (found.length > MAX_CONFIGS_PER_REPO) {
         log.warn(`  ! ${r.repo_url} yielded ${found.length} configs. Smart sampling down to ${MAX_CONFIGS_PER_REPO}…`);
-        const half = Math.floor(MAX_CONFIGS_PER_REPO / 2);
-        found = [...found.slice(0, half), ...found.slice(-half)];
+        
+        function getProtocolScore(uri) {
+          const p = PROTOCOL_OF(uri);
+          if (p === 'vless') return 3; // The ONLY protocol that reliably works in Russia
+          if (['hysteria2', 'hy2', 'tuic', 'trojan'].includes(p)) return 2; // Modern fallbacks
+          if (['vmess', 'ss', 'ssr'].includes(p)) return 1; // Outdated/Blocked
+          return 0;
+        }
+
+        const grouped = { 3: [], 2: [], 1: [], 0: [] };
+        for (const uri of found) grouped[getProtocolScore(uri)].push(uri);
+        
+        let smartFound = [];
+        for (const score of [3, 2, 1, 0]) {
+          const g = grouped[score];
+          if (smartFound.length >= MAX_CONFIGS_PER_REPO) break;
+          const needed = MAX_CONFIGS_PER_REPO - smartFound.length;
+          if (g.length <= needed) {
+            smartFound.push(...g);
+          } else {
+            const half = Math.floor(needed / 2);
+            smartFound.push(...g.slice(0, half), ...g.slice(-half));
+          }
+        }
+        found = smartFound;
       }
 
       perRepo.set(r.repo_url, { files_found: fileCount, configs_extracted: found.length });

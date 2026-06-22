@@ -18,6 +18,21 @@ function maybeDecodeBase64(text) {
   return text;
 }
 
+export function stripRemark(uri) {
+  const scheme = (uri.split('://')[0] || '').toLowerCase();
+  try {
+    if (scheme === 'vmess') {
+      const json = JSON.parse(Buffer.from(uri.slice('vmess://'.length), 'base64').toString('utf8'));
+      delete json.ps;
+      return 'vmess://' + Buffer.from(JSON.stringify(json), 'utf8').toString('base64');
+    }
+    const hashIdx = uri.indexOf('#');
+    return hashIdx >= 0 ? uri.slice(0, hashIdx) : uri;
+  } catch {
+    return uri;
+  }
+}
+
 export function hashConfig(uri) {
   return createHash('sha256').update(uri).digest('hex');
 }
@@ -25,11 +40,12 @@ export function hashConfig(uri) {
 // Extract unique config URIs from raw text.
 export function extractConfigs(text) {
   const decoded = maybeDecodeBase64(text);
-  const out = new Map(); // hash -> uri
+  const out = new Map(); // true_identity_hash -> uri
   for (let line of decoded.split(/\r?\n/)) {
     line = line.trim();
     if (!looksLikeConfig(line)) continue;
-    out.set(hashConfig(line), line);
+    // Deduplicate by core server identity, ignoring the remark
+    out.set(hashConfig(stripRemark(line)), line);
   }
   return [...out.values()];
 }
