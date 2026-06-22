@@ -20,7 +20,8 @@ export default async function AdminSupportPage({
   const { data: rows } = await admin
     .from('support_messages')
     .select('user_id, body, created_at, users(email)')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(1000);
 
   // latest message per conversation
   const convos = new Map<string, { email: string; snippet: string }>();

@@ -34,17 +34,20 @@ export default async function AdminUsersPage({
   const { data: users } = await admin
     .from('users')
     .select('id, email, role, banned_until, created_at')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(500);
 
   const { data: subs } = await admin
     .from('subscriptions')
     .select('id, user_id, end_at, plan, network_type, server_count, created_at, status')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(1000);
 
   const { data: devicesData } = await admin
     .from('sub_devices')
     .select('subscription_id, ip_address, device_type, last_seen_at')
-    .order('last_seen_at', { ascending: false });
+    .order('last_seen_at', { ascending: false })
+    .limit(2000);
   
   const allDevices: Device[] = devicesData ?? [];
 
