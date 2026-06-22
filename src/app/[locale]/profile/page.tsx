@@ -195,8 +195,14 @@ export default async function ProfilePage({
                   {/* Anti-Sharing Warning */}
                   <div className={`mt-2 rounded-xl border p-4 ${isSuspended ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
                     <div className="flex items-center justify-between mb-1">
-                      <div className={`text-sm font-semibold ${isSuspended ? 'text-red-400' : 'text-galaxy-accent'}`}>
-                        {isSuspended ? '⛔ Subscription Suspended (24h)' : 'Device Limit (24h)'}
+                      <div className={`flex items-center gap-2 text-sm font-semibold ${isSuspended ? 'text-red-400' : 'text-galaxy-accent'}`}>
+                        {isSuspended ? '⛔ Subscription Suspended (24h)' : t('ipsLimit')}
+                        <span 
+                          className="flex items-center justify-center w-4 h-4 rounded-full border border-current opacity-70 text-[10px] cursor-help transition-opacity hover:opacity-100" 
+                          title={t('ipsTooltip')}
+                        >
+                          i
+                        </span>
                       </div>
                       <div className="text-sm font-mono text-white/80">{activeIpCount} / 20 IPs</div>
                     </div>
@@ -209,7 +215,7 @@ export default async function ProfilePage({
                     <p className="text-xs text-white/50">
                       {isSuspended 
                         ? 'You exceeded the limit of 20 unique IP addresses in 24 hours. Wait for older IPs to expire to restore access.'
-                        : 'Your subscription can be used on up to 20 unique IPs in a rolling 24-hour window. Do not share your link publicly.'}
+                        : t('ipsTooltip')}
                     </p>
                   </div>
 

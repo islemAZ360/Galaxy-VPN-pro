@@ -138,6 +138,8 @@
     "copy": "Copy",
     "copied": "Copied!",
     "serversIncluded": "{count} servers included",
+    "ipsLimit": "IPs Limit (24h)",
+    "ipsTooltip": "What is an IP? Every internet connection (Wi-Fi, mobile data) assigns your device a unique IP address. We allow up to 20 unique IPs per 24h to prevent account sharing. Switching between Wi-Fi and Cellular uses different IPs. Do not share your subscription publicly.",
     "updateTipTitle": "🔄 Resolving Connection Issues",
     "updateTipDesc": "If the network drops or servers stop working, just click the \"Update Subscription\" button in the app. It will fetch new working servers instantly!",
     "routingGuideTitle": "⚡ Pro Tip: Optimize Speed & Prevent Blocking",
