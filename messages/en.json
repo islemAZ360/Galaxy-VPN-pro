@@ -210,7 +210,11 @@
       "salesRecordTitle": "Sales Record",
       "deleteSelected": "Delete Selected",
       "selectAll": "Select All",
-      "date": "Date"
+      "date": "Date",
+      "confirmTitle": "Confirm Deletion",
+      "confirmDesc": "Are you sure you want to permanently delete the {count} selected sales records and their associated subscriptions? This action cannot be undone.",
+      "cancelBtn": "Cancel",
+      "deleteBtn": "Yes, Delete"
     },
     "servers": {
       "title": "Live server pool",

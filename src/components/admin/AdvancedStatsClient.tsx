@@ -40,6 +40,7 @@ const COLORS = {
 export default function AdvancedStatsClient({ t, stats, byPlan, adv, salesRecord = [] }: AdvancedStatsClientProps) {
   const [resetting, setResetting] = useState(false);
   const [selectedSales, setSelectedSales] = useState<string[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleSelectAll = () => {
     if (selectedSales.length === salesRecord.length && salesRecord.length > 0) {
@@ -57,9 +58,13 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv, salesRecord
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const triggerDelete = () => {
     if (selectedSales.length === 0) return;
-    if (!confirm(t.resetConfirm)) return;
+    setShowConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowConfirm(false);
     setResetting(true);
     try {
       await deleteSales(selectedSales);
@@ -221,7 +226,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv, salesRecord
           </h3>
           {selectedSales.length > 0 && (
             <button 
-              onClick={handleDeleteSelected}
+              onClick={triggerDelete}
               disabled={resetting}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition border border-red-500/30 disabled:opacity-50"
             >
@@ -302,6 +307,36 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv, salesRecord
           </table>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#0f111a] border border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative overflow-hidden">
+            <div className="pointer-events-none absolute right-0 top-0 h-32 w-32 rounded-full bg-red-500/10 blur-3xl" />
+            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2 relative z-10">
+              <ShieldAlert className="h-6 w-6 text-red-500" />
+              {t.confirmTitle || 'Confirm Deletion'}
+            </h3>
+            <p className="text-white/70 mb-6 text-sm leading-relaxed relative z-10">
+              {(t.confirmDesc || 'Are you sure you want to permanently delete the {count} selected sales records and their associated subscriptions? This action cannot be undone.').replace('{count}', String(selectedSales.length))}
+            </p>
+            <div className="flex justify-end gap-3 relative z-10">
+              <button 
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 rounded-lg font-medium text-white/70 hover:bg-white/10 transition-colors"
+              >
+                {t.cancelBtn || 'Cancel'}
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+              >
+                {t.deleteBtn || 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

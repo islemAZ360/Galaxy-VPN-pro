@@ -105,7 +105,11 @@ export default async function AdminStatsPage({
     dangerZoneDesc: t('dangerZoneDesc'),
     resetTestBtn: t('resetTestBtn'),
     resettingBtn: t('resettingBtn'),
-    resetConfirm: 'هل أنت متأكد من رغبتك في حذف تجاربك (مدفوعات واشتراكات حساب الأدمن)؟ هذا الإجراء لا يمكن التراجع عنه.',
+    resetConfirm: t('resetConfirm', { fallback: 'Are you sure you want to delete your test data? This action cannot be undone.' }),
+    confirmTitle: t('confirmTitle', { fallback: 'Confirm Deletion' }),
+    confirmDesc: t('confirmDesc', { count: '{count}', fallback: 'Are you sure you want to permanently delete the {count} selected sales records and their associated subscriptions? This action cannot be undone.' }),
+    cancelBtn: t('cancelBtn', { fallback: 'Cancel' }),
+    deleteBtn: t('deleteBtn', { fallback: 'Yes, Delete' }),
   };
 
   return (
