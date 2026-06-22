@@ -39,7 +39,7 @@ export default async function AdminUsersPage({
 
   const { data: subs } = await admin
     .from('subscriptions')
-    .select('id, token, user_id, end_at, plan, network_type, server_count, created_at, status')
+    .select('id, token:sub_token, user_id, end_at, plan, network_type, server_count, created_at, status')
     .order('created_at', { ascending: false })
     .limit(1000);
 
