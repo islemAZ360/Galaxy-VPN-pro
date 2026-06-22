@@ -2,10 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Trash2, ChevronDown, Check } from 'lucide-react';
-import { deleteAllServers, deleteServersByType } from '@/lib/admin-actions';
+import { deleteAllServers, deleteServersByType } from '@/app/[locale]/admin/servers/actions';
 
 interface DeleteServersFormProps {
-  tiers: [string, number][];
+  tiers: readonly (readonly [string, number])[];
   netLabels: Record<string, any>;
   t: any;
 }
