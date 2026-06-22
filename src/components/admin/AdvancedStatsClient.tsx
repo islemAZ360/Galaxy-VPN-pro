@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { resetTestStats } from '@/lib/admin-actions';
+import { deleteSales } from '@/lib/admin-actions';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
   PieChart, Pie, Sector, AreaChart, Area, CartesianGrid 
@@ -24,6 +24,7 @@ interface AdvancedStatsClientProps {
     revenueByDay: { day: string; revenue_rub: number; sales: number }[];
     usersByDay: { day: string; new_users: number }[];
   };
+  salesRecord: any[];
 }
 
 const COLORS = {
@@ -36,14 +37,32 @@ const COLORS = {
   gemini: '#ec4899',
 };
 
-export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedStatsClientProps) {
+export default function AdvancedStatsClient({ t, stats, byPlan, adv, salesRecord = [] }: AdvancedStatsClientProps) {
   const [resetting, setResetting] = useState(false);
+  const [selectedSales, setSelectedSales] = useState<string[]>([]);
 
-  const handleReset = async () => {
+  const handleSelectAll = () => {
+    if (selectedSales.length === salesRecord.length && salesRecord.length > 0) {
+      setSelectedSales([]);
+    } else {
+      setSelectedSales(salesRecord.map((s) => s.id));
+    }
+  };
+
+  const toggleSale = (id: string) => {
+    if (selectedSales.includes(id)) {
+      setSelectedSales(selectedSales.filter((s) => s !== id));
+    } else {
+      setSelectedSales([...selectedSales, id]);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedSales.length === 0) return;
     if (!confirm(t.resetConfirm)) return;
     setResetting(true);
     try {
-      await resetTestStats();
+      await deleteSales(selectedSales);
       window.location.reload();
     } catch (e) {
       console.error(e);
@@ -194,23 +213,66 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
         </div>
       </div>
 
-      {/* 5. Danger Zone */}
-      <div className="admin-panel border-red-500/20 bg-red-500/5 p-6 relative overflow-hidden">
-        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-red-500/10 blur-3xl" />
-        <div className="relative">
-          <h3 className="text-lg font-bold text-red-400 mb-2 flex items-center gap-2">
-            <Trash2 className="h-5 w-5" /> {t.dangerZone}
+      {/* 5. Sales Record */}
+      <div className="admin-panel p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-indigo-400" /> {t.salesRecordTitle || 'Sales Record'}
           </h3>
-          <p className="text-sm text-red-300/70 mb-6 max-w-2xl">
-            {t.dangerZoneDesc}
-          </p>
-          <button 
-            onClick={handleReset}
-            disabled={resetting}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 transition border border-red-500/30 disabled:opacity-50"
-          >
-            {resetting ? t.resettingBtn : t.resetTestBtn}
-          </button>
+          {selectedSales.length > 0 && (
+            <button 
+              onClick={handleDeleteSelected}
+              disabled={resetting}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition border border-red-500/30 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" /> {resetting ? t.resettingBtn : t.deleteSelected || 'Delete Selected'} ({selectedSales.length})
+            </button>
+          )}
+        </div>
+        <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="text-white/50 border-b border-white/10 sticky top-0 bg-[#0f111a] z-10">
+              <tr className="text-start">
+                <th className="pb-3 px-2 text-start font-medium w-10">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-white/20 bg-black/40 text-red-500 focus:ring-red-500/50 cursor-pointer" 
+                    checked={salesRecord.length > 0 && selectedSales.length === salesRecord.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+                <th className="pb-3 px-2 text-start font-medium">{t.date || 'Date'}</th>
+                <th className="pb-3 px-2 text-start font-medium">Email</th>
+                <th className="pb-3 px-2 text-center font-medium">{t.plan}</th>
+                <th className="pb-3 px-2 text-end font-medium">{t.revenue}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {salesRecord.map((s) => (
+                <tr key={s.id} className="hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => toggleSale(s.id)}>
+                  <td className="py-3 px-2">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-white/20 bg-black/40 text-red-500 focus:ring-red-500/50 cursor-pointer pointer-events-none" 
+                      checked={selectedSales.includes(s.id)}
+                      readOnly
+                    />
+                  </td>
+                  <td className="py-3 px-2 text-white/70 whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                  <td className="py-3 px-2 truncate max-w-[150px]">{s.users?.email || '—'}</td>
+                  <td className="py-3 px-2 text-center">Plan {s.plan}</td>
+                  <td className="py-3 px-2 text-end font-bold text-emerald-400">{s.amount_rub} ₽</td>
+                </tr>
+              ))}
+              {salesRecord.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-white/40">
+                    No sales found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

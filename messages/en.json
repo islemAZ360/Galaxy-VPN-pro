@@ -206,7 +206,11 @@
       "dangerZone": "Danger Zone",
       "dangerZoneDesc": "Are you creating test accounts and purchasing plans, and want to delete them because they affect real statistics? This button will delete **all payments and subscriptions** created by you (the admin account) to make the statistics highly accurate. This button will not affect real subscriber data.",
       "resetTestBtn": "Reset My Test Data",
-      "resettingBtn": "Resetting..."
+      "resettingBtn": "Resetting...",
+      "salesRecordTitle": "Sales Record",
+      "deleteSelected": "Delete Selected",
+      "selectAll": "Select All",
+      "date": "Date"
     },
     "servers": {
       "title": "Live server pool",

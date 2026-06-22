@@ -348,16 +348,24 @@ export async function getBalanceModeStatus() {
   return !!data?.last_result?.balance_mode;
 }
 
-// Reset ONLY the test data created by the admin to clean up the statistics.
-export async function resetTestStats() {
+// Delete specific payments (and their associated subscriptions) from the Sales Record
+export async function deleteSales(paymentIds: string[]) {
   const adminId = await assertAdmin();
   const admin = createAdminClient();
 
-  // Delete all payments made by the admin
-  await admin.from('payments').delete().eq('user_id', adminId);
+  if (!paymentIds || paymentIds.length === 0) return;
+
+  // Find associated subscriptions
+  const { data: payments } = await admin.from('payments').select('subscription_id').in('id', paymentIds);
+  const subIds = payments?.map(p => p.subscription_id).filter(Boolean) || [];
+
+  // Delete payments
+  await admin.from('payments').delete().in('id', paymentIds);
   
-  // Delete all subscriptions made by the admin
-  await admin.from('subscriptions').delete().eq('user_id', adminId);
+  // Delete associated subscriptions
+  if (subIds.length > 0) {
+    await admin.from('subscriptions').delete().in('id', subIds);
+  }
 
   revalidatePath('/', 'layout');
 }

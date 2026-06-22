@@ -20,6 +20,11 @@ export default async function AdminStatsPage({
   const { data: subs } = await admin.from('subscriptions').select('status, network_type, price_rub, duration_days').eq('status', 'active');
   const { data: servers } = await admin.from('servers').select('protocol, is_working, latency_ms').eq('is_working', true);
   const { data: uniquePaidUsers } = await admin.from('payments').select('user_id').eq('status', 'approved');
+  const { data: salesRecord } = await admin.from('payments')
+    .select('id, amount_rub, plan, created_at, user_id, users(email)')
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(500);
   
   // 3. Fetch Time-Series Data (Last 30 Days)
   const { data: revenueByDay } = await admin.from('admin_revenue_by_day').select('*');
@@ -109,6 +114,7 @@ export default async function AdminStatsPage({
       stats={stats} 
       byPlan={byPlan || []} 
       adv={advancedData} 
+      salesRecord={salesRecord || []}
     />
   );
 }
