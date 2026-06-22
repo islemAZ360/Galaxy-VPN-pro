@@ -192,7 +192,17 @@
       "lastCheck": "Last server check",
       "revenueByPlan": "Revenue by plan",
       "plan": "Plan",
-      "sales": "Sales"
+      "sales": "Sales",
+      "mrr": "MRR (Expected Monthly Revenue)",
+      "arpu": "ARPU (Average Revenue per User)",
+      "networkDistribution": "Subscription Distribution by Network",
+      "protocolAnalysis": "Server Strength Analysis (Protocols)",
+      "revenueGrowth": "Revenue Growth (Last 30 Days)",
+      "userGrowth": "New User Growth (Last 30 Days)",
+      "dangerZone": "Danger Zone",
+      "dangerZoneDesc": "Are you creating test accounts and purchasing plans, and want to delete them because they affect real statistics? This button will delete **all payments and subscriptions** created by you (the admin account) to make the statistics highly accurate. This button will not affect real subscriber data.",
+      "resetTestBtn": "Reset My Test Data",
+      "resettingBtn": "Resetting..."
     },
     "servers": {
       "title": "Live server pool",

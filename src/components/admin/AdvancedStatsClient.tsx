@@ -56,8 +56,8 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
     { label: t.activeSubs, value: stats?.active_subscriptions ?? 0, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' },
     { label: t.workingServers, value: stats?.working_servers ?? 0, icon: Server, color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/20' },
     { label: t.revenue, value: `${stats?.total_revenue_rub ?? 0} ₽`, icon: Banknote, color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-400/20' },
-    { label: 'MRR (العائد الشهري المتوقع)', value: `${adv.mrr} ₽`, icon: TrendingUp, color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20' },
-    { label: 'ARPU (متوسط الدخل لكل مستخدم)', value: `${adv.arpu} ₽`, icon: Activity, color: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-400/20' },
+    { label: t.mrr, value: `${adv.mrr} ₽`, icon: TrendingUp, color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20' },
+    { label: t.arpu, value: `${adv.arpu} ₽`, icon: Activity, color: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-400/20' },
   ];
 
   return (
@@ -84,7 +84,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
         {/* 2. Network Distribution Chart */}
         <div className="admin-panel p-6">
           <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-            <Zap className="h-5 w-5 text-amber-400" /> توزيع باقات الاشتراكات
+            <Zap className="h-5 w-5 text-amber-400" /> {t.networkDistribution}
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -110,7 +110,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
         {/* 3. Server Protocols Chart */}
         <div className="admin-panel p-6">
           <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-blue-400" /> تحليل قوة السيرفرات (البروتوكولات)
+            <ShieldAlert className="h-5 w-5 text-blue-400" /> {t.protocolAnalysis}
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -135,7 +135,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
         {/* Revenue Growth */}
         <div className="admin-panel p-6">
           <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-emerald-400" /> نمو الإيرادات (آخر 30 يوماً)
+            <TrendingUp className="h-5 w-5 text-emerald-400" /> {t.revenueGrowth}
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -157,7 +157,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                   labelFormatter={(val) => new Date(val).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  formatter={(value: any) => [`${value} ₽`, 'الإيرادات']}
+                  formatter={(value: any) => [`${value} ₽`, t.revenue]}
                 />
                 <Area type="monotone" dataKey="revenue_rub" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
               </AreaChart>
@@ -168,7 +168,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
         {/* User Growth */}
         <div className="admin-panel p-6">
           <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-400" /> نمو المستخدمين الجدد (آخر 30 يوماً)
+            <Users className="h-5 w-5 text-blue-400" /> {t.userGrowth}
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -185,7 +185,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
                   cursor={{ fill: '#1e293b', opacity: 0.5 }} 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                   labelFormatter={(val) => new Date(val).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  formatter={(value: any) => [value, 'مستخدم جديد']}
+                  formatter={(value: any) => [value, t.totalUsers]}
                 />
                 <Bar dataKey="new_users" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -199,18 +199,17 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
         <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-red-500/10 blur-3xl" />
         <div className="relative">
           <h3 className="text-lg font-bold text-red-400 mb-2 flex items-center gap-2">
-            <Trash2 className="h-5 w-5" /> منطقة الإدارة المتقدمة (Danger Zone)
+            <Trash2 className="h-5 w-5" /> {t.dangerZone}
           </h3>
           <p className="text-sm text-red-300/70 mb-6 max-w-2xl">
-            هل تقوم بتجارب إنشاء حسابات وشراء باقات وتُريد مسحها لأنها تؤثر على الإحصائيات الحقيقية؟ 
-            هذا الزر سيقوم بحذف **جميع المدفوعات والاشتراكات** التي أنشأتها أنت (حساب الأدمن) لتعود الإحصائيات دقيقة جداً. لن يمس هذا الزر بيانات المشتركين الحقيقيين.
+            {t.dangerZoneDesc}
           </p>
           <button 
             onClick={handleReset}
             disabled={resetting}
             className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 transition border border-red-500/30 disabled:opacity-50"
           >
-            {resetting ? 'جارٍ التصفير...' : 'تصفير تجارب الأدمن (Reset My Test Data)'}
+            {resetting ? t.resettingBtn : t.resetTestBtn}
           </button>
         </div>
       </div>
@@ -218,21 +217,21 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
       {/* 5. Revenue By Plan Table */}
       <div className="admin-panel p-6">
         <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-          <Banknote className="h-5 w-5 text-green-400" /> الإيرادات حسب الاشتراك
+          <Banknote className="h-5 w-5 text-green-400" /> {t.revenueByPlan}
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-white/50 border-b border-white/10">
               <tr className="text-start">
-                <th className="pb-3 px-2 text-start font-medium">الاشتراك</th>
-                <th className="pb-3 px-2 text-center font-medium">المبيعات</th>
-                <th className="pb-3 px-2 text-end font-medium">الإيرادات</th>
+                <th className="pb-3 px-2 text-start font-medium">{t.plan}</th>
+                <th className="pb-3 px-2 text-center font-medium">{t.sales}</th>
+                <th className="pb-3 px-2 text-end font-medium">{t.revenue}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {byPlan.map((r, i) => (
                 <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-4 px-2 font-semibold">خطة رقم {r.plan}</td>
+                  <td className="py-4 px-2 font-semibold">{t.plan} {r.plan}</td>
                   <td className="py-4 px-2 text-center text-lg">{r.sales}</td>
                   <td className="py-4 px-2 text-end font-bold text-emerald-400">{r.revenue_rub} ₽</td>
                 </tr>
