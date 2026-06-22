@@ -147,7 +147,15 @@ async function loadKnownHostGeo() {
   for (const r of repos ?? []) {
     try {
       const { text, fileCount } = await fetchRepoTexts(r.repo_url);
-      const found = extractConfigs(text);
+      let found = extractConfigs(text);
+      
+      const MAX_CONFIGS_PER_REPO = 15000;
+      if (found.length > MAX_CONFIGS_PER_REPO) {
+        log.warn(`  ! ${r.repo_url} yielded ${found.length} configs. Smart sampling down to ${MAX_CONFIGS_PER_REPO}…`);
+        const half = Math.floor(MAX_CONFIGS_PER_REPO / 2);
+        found = [...found.slice(0, half), ...found.slice(-half)];
+      }
+
       perRepo.set(r.repo_url, { files_found: fileCount, configs_extracted: found.length });
       log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${found.length} configs`);
       for (const uri of found) configs.set(hashConfig(uri), { uri, source: r.repo_url });
