@@ -110,6 +110,7 @@ create table if not exists public.servers (
   config_hash     text not null unique,   -- dedupe key (hash of config_uri)
   latency_ms      int,
   is_working      boolean not null default true,
+  is_deleted      boolean not null default false,
   source_repo     text,
   last_checked_at timestamptz,
   updated_at      timestamptz not null default now()

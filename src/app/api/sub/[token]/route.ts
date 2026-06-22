@@ -142,6 +142,7 @@ export async function GET(
     .from('servers')
     .select('id, config_uri, network_type, country')
     .eq('is_working', true)
+    .eq('is_deleted', false)
     .in('network_type', fetchPools)
     .order('latency_ms', { ascending: true, nullsFirst: false })
     .limit(3000); // Fetch a large pool to ensure we can balance by country
