@@ -192,10 +192,11 @@ async function loadKnownHostGeo() {
 
   const hostGeo = await loadKnownHostGeo(); // host -> { country, country_code }
   const unknownHosts = [...allHosts].filter((h) => !hostGeo.has(h));
-  log.info(`Host geo: ${allHosts.size - unknownHosts.length} cached · ${unknownHosts.length} new to resolve`);
-  if (unknownHosts.length) {
+  const toResolve = unknownHosts.slice(0, 500); // cap to 500 per run to respect limits
+  log.info(`Host geo: ${allHosts.size - unknownHosts.length} cached · ${unknownHosts.length} new (resolving ${toResolve.length} this run)`);
+  if (toResolve.length) {
     try {
-      const fresh = await lookupCountries(unknownHosts);
+      const fresh = await lookupCountries(toResolve);
       // Only cache successful resolutions; unresolved hosts retry next run.
       for (const [h, v] of fresh) if (v && v.country_code) hostGeo.set(h, v);
     } catch (e) {

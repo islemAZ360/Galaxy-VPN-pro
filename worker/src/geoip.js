@@ -22,6 +22,7 @@ export async function lookupCountries(hosts) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(batch.map((q) => ({ query: q }))),
+          signal: AbortSignal.timeout(8000),
         });
         if (res.ok) {
           const arr = await res.json();
