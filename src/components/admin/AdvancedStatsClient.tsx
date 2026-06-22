@@ -128,6 +128,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
             </ResponsiveContainer>
         </div>
       </div>
+      </div>
 
       {/* 4. Time-Series Analytics (Revenue & Users) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -156,7 +157,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                   labelFormatter={(val) => new Date(val).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  formatter={(value: number) => [`${value} ₽`, 'الإيرادات']}
+                  formatter={(value: any) => [`${value} ₽`, 'الإيرادات']}
                 />
                 <Area type="monotone" dataKey="revenue_rub" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
               </AreaChart>
@@ -184,7 +185,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
                   cursor={{ fill: '#1e293b', opacity: 0.5 }} 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                   labelFormatter={(val) => new Date(val).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  formatter={(value: number) => [value, 'مستخدم جديد']}
+                  formatter={(value: any) => [value, 'مستخدم جديد']}
                 />
                 <Bar dataKey="new_users" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -241,6 +242,7 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
         </div>
       </div>
 
+    </div>
     </div>
   );
 }

@@ -69,6 +69,8 @@ Columns below reflect what the code actually reads/writes.
 - **`sub_devices`** — devices seen per subscription. `subscription_id`,
   `ip_address`, `device_type`, `last_seen_at`.
 - **`support_messages`** — chat. `user_id`, `body`, `created_at`, `sender`.
+- **`ggsel_keys`** — pre-purchased GGSel 16-digit keys. `id`, `key_code`, `plan`,
+  `is_used`, `used_by`, `used_at`.
 
 ---
 
@@ -105,22 +107,6 @@ The live pool is retested over the worker's *current* connection:
 - **`runGeminiWifiRecheck()` / `runGeminiLteRecheck()`** — REAL Gemini
   availability, FAST (`worker/src/gemini.js`, `classifyGeminiPool`). What decides
   Gemini is the server's **exit-IP country**, not reachability of a Google URL.
-  - **Stage 1 (fast):** one batched `xray-knife http -x csv` over the whole pool
-    reports each server's real egress country (the `location` column, resolved
-    *through* the tunnel) + connectivity. Classify by `GEMINI_BLOCKED_CC` (exit
-    in a blocked country → no; otherwise → yes). ~1.5 min for 800 servers.
-  - **Stage 2 (precise):** only servers that connect but whose country xray-knife
-    couldn't resolve (`ip_info_failed`) get a per-config probe — run as a local
-    NO-AUTH SOCKS5 proxy (`-I socks://127.0.0.1:PORT`; v10's default inbound
-    demands a random user/pass), call the Gemini API through it, read the body
-    for `"User location is not supported"`.
-  - Because it keys off the exit IP, the system **VPN may stay ON** during the
-    re-check (default) — set `GEMINI_RECHECK_VPN_OFF=1` to test on the raw
-    connection. NOTE: the geo answer is VPN-independent; only host-reachability
-    differs, and DPI is already enforced by the full sync.
-  - ⚠️ Do NOT revert to merely "reaching" a Google URL — that responds from every
-    country (incl. blocked ones), so it falsely passed everything. Both 400-key
-    and 400-geo share the same status code, so the COUNTRY (or body) is the signal.
 - **`runLatencyCheck()`** — TCP ping pass to refresh `latency_ms`.
 
 ### 4.3 The "LTE → TypeError: terminated" issue (`worker/src/supa.js`)
@@ -148,10 +134,6 @@ The live pool is retested over the worker's *current* connection:
   (`UND_ERR_CONNECT_TIMEOUT`, `ECONNRESET`, `ERR_TLS_*`, …) instead of
   `terminated`. `closeSupa()` closes the dispatcher before a hard exit (avoids a
   Windows libuv `UV_HANDLE_CLOSING` assertion). All knobs are env-tunable.
-- **To confirm the root cause on LTE:** read the logged `err.cause.code`, and run
-  an out-of-Node reachability probe on the same link:
-  `Invoke-WebRequest "$env:SUPABASE_URL/rest/v1/" -Headers @{ apikey = $env:SUPABASE_SERVICE_ROLE_KEY }`.
-  If that also hangs/resets, the worker code is exonerated — it's the carrier.
 
 ### 4.4 Realtime admin triggers (`index.js`)
 - A **presence** channel (`worker_presence`) publishes the worker's live state so
@@ -159,13 +141,10 @@ The live pool is retested over the worker's *current* connection:
 - A **postgres_changes** subscription on `sync_requests` (INSERT) triggers an
   instant drain; a **15s poll** (`REQUEST_POLL_MS`) is the reliability backstop so
   nothing is missed if the websocket drops.
-- `drainPending()` claims all pending rows at once and runs them in order
-  full → lte → gemini → latency. On boot, stale pending requests are cleared so
-  they don't fire on the wrong network.
 
 ---
 
-## 5. The Web App (`/src`) — Deep Dive
+## 5. The Web App (`/src`) — Deep Dive & Security Model
 
 ### 5.1 Auth & Roles
 - Google OAuth via `GoogleButton.tsx` → `/auth/callback`.
@@ -177,76 +156,58 @@ The live pool is retested over the worker's *current* connection:
 ### 5.2 Admin Dashboard (`/admin/*`)
 - Pages: `admin` (stats), `admin/servers`, `admin/servers/deleted`,
   `admin/repos`, `admin/users`, `admin/support`.
-- `RepoManager.tsx` (add/remove repos, show stats, fire re-check buttons),
-  `WorkerStatus.tsx` (live presence), `TestLatencyButton.tsx`,
-  `PaymentReview.tsx`, `UserRow.tsx`.
-- Buttons enqueue a `sync_requests` row; the worker picks it up (see 4.4).
-- **Hydration gotcha:** components rendering live dates / reducer totals use
-  `suppressHydrationWarning` on the wrapping element.
+- **Advanced Stats:** Recharts-based Dashboard with MRR, ARPU, Protocol Analysis,
+  and Time-Series Analytics (Revenue & User growth) loaded via custom `admin_revenue_by_day` views.
+- **Deleted Servers:** Servers are soft-deleted (`is_deleted=true`) to keep historical
+  data intact, with a UI panel to recover them.
 
-### 5.3 Realtime singleton safety (`useWorkerPresence.ts`)
-Next.js re-evaluates client modules aggressively. Before
-`.channel().on().subscribe()`, query `supabase.getChannels()` and
-`removeChannel()` any existing one, or Supabase throws
-"cannot add 'presence' callbacks after 'subscribe()'".
+### 5.3 Zero-Trust Security & Rate Limits
+- **OOM Prevention:** All public list pages and admin list pages (e.g., users, support, servers)
+  now use `.limit(1000)` to prevent PostgreSQL from loading infinite rows into Vercel Serverless
+  functions and causing Out-of-Memory crashes.
+- **Mass Assignment Protection:** Next.js Server Actions (like `submitManualPayment`) explicitly
+  extract only safe fields (`amount_rub`, `plan`, `receipt_base64`) from `FormData` to prevent
+  malicious users from injecting `status: "approved"` or assigning payments to other users.
+- **Storage Exhaustion DoS:** Check constraints in `schema.sql` (`check (length(receipt_base64) < 2000000)`)
+  and runtime checks in Server Actions strictly limit the size of uploaded receipts to ~1.5MB.
+- **Data Integrity:** Added `UNIQUE INDEX` on `sub_devices(subscription_id, ip_address)` with
+  upsert conflict resolution to prevent duplicate tracking rows on highly active endpoints.
+- **Race Condition Prevention:** The GGsel key redemption logic uses strict RLS and optimistic
+  locking. It checks if the key is already used *inside* a `single()` Supabase query and prevents
+  multi-click or concurrent automation from redeeming the same key twice.
 
-### 5.4 User Dashboard (`/profile`)
-Shows each subscription (pending/active/rejected/expired), countdown, the
-per-sub subscription URL (`SubLink.tsx`), connected devices, and a plan picker.
+### 5.4 Realtime singleton safety (`useWorkerPresence.ts`)
+Next.js re-evaluates client modules aggressively. Before `.channel().on().subscribe()`, query
+`supabase.getChannels()` and `removeChannel()` any existing one to prevent leakages.
 
 ---
 
 ## 6. Design System & Motion
 - **Theme:** deep-space galaxy. Colors: void `#0a0a1a`, surface `#12122b`,
-  primary violet `#7c3aed`, accent cyan `#22d3ee` (see `tailwind.config.ts`).
-- **Surfaces:** `.glass` (blur + inset highlight + shadow). Hover lift via
-  `.card-lift`; primary CTA via `.btn-primary`; tactile `.pressable`; animated
-  `.link-underline`.
-- **Cosmic backdrop:** `SpaceBackground.tsx` — CSS-only drifting starfield +
-  nebula glows (zero JS), used behind auth/marketing surfaces.
-- **Hero:** `FloatingLines.tsx` — a three.js shader. It **pauses its rAF loop
-  when off-screen (IntersectionObserver) or in a hidden tab**, resumes without a
-  time jump (delta accumulation), and freezes under reduced motion.
-- **Motion vocabulary:**
-  - `FadeIn` / `FadeInStagger` / `FadeInItem` (framer-motion) — scroll-reveal
-    with an ease-out-expo curve `[0.16,1,0.3,1]`, subtle 24px travel, optional
-    blur-in.
-  - CSS utilities in `globals.css`: `.animate-fade-up`, `.animate-grow-x`,
-    `.stagger` (auto-cascading children), plus `transitionTimingFunction` tokens
-    (`ease-out-expo`, `ease-out-quart`, `ease-spring`).
-- **Accessibility:** a global `prefers-reduced-motion` guard neutralizes CSS
-  animation/transition; framer components check `useReducedMotion()`; the WebGL
-  hero and marquee freeze. Always preserve this when adding motion.
+  primary violet `#7c3aed`, accent cyan `#22d3ee`.
+- **Surfaces:** `.glass` (blur + inset highlight + shadow).
+- **Cosmic backdrop:** `SpaceBackground.tsx` — CSS-only drifting starfield + nebula glows.
+- **Accessibility:** a global `prefers-reduced-motion` guard neutralizes CSS animation.
 
 ---
 
 ## 7. Rules for AI Agents
 1. **Worker network code:** keep Supabase calls fail-fast, auth-preserving, and
    `err.cause`-surfacing. Never spread a `Headers` instance into a plain object.
-   Never re-add a blanket `Connection: close` as a "fix".
-2. **i18n is mandatory.** No hardcoded UI strings — use
-   `useTranslations('namespace')` / `getTranslations` and update BOTH
-   `messages/en.json` and `messages/ar.json`.
-3. **Respect reduced motion.** Any new animation must honor the global guard /
-   `useReducedMotion()`.
-4. **Realtime:** don't touch the `useWorkerPresence` / `WorkerStatus` singleton
-   pattern without understanding 5.3.
-5. **Don't assume non-null Supabase data.** Use optional chaining; tables are
-   `users`/`servers`/`repos`/… as listed in §3 (not `profiles`).
-6. Prefer standard Tailwind utilities; reuse the design tokens in §6 instead of
-   re-inventing shadows/gradients.
+2. **Security First:** Always assume `FormData` in Server Actions is malicious. Never spread raw data
+   into a `.insert()`. Always whitelist fields.
+3. **Database Scalability:** Never use `.select('*')` without a `.limit()` on unbounded tables.
+4. **i18n is mandatory.** No hardcoded UI strings — update BOTH `messages/en.json` and `messages/ar.json`.
+5. **Realtime:** don't touch the `useWorkerPresence` / `WorkerStatus` singleton pattern without understanding 5.4.
+6. **Prefer standard Tailwind utilities;** reuse the design tokens in §6 instead of re-inventing shadows/gradients.
 
 ---
 
 ## 8. Changelog (recent, load-bearing)
-- **Worker `supa.js` rewritten** — see §4.3. The old `Connection: close` custom
-  fetch was dropping auth headers and was based on a misdiagnosis.
-- **DPI Blocking & Split Tunneling Analysis** — Discovered that the "TypeError: terminated" issue in the worker was caused by Russian ISP DPI (specifically on LTE networks) blocking new outbound TCP connections to the Supabase domain. 
-  - *Solution:* The worker MUST be run locally with a VPN (e.g., Happ) active to allow Node.js to reach Supabase. 
-  - *Split-Tunneling:* To ensure `xray-knife` still tests servers over the real Russian LTE connection (not through the VPN tunnel), users must use "Per-App Proxy Settings" (Direct connection for selected applications) in Happ and add both `xray-knife.exe` and `xray.exe` to the bypass list. If `xray.exe` is omitted, the 50 concurrent tests route through the VPN, causing the VPN server to disconnect due to network flood/abuse.
-  - *Admin UI:* Added a "Local Tester Guide" button in the Repos section to document these steps for admins.
-- **Site-wide design + motion pass** — design tokens, professional motion system
-  with reduced-motion support, WebGL hero performance gating, cosmic backdrop,
-  and redesigned home/admin/login/profile/checkout/support surfaces (§6).
+- **Time-Series Advanced Admin Stats** — Implemented MRR, ARPU, Daily Revenue (AreaChart), and Daily User Signups (BarChart) using Supabase views for massive scalability and real-time insights.
+- **Zero-Trust Security Pass** — Hardened Server Actions against Mass Assignment, locked down Database sizing limits to prevent OOM / Storage Exhaustion DoS attacks, and implemented Race Condition prevention for the GGSel system.
+- **Soft Delete Servers Pipeline** — Changed server deletion to be non-destructive (`is_deleted=true`), allowing the admin to recover incorrectly-flagged servers from a dedicated Trash dashboard.
+- **Worker `supa.js` rewritten** — Fixed the bug where the old `Connection: close` custom fetch was dropping auth headers.
+- **DPI Blocking & Split Tunneling Analysis** — Discovered that the "TypeError: terminated" issue in the worker was caused by Russian ISP DPI (specifically on LTE networks) blocking new outbound TCP connections to the Supabase domain. Fixed by recommending Admin to use Split-Tunnel VPN on `xray.exe`.
 
 *End of Document. Proceed with confidence — and accuracy.*
