@@ -94,10 +94,21 @@ export default async function ProfilePage({
           <span className="h-8 w-1 rounded-full bg-gradient-to-b from-galaxy-primary to-galaxy-accent" />
           <h1 className="text-gradient text-3xl font-bold tracking-tight">{t('title')}</h1>
         </div>
-        <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 break-all sm:self-auto">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          {user!.email}
-        </span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <a
+            href="/GalaxyVPN_Manual.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-galaxy-accent/30 bg-galaxy-accent/10 px-4 py-1.5 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+            Manual (RU/EN)
+          </a>
+          <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 break-all sm:self-auto">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            {user!.email}
+          </span>
+        </div>
       </div>
 
       <div className="mt-8 space-y-8">

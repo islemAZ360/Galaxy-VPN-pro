@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Smartphone, Monitor, AlertTriangle, Copy, CheckCircle2 } from 'lucide-react';
+import { Smartphone, Monitor, AlertTriangle, Copy, CheckCircle2, FileText } from 'lucide-react';
 
 const BYPASS_RULES = "happ://routing/add/eyJibG9ja2lwIjpbXSwiYmxvY2tzaXRlcyI6W10sImRpcmVjdGlwIjpbIjEwLjAuMC4wLzgiLCIxNzIuMTYuMC4wLzEyIiwiMTkyLjE2OC4wLjAvMTYiLCIxNjkuMjU0LjAuMC8xNiIsIjIyNC4wLjAuMC80IiwiMjU1LjI1NS4yNTUuMjU1IiwiZ2VvaXA6cnUiXSwiZGlyZWN0c2l0ZXMiOlsibWF4LnJ1IiwiZG9tYWluOjJnaXMucnUiLCJkb21haW46YWRzLng1LnJ1IiwiZG9tYWluOjJnaXMuY29tIiwiZG9tYWluOmFpZi5ydSIsImRvbWFpbjphZXJvZmxvdC5ydSIsImRvbWFpbjphbGZhYmFuay5ydSIsImRvbWFpbjphdml0by5ydSIsImRvbWFpbjpiZWVsaW5lLnJ1IiwiZG9tYWluOmJ1cmdlcmtpbmdydXMucnUiLCJkb21haW46ZGVsbGluLnJ1IiwiZG9tYWluOmRyaXZlMi5ydSIsImRvbWFpbjpkemVuLnJ1IiwiZG9tYWluOmZseXBvYmVkYS5ydSIsImRvbWFpbjpmb3JiZXMucnUiLCJkb21haW46Z2F6ZXRhLnJ1IiwiZG9tYWluOmdhenByb21iYW5rLnJ1IiwiZG9tYWluOmdpc21ldGVvLnJ1IiwiZG9tYWluOmdvc3VzbHVnaS5ydSIsImRvbWFpbjpoaC5ydSIsImRvbWFpbjprb250dXIucnUiLCJkb21haW46a29udHVyLmhvc3QiLCJkb21haW46a3AucnUiLCJkb21haW46a3VwZXIucnUiLCJkb21haW46bGVudGEucnUiLCJkb21haW46bWFpbC5ydSIsImRvbWFpbjptZWdhbWFya2V0LnJ1IiwiZG9tYWluOm1lZ2FtYXJrZXQudGVjaCIsImRvbWFpbjptZWdhZm9uLnJ1IiwiZG9tYWluOm1vZXguY29tIiwiZG9tYWluOm1vdGl2dGVsZWNvbS5ydSIsImRvbWFpbjpvem9uLnJ1IiwiZG9tYWluOnBlcnZ5ZS5ydSIsImRvbWFpbjpwc2JhbmsucnUiLCJkb21haW46cmFtYmxlci5ydSIsImRvbWFpbjpyYW1ibGVyLWNvLnJ1IiwiZG9tYWluOnJiYy5ydSIsImRvbWFpbjpyZWcucnUiLCJkb21haW46cmV2aWV3cy4yZ2lzLmNvbSIsImRvbWFpbjpyZy5ydSIsImRvbWFpbjpyaWEucnUiLCJkb21haW46cnV3aWtpLnJ1IiwiZG9tYWluOnJ1c3RvcmUucnUiLCJkb21haW46cnV0dWJlLnJ1IiwiZG9tYWluOnJ6ZC5ydSIsImRvbWFpbjpzaXJlbmEtdHJhdmVsLnJ1IiwiZG9tYWluOnNyYXZuaS5ydSIsImRvbWFpbjp0LWoucnUiLCJkb21haW46dDIucnUiLCJkb21haW46dGFuay1vbmxpbmUuY29tIiwiZG9tYWluOnRheGltYXhpbS5ydSIsImRvbWFpbjp0YmFuay1vbmxpbmUuY29tIiwiZG9tYWluOnRpbGRhYXBpLmNvbSIsImRvbWFpbjp0bnMtY291bnRlci5ydSIsImRvbWFpbjp0cnZsLnlhbmRleC5uZXQiLCJkb21haW46dHV0dS5ydSIsImRvbWFpbjp2ay5jb20iLCJkb21haW46dmsucnUiLCJkb21haW46dmt2aWRlby5ydSIsImRvbWFpbjp2dGIucnUiLCJkb21haW46eDUucnUiLCJkb21haW46eWEucnUiLCJkb21haW46eWFuZGV4LnJ1IiwiZG9tYWluOnlhbmRleC5uZXQiLCJkb21haW46eWFuZGV4LmNvbSIsImRvbWFpbjp5YXN0YXRpYy5uZXQiLCJkb21haW46eWFuZGV4Y2xvdWQubmV0IiwiZnVsbDpnby55YW5kZXgiLCJmdWxsOnJ1LnJ1d2lraS5ydSIsImRvbWFpbjp4bi0tOTBhY2FnYmhncGNhN2M4YzdmLnhuLS1wMWFpIiwiZG9tYWluOnhuLS04MGFqZ2hob2MyYWoxYzhiLnhuLS1wMWFpIiwiZG9tYWluOnhuLS05MGFpdmNkdDZkeGJjLnhuLS1wMWFpIiwiZG9tYWluOnhuLS1iMWFldy54bi0tcDFhaSIsImRvbWFpbjphcGkub25lbWUucnUiLCJkb21haW46ZmQub25lbWUucnUiLCJkb21haW46aS5vbmVtZS5ydSIsImRvbWFpbjptaW5pYXBwcy5tYXgucnUiLCJkb21haW46c2RrLWFwaS5hcHB0cmFjZXIucnUiLCJkb21haW46c3QubWF4LnJ1IiwiZG9tYWluOnRyYWNrZXItYXBpLnZrLWFuYWx5dGljcy5ydSIsImRvbWFpbjp3Yi5ydSIsImRvbWFpbjp3aWxkYmVycmllcy5ydSJdLCJkbnNob3N0cyI6eyJjbG91ZGZsYXJlLWRucy5jb20iOiIxLjEuMS4xIiwiZG5zLmdvb2dsZSI6IjguOC44LjgifSwiZG9tYWluc3RyYXRlZ3kiOiJJUElmTm9uTWF0Y2giLCJkb21lc3RpY2Ruc2RvbWFpbiI6Imh0dHBzOi8vZG5zLmdvb2dsZS9kbnMtcXVlcnkiLCJkb21lc3RpY2Ruc2lwIjoiOC44LjguOCIsImRvbWVzdGljZG5zdHlwZSI6IkRvSCIsImZha2VkbnMiOmZhbHNlLCJnZW9pcHVybCI6Imh0dHBzOi8vZ2l0aHViLmNvbS9Mb3lhbHNvbGRpZXIvdjJyYXktcnVsZXMtZGF0L3JlbGVhc2VzL2xhdGVzdC9kb3dubG9hZC9nZW9pcC5kYXQiLCJnZW9zaXRldXJsIjoiaHR0cHM6Ly9naXRodWIuY29tL0xveWFsc29sZGllci92MnJheS1ydWxlcy1kYXQvcmVsZWFzZXMvbGF0ZXN0L2Rvd25sb2FkL2dlb3NpdGUuZGF0IiwiZ2xvYmFscHJveHkiOnRydWUsIm5hbWUiOiJCeXBhc3MgUnVzc2lhIiwicHJveHlpcCI6W10sInByb3h5c2l0ZXMiOltdLCJyZW1vdGVkbnNkb21haW4iOiJodHRwczovL2Nsb3VkZmxhcmUtZG5zLmNvbS9kbnMtcXVlcnkiLCJyZW1vdGVkbnNpcCI6IjEuMS4xLjEiLCJyZW1vdGVkbnN0eXBlIjoiRG9IIiwicm91dGVvcmRlciI6ImJsb2NrLWRpcmVjdC1wcm94eSJ9";
 
@@ -21,8 +21,17 @@ export function HuppInstructions() {
   return (
     <div className="space-y-6 mt-8">
       <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
-        <div className="bg-white/5 px-4 py-3 border-b border-white/5">
+        <div className="bg-white/5 px-4 py-3 border-b border-white/5 flex items-center justify-between">
           <h3 className="font-medium text-sm text-white/90">How to connect with Hupp</h3>
+          <a
+            href="/GalaxyVPN_Manual.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-xs font-medium text-galaxy-accent hover:text-galaxy-primary transition-colors bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10"
+          >
+            <FileText className="w-4 h-4" />
+            PDF Manual (RU & EN)
+          </a>
         </div>
         
         <div className="p-4 sm:p-6">
