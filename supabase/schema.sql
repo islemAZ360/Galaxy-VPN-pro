@@ -273,3 +273,24 @@ alter view public.admin_revenue_by_plan set (security_invoker = on);
 -- ============================================================================
 -- Done.
 -- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 14. Admin Time-Series views (Last 30 Days)
+-- ----------------------------------------------------------------------------
+create or replace view public.admin_revenue_by_day as
+  select date_trunc('day', created_at)::date as day, coalesce(sum(amount_rub), 0) as revenue_rub, count(*) as sales
+  from public.payments
+  where status = 'approved' and created_at >= now() - interval '30 days'
+  group by 1 order by 1 asc;
+
+create or replace view public.admin_users_by_day as
+  select date_trunc('day', created_at)::date as day, count(*) as new_users
+  from public.users
+  where created_at >= now() - interval '30 days'
+  group by 1 order by 1 asc;
+
+revoke all on public.admin_revenue_by_day from anon, authenticated;
+revoke all on public.admin_users_by_day from anon, authenticated;
+alter view public.admin_revenue_by_day set (security_invoker = on);
+alter view public.admin_users_by_day set (security_invoker = on);
+

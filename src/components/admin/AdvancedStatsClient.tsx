@@ -21,6 +21,8 @@ interface AdvancedStatsClientProps {
     avgLatency: number;
     protocols: { name: string; value: number; color: string }[];
     networks: { name: string; value: number; color: string }[];
+    revenueByDay: { day: string; revenue_rub: number; sales: number }[];
+    usersByDay: { day: string; new_users: number }[];
   };
 }
 
@@ -124,12 +126,74 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
-          <p className="text-xs text-center text-white/40 mt-4">متوسط سرعة الاستجابة للشبكة (Latency): <span className="text-white/80 font-bold">{adv.avgLatency}ms</span></p>
         </div>
       </div>
 
-      {/* 4. Danger Zone */}
+      {/* 4. Time-Series Analytics (Revenue & Users) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Growth */}
+        <div className="admin-panel p-6">
+          <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-emerald-400" /> نمو الإيرادات (آخر 30 يوماً)
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={adv.revenueByDay} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis 
+                  dataKey="day" 
+                  stroke="#64748b" 
+                  tick={{ fill: '#94a3b8', fontSize: 12 }} 
+                  tickFormatter={(val) => new Date(val).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                />
+                <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                  labelFormatter={(val) => new Date(val).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  formatter={(value: number) => [`${value} ₽`, 'الإيرادات']}
+                />
+                <Area type="monotone" dataKey="revenue_rub" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* User Growth */}
+        <div className="admin-panel p-6">
+          <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+            <Users className="h-5 w-5 text-blue-400" /> نمو المستخدمين الجدد (آخر 30 يوماً)
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={adv.usersByDay} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis 
+                  dataKey="day" 
+                  stroke="#64748b" 
+                  tick={{ fill: '#94a3b8', fontSize: 12 }}
+                  tickFormatter={(val) => new Date(val).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                />
+                <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
+                <Tooltip 
+                  cursor={{ fill: '#1e293b', opacity: 0.5 }} 
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                  labelFormatter={(val) => new Date(val).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  formatter={(value: number) => [value, 'مستخدم جديد']}
+                />
+                <Bar dataKey="new_users" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Danger Zone */}
       <div className="admin-panel border-red-500/20 bg-red-500/5 p-6 relative overflow-hidden">
         <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-red-500/10 blur-3xl" />
         <div className="relative">

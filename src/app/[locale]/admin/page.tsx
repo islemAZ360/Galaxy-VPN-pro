@@ -20,6 +20,10 @@ export default async function AdminStatsPage({
   const { data: subs } = await admin.from('subscriptions').select('status, network_type, price_rub, duration_days').eq('status', 'active');
   const { data: servers } = await admin.from('servers').select('protocol, is_working, latency_ms').eq('is_working', true);
   const { data: uniquePaidUsers } = await admin.from('payments').select('user_id').eq('status', 'approved');
+  
+  // 3. Fetch Time-Series Data (Last 30 Days)
+  const { data: revenueByDay } = await admin.from('admin_revenue_by_day').select('*');
+  const { data: usersByDay } = await admin.from('admin_users_by_day').select('*');
 
   // 3. Compute MRR (Monthly Recurring Revenue)
   let mrr = 0;
@@ -72,6 +76,8 @@ export default async function AdminStatsPage({
     avgLatency,
     protocols,
     networks,
+    revenueByDay: revenueByDay || [],
+    usersByDay: usersByDay || [],
   };
 
   const translations = {
