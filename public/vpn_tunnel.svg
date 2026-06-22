@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" width="100%" height="300">
+  <defs>
+    <radialGradient id="tunnelGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="20%" stop-color="#00ffcc" stop-opacity="0.5"/>
+      <stop offset="60%" stop-color="#ff00ff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#050a14" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Deep background -->
+  <rect width="1000" height="300" fill="#050a14"/>
+
+  <!-- Core Light -->
+  <circle cx="500" cy="150" r="150" fill="url(#tunnelGlow)">
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Grid Lines to simulate 3D Perspective -->
+  <g stroke="#ff00ff" stroke-width="1.5" opacity="0.4">
+    <!-- Radiating Lines from Center -->
+    <line x1="500" y1="150" x2="-200" y2="-200" />
+    <line x1="500" y1="150" x2="200" y2="-200" />
+    <line x1="500" y1="150" x2="500" y2="-200" />
+    <line x1="500" y1="150" x2="800" y2="-200" />
+    <line x1="500" y1="150" x2="1200" y2="-200" />
+
+    <line x1="500" y1="150" x2="-200" y2="150" />
+    <line x1="500" y1="150" x2="1200" y2="150" />
+
+    <line x1="500" y1="150" x2="-200" y2="500" />
+    <line x1="500" y1="150" x2="200" y2="500" />
+    <line x1="500" y1="150" x2="500" y2="500" />
+    <line x1="500" y1="150" x2="800" y2="500" />
+    <line x1="500" y1="150" x2="1200" y2="500" />
+  </g>
+
+  <!-- Concentric Rings (The Tunnel Walls) -->
+  <g fill="none" stroke="#00ffcc" stroke-width="2">
+    <!-- Tunnel Rings zooming outwards -->
+    <ellipse cx="500" cy="150" rx="100" ry="50" opacity="0.8">
+      <animate attributeName="rx" values="0; 1500" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="ry" values="0; 750" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.8; 0" dur="2s" repeatCount="indefinite"/>
+    </ellipse>
+
+    <ellipse cx="500" cy="150" rx="100" ry="50" opacity="0.8">
+      <animate attributeName="rx" values="0; 1500" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+      <animate attributeName="ry" values="0; 750" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+      <animate attributeName="opacity" values="0.8; 0" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+    </ellipse>
+
+    <ellipse cx="500" cy="150" rx="100" ry="50" opacity="0.8">
+      <animate attributeName="rx" values="0; 1500" dur="2s" repeatCount="indefinite" begin="1s"/>
+      <animate attributeName="ry" values="0; 750" dur="2s" repeatCount="indefinite" begin="1s"/>
+      <animate attributeName="opacity" values="0.8; 0" dur="2s" repeatCount="indefinite" begin="1s"/>
+    </ellipse>
+
+    <ellipse cx="500" cy="150" rx="100" ry="50" opacity="0.8">
+      <animate attributeName="rx" values="0; 1500" dur="2s" repeatCount="indefinite" begin="1.5s"/>
+      <animate attributeName="ry" values="0; 750" dur="2s" repeatCount="indefinite" begin="1.5s"/>
+      <animate attributeName="opacity" values="0.8; 0" dur="2s" repeatCount="indefinite" begin="1.5s"/>
+    </ellipse>
+  </g>
+
+  <!-- Data Packets Flying In -->
+  <g fill="#ffffff">
+    <circle cx="100" cy="50" r="4">
+      <animate attributeName="cx" values="100; 500" dur="1s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="50; 150" dur="1s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="8; 0" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="900" cy="250" r="4">
+      <animate attributeName="cx" values="900; 500" dur="1.2s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="250; 150" dur="1.2s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="8; 0" dur="1.2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="50" cy="250" r="4" fill="#ff00ff">
+      <animate attributeName="cx" values="50; 500" dur="0.8s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="250; 150" dur="0.8s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="10; 0" dur="0.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="950" cy="50" r="4" fill="#00ffcc">
+      <animate attributeName="cx" values="950; 500" dur="0.9s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="50; 150" dur="0.9s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="10; 0" dur="0.9s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <text x="500" y="270" font-family="'Courier New', monospace" font-size="24" font-weight="bold" fill="#00ffcc" text-anchor="middle" letter-spacing="10">
+    ENCRYPTED TUNNEL ACTIVE
+    <animate attributeName="opacity" values="1;0.5;1" dur="0.5s" repeatCount="indefinite"/>
+  </text>
+</svg>

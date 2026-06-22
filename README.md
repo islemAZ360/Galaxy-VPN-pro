@@ -17,7 +17,7 @@
   
 </div>
 
----
+<img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/neon_separator.svg" width="100%" />
 
 <div align="center">
   <p>
@@ -25,7 +25,7 @@
   </p>
 </div>
 
----
+<img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/neon_separator.svg" width="100%" />
 
 ## ✨ Supernatural Features
 
@@ -51,6 +51,12 @@
 </td>
 </tr>
 </table>
+
+<br/>
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/vpn_tunnel.svg" alt="Animated VPN Encrypted Tunnel" width="100%" />
+</div>
 
 <br/>
 
