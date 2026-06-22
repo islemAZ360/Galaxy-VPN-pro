@@ -111,7 +111,7 @@ export async function GET(
       device_type: parseDeviceType(ua),
       last_seen_at: new Date().toISOString(),
     },
-    { onConflict: 'subscription_id,ip_address,user_agent' }
+    { onConflict: 'subscription_id,ip_address' }
   );
   if (trackErr) console.error('[sub] device tracking upsert failed:', trackErr.message);
 

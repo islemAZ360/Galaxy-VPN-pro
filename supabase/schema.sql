@@ -87,7 +87,7 @@ create table if not exists public.payments (
   subscription_id uuid references public.subscriptions(id) on delete set null,
   plan            int  not null,
   amount_rub      int  not null,
-  receipt_base64  text not null,          -- compressed image, data URL or raw base64
+  receipt_base64  text not null check (length(receipt_base64) < 2000000), -- max ~1.5MB to prevent DoS Storage Exhaustion
   status          payment_status not null default 'pending',
   admin_message   text,
   reviewed_by     uuid references public.users(id),
@@ -136,7 +136,7 @@ create table if not exists public.support_messages (
   user_id      uuid not null references public.users(id) on delete cascade, -- the thread owner
   sender       sender_type not null,
   body         text,
-  image_base64 text,
+  image_base64 text check (length(image_base64) < 2000000), -- max ~1.5MB to prevent DoS Storage Exhaustion
   read         boolean not null default false,
   created_at   timestamptz not null default now()
 );

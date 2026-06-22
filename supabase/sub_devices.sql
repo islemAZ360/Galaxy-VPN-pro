@@ -39,9 +39,9 @@ where a.ctid < b.ctid
   and a.user_agent      = b.user_agent;
 
 -- The unique key the route's upsert relies on. Names without spaces matter:
--- the route passes onConflict: 'subscription_id,ip_address,user_agent'.
-create unique index if not exists sub_devices_sub_ip_ua_key
-  on public.sub_devices (subscription_id, ip_address, user_agent);
+-- the route passes onConflict: 'subscription_id,ip_address'.
+create unique index if not exists sub_devices_sub_ip_key
+  on public.sub_devices (subscription_id, ip_address);
 
 -- Speeds up the 24h window query: where subscription_id = ? and last_seen_at >= ?
 create index if not exists sub_devices_sub_lastseen_idx

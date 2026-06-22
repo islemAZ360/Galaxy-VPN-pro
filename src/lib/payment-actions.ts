@@ -16,6 +16,11 @@ export async function submitManualPayment(
   if (!user) return { error: 'unauthorized' };
 
   if (!receiptBase64) return { error: 'noReceipt' };
+
+  // Protect against massive payloads (Storage Exhaustion DoS)
+  if (receiptBase64.length > 2000000) {
+    return { error: 'Payload too large (Max 1.5MB)' };
+  }
   
   // 2. Validate Plan & Network securely on the SERVER
   const plan = getPlan(planId);
