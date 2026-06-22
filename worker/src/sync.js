@@ -469,7 +469,7 @@ export async function runWifiCascade() {
     const eligible = working.filter((w) => {
       const cc = geo.get(w.host)?.country_code;
       if (cc && EXCLUDE_HOST_CC.has(cc)) return false;
-      if (w.latencyMs != null && w.latencyMs > MAX_LATENCY_MS) return false;
+      if (w.latencyMs == null || w.latencyMs > MAX_LATENCY_MS) return false;
       return true;
     });
     if (eligible.length !== working.length) {
@@ -717,7 +717,7 @@ export async function runWhitelistCascade() {
     const eligible = working.filter((w) => {
       const cc = geo.get(w.host)?.country_code;
       if (cc && EXCLUDE_HOST_CC.has(cc)) return false;
-      if (w.latencyMs != null && w.latencyMs > MAX_LATENCY_MS) return false;
+      if (w.latencyMs == null || w.latencyMs > MAX_LATENCY_MS) return false;
       return true;
     });
     if (eligible.length !== working.length) {
