@@ -190,20 +190,18 @@ create policy users_self_read   on public.users for select using (auth.uid() = i
 create policy users_self_update on public.users for update using (auth.uid() = id);
 create policy users_admin_all   on public.users for all    using (public.is_admin()) with check (public.is_admin());
 
--- subscriptions: owner read/insert; admin all
+-- subscriptions: owner read; admin all (inserts are now done exclusively via Server Actions to prevent Mass Assignment)
 drop policy if exists subs_owner_read   on public.subscriptions;
 drop policy if exists subs_owner_insert on public.subscriptions;
 drop policy if exists subs_admin_all    on public.subscriptions;
 create policy subs_owner_read   on public.subscriptions for select using (auth.uid() = user_id);
-create policy subs_owner_insert on public.subscriptions for insert with check (auth.uid() = user_id);
 create policy subs_admin_all    on public.subscriptions for all    using (public.is_admin()) with check (public.is_admin());
 
--- payments: owner read/insert; admin all
+-- payments: owner read; admin all (inserts are now done exclusively via Server Actions to prevent Mass Assignment)
 drop policy if exists pay_owner_read   on public.payments;
 drop policy if exists pay_owner_insert on public.payments;
 drop policy if exists pay_admin_all    on public.payments;
 create policy pay_owner_read   on public.payments for select using (auth.uid() = user_id);
-create policy pay_owner_insert on public.payments for insert with check (auth.uid() = user_id);
 create policy pay_admin_all    on public.payments for all    using (public.is_admin()) with check (public.is_admin());
 
 -- servers: world-readable (for the public server list); only admin writes via UI.

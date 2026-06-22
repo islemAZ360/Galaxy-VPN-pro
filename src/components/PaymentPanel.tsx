@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from '@/i18n/routing';
 import type { Plan, NetworkType } from '@/lib/plans';
+import { submitManualPayment } from '@/lib/payment-actions';
 
 // Compress an image file to a JPEG data-URL (<= maxW px, given quality).
 function compressImage(file: File, maxW = 1100, quality = 0.7): Promise<string> {
@@ -64,45 +65,11 @@ export function PaymentPanel({
     }
     setBusy(true);
     setError(null);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setBusy(false);
-      return;
-    }
-
-    // 1) pending subscription (carries the chosen network type)
-    const { data: sub, error: subErr } = await supabase
-      .from('subscriptions')
-      .insert({
-        user_id: user.id,
-        plan: plan.id,
-        server_count: variant.serverCount,
-        price_rub: variant.priceRub,
-        duration_days: plan.durationDays,
-        status: 'pending',
-        network_type: net,
-      })
-      .select('id')
-      .single();
-    if (subErr || !sub) {
-      setBusy(false);
-      setError(t('error'));
-      return;
-    }
-
-    // 2) pending payment with the receipt
-    const { error: payErr } = await supabase.from('payments').insert({
-      user_id: user.id,
-      subscription_id: sub.id,
-      plan: plan.id,
-      amount_rub: variant.priceRub,
-      receipt_base64: receipt,
-      status: 'pending',
-    });
-    if (payErr) {
+    
+    // Call the secure server action instead of client-side inserting
+    const res = await submitManualPayment(plan.id, net, receipt);
+    
+    if ('error' in res) {
       setBusy(false);
       setError(t('error'));
       return;
