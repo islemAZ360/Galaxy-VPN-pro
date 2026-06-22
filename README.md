@@ -1,32 +1,27 @@
 <div align="center">
 
-  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/icon-192x192.png" alt="GalaxyVPN Logo" width="160" style="border-radius: 50%; box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);" />
-
-  <br/><br/>
-
-  # 🌌 G A L A X Y &nbsp; V P N &nbsp; P R O
-
-  <p align="center">
-    <b>The Ultimate, Censorship-Resistant VPN Subscription Engine.</b> <br/>
-    <i>Engineered for scale, speed, and absolute freedom.</i>
-  </p>
+  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/supernatural_galaxy.svg" alt="GalaxyVPN Animated Banner" width="100%" />
 
   <br/>
+
+  <a href="https://git.io/typing-svg">
+    <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=700&size=24&pause=1000&color=00FFFF&center=true&vCenter=true&width=600&lines=The+Ultimate+VPN+Subscription+Engine;Bypass+Deep+Packet+Inspection+Easily;Fully+Automated+Server+Testing;Enterprise-Grade+Billing+%26+Analytics" alt="Typing SVG" />
+  </a>
+
+  <br/><br/>
 
   [![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
   [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
   
-  <br/>
-
 </div>
 
 ---
 
 <div align="center">
   <p>
-    Welcome to <b>GalaxyVPN Pro</b> — not just a VPN app, but an entire autonomous ecosystem. It automatically hunts for live servers, tests their latency across multiple network tiers, provisions access, handles billing, and provides enterprise-grade analytics in three different languages.
+    <b>GalaxyVPN Pro</b> is not just a VPN app, it is a fully autonomous <b>ecosystem</b>. It automatically hunts for live servers, tests their latency across multiple network tiers, provisions access, handles billing, and provides enterprise-grade analytics.
   </p>
 </div>
 
