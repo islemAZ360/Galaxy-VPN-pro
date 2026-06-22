@@ -55,7 +55,7 @@
 <br/>
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/vpn_tunnel.svg" alt="Animated VPN Encrypted Tunnel" width="100%" />
+  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/vpn_network.svg" alt="Animated VPN Network Dashboard" width="100%" />
 </div>
 
 <br/>
