@@ -2,8 +2,9 @@ import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { requireAdmin } from '@/lib/admin';
 import { Trash2, Server } from 'lucide-react';
-import { deleteServer, deleteAllServers, deleteServersByType } from './actions';
-import { TestLatencyButton } from '@/components/admin/TestLatencyButton';
+import { deleteServerById, deleteServersByType, deleteAllServers, testServerLatency } from '@/lib/admin-actions';
+import TestLatencyButton from '@/components/admin/TestLatencyButton';
+import DeleteServersForm from '@/components/admin/DeleteServersForm';
 import { BalanceToggle } from '@/components/admin/BalanceToggle';
 import { getBalanceModeStatus } from '@/lib/admin-actions';
 import { getBalancedType } from '@/lib/balancer';
@@ -127,35 +128,14 @@ export default async function AdminServersPage({
             );
           })}
           <TestLatencyButton label={t('test_latency', { fallback: 'Test Latency' })} />
-          <form action={async (formData: FormData) => {
-            'use server';
-            const type = formData.get('networkType') as string;
-            if (type === 'all') {
-              await deleteAllServers();
-            } else if (type) {
-              await deleteServersByType(type);
-            }
-          }} className="flex items-center gap-1.5">
-            <select 
-              name="networkType" 
-              className="appearance-none cursor-pointer rounded-lg border border-red-500/40 bg-[#0f111a] px-3 py-1.5 pr-8 text-xs font-medium text-red-300 outline-none transition-colors hover:border-red-500/60 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-              style={{
-                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fca5a5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0.5rem center',
-                backgroundSize: '1em 1em'
-              }}
-            >
-              <option className="bg-[#0f111a] text-red-300 py-1" value="all">{t('delete_all', { fallback: 'Delete All' })}</option>
-              {tiers.map(([t]) => (
-                <option className="bg-[#0f111a] text-white py-1" key={t} value={t}>{NET[t].label}</option>
-              ))}
-            </select>
-            <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 font-medium text-red-300 transition hover:bg-red-500/20">
-              <Trash2 className="h-3.5 w-3.5" />
-              {t('delete', { fallback: 'Delete' })}
-            </button>
-          </form>
+          <DeleteServersForm 
+            tiers={tiers} 
+            netLabels={NET} 
+            t={{ 
+              deleteAll: t('delete_all', { fallback: 'Delete All' }), 
+              delete: t('delete', { fallback: 'Delete' }) 
+            }} 
+          />
         </div>
       </div>
 
