@@ -55,7 +55,7 @@
 <br/>
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/cosmic_nodes.svg" alt="Cosmic Routing Nodes" width="100%" />
+  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/data_exchange.svg" alt="Real-Time Data Exchange Polling" width="100%" />
 </div>
 
 <br/>

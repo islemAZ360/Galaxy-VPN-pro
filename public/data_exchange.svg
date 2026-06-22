@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 250" width="100%" height="250">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="heavyGlow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="250" fill="#050505"/>
+
+  <!-- Static connection lines -->
+  <path d="M 200 125 Q 350 125 500 125" fill="none" stroke="#A855F7" stroke-width="1.5" opacity="0.3"/>
+  <path d="M 500 125 Q 650 125 800 50" fill="none" stroke="#3B82F6" stroke-width="1.5" opacity="0.3"/>
+  <path d="M 500 125 Q 650 125 800 125" fill="none" stroke="#3B82F6" stroke-width="1.5" opacity="0.3"/>
+  <path d="M 500 125 Q 650 125 800 200" fill="none" stroke="#3B82F6" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- Ping / Data Pulses -->
+  <g filter="url(#glow)">
+    
+    <!-- GitHub -> Worker (Config fetch) -->
+    <circle r="4" fill="#A855F7">
+      <animateMotion dur="2s" repeatCount="indefinite" path="M 200 125 Q 350 125 500 125" />
+      <animate attributeName="opacity" values="0;1;1;0" dur="2s" repeatCount="indefinite" keyTimes="0;0.2;0.8;1"/>
+    </circle>
+    
+    <!-- Worker -> Server Alpha (Ping) -->
+    <circle r="4" fill="#3B82F6">
+      <animateMotion dur="1.5s" repeatCount="indefinite" path="M 500 125 Q 650 125 800 50" />
+      <animate attributeName="opacity" values="0;1;1;0" dur="1.5s" repeatCount="indefinite" keyTimes="0;0.2;0.8;1"/>
+    </circle>
+    
+    <!-- Server Alpha -> Worker (Response 24ms - Fast) -->
+    <circle r="4" fill="#10B981">
+      <animateMotion dur="1.5s" repeatCount="indefinite" path="M 800 50 Q 650 125 500 125" begin="0.75s"/>
+      <animate attributeName="opacity" values="0;1;1;0" dur="1.5s" repeatCount="indefinite" keyTimes="0;0.2;0.8;1" begin="0.75s"/>
+    </circle>
+
+    <!-- Worker -> Server Beta (Ping) -->
+    <circle r="4" fill="#3B82F6">
+      <animateMotion dur="2s" repeatCount="indefinite" path="M 500 125 Q 650 125 800 125" />
+      <animate attributeName="opacity" values="0;1;1;0" dur="2s" repeatCount="indefinite" keyTimes="0;0.2;0.8;1"/>
+    </circle>
+
+    <!-- Server Beta -> Worker (Response 112ms - Slower) -->
+    <circle r="4" fill="#F59E0B">
+      <animateMotion dur="2s" repeatCount="indefinite" path="M 800 125 Q 650 125 500 125" begin="1s"/>
+      <animate attributeName="opacity" values="0;1;1;0" dur="2s" repeatCount="indefinite" keyTimes="0;0.2;0.8;1" begin="1s"/>
+    </circle>
+
+    <!-- Worker -> Server Gamma (Ping) -->
+    <circle r="4" fill="#3B82F6">
+      <animateMotion dur="1.5s" repeatCount="indefinite" path="M 500 125 Q 650 125 800 200" />
+      <animate attributeName="opacity" values="0;1;1;0" dur="1.5s" repeatCount="indefinite" keyTimes="0;0.2;0.8;1"/>
+    </circle>
+    
+    <!-- No response from Gamma (Offline) - Red error blip at Gamma -->
+    <circle cx="800" cy="200" r="6" fill="none" stroke="#EF4444" stroke-width="2">
+      <animate attributeName="r" values="6;20" dur="1.5s" repeatCount="indefinite" begin="1.5s"/>
+      <animate attributeName="opacity" values="1;0" dur="1.5s" repeatCount="indefinite" begin="1.5s"/>
+    </circle>
+
+  </g>
+
+  <!-- Nodes (drawn over the lines) -->
+  
+  <!-- Left Node: GitHub Configs -->
+  <circle cx="200" cy="125" r="20" fill="#0A0A0A" stroke="#A855F7" stroke-width="2" filter="url(#heavyGlow)"/>
+  <text x="200" y="165" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#A855F7" text-anchor="middle">GitHub Registry</text>
+  <text x="200" y="180" font-family="-apple-system, sans-serif" font-size="10" fill="#9CA3AF" text-anchor="middle">Fetches Configs</text>
+
+  <!-- Center Node: Autonomous Tester -->
+  <circle cx="500" cy="125" r="30" fill="#0A0A0A" stroke="#3B82F6" stroke-width="3" filter="url(#heavyGlow)"/>
+  <circle cx="500" cy="125" r="10" fill="#3B82F6" filter="url(#glow)">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <text x="500" y="180" font-family="-apple-system, sans-serif" font-size="14" font-weight="bold" fill="#3B82F6" text-anchor="middle">Autonomous Tester</text>
+  <text x="500" y="195" font-family="-apple-system, sans-serif" font-size="10" fill="#9CA3AF" text-anchor="middle">Node.js Worker</text>
+  
+  <!-- Right Nodes: VPN Servers -->
+  <!-- Alpha -->
+  <circle cx="800" cy="50" r="15" fill="#0A0A0A" stroke="#10B981" stroke-width="2" filter="url(#heavyGlow)"/>
+  <text x="830" y="54" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#10B981">Node_Alpha (24ms)</text>
+
+  <!-- Beta -->
+  <circle cx="800" cy="125" r="15" fill="#0A0A0A" stroke="#F59E0B" stroke-width="2" filter="url(#heavyGlow)"/>
+  <text x="830" y="129" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#F59E0B">Node_Beta (112ms)</text>
+
+  <!-- Gamma -->
+  <circle cx="800" cy="200" r="15" fill="#0A0A0A" stroke="#EF4444" stroke-width="2" filter="url(#heavyGlow)"/>
+  <text x="830" y="204" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#EF4444">Node_Gamma (TIMEOUT)</text>
+
+  <!-- Title -->
+  <text x="500" y="235" font-family="-apple-system, sans-serif" font-size="14" font-weight="600" fill="#ffffff" text-anchor="middle" letter-spacing="4">
+    REAL-TIME VLESS SERVER POLLING
+  </text>
+</svg>
