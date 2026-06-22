@@ -24,6 +24,7 @@ const UNIT_MS: Record<string, number> = {
 
 type SubData = {
   id: string;
+  token: string;
   end_at: string | null;
   plan: number | null;
   network: 'wifi' | 'lte' | 'gemini' | null;
@@ -159,6 +160,15 @@ export function UserRow({
 
               {!isAdmin && (
                 <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-white/5">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/api/sub/${sub.token}`);
+                      alert('Link copied to clipboard!');
+                    }}
+                    className={`${btnCls} !text-galaxy-accent !border-galaxy-accent/40 hover:!bg-galaxy-accent/10`}
+                  >
+                    Copy Link
+                  </button>
                   <input
                     type="number"
                     min="1"

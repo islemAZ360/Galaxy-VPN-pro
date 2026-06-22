@@ -5,7 +5,7 @@ import { UserRow } from '@/components/admin/UserRow';
 
 export const dynamic = 'force-dynamic';
 
-export type SubData = { id: string; end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null; server_count: number | null; active_ip_count: number; status: string; created_at: string; };
+export type SubData = { id: string; token: string; end_at: string | null; plan: number | null; network: 'wifi' | 'lte' | 'gemini' | null; server_count: number | null; active_ip_count: number; status: string; created_at: string; };
 
 type Device = {
   subscription_id: string;
@@ -39,7 +39,7 @@ export default async function AdminUsersPage({
 
   const { data: subs } = await admin
     .from('subscriptions')
-    .select('id, user_id, end_at, plan, network_type, server_count, created_at, status')
+    .select('id, token, user_id, end_at, plan, network_type, server_count, created_at, status')
     .order('created_at', { ascending: false })
     .limit(1000);
 
@@ -68,6 +68,7 @@ export default async function AdminUsersPage({
     
     userSubs.get(s.user_id)!.push({
       id: s.id,
+      token: s.token,
       end_at: s.end_at,
       plan: s.plan,
       network: (s.network_type as 'wifi' | 'lte' | 'gemini' | null) ?? null,
