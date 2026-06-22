@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { requireAdmin } from '@/lib/admin';
 import { Trash2, Server } from 'lucide-react';
-import { deleteServer, deleteAllServers } from './actions';
+import { deleteServer, deleteAllServers, deleteServersByType } from './actions';
 import { TestLatencyButton } from '@/components/admin/TestLatencyButton';
 import { BalanceToggle } from '@/components/admin/BalanceToggle';
 import { getBalanceModeStatus } from '@/lib/admin-actions';
@@ -127,13 +127,24 @@ export default async function AdminServersPage({
             );
           })}
           <TestLatencyButton label={t('test_latency', { fallback: 'Test Latency' })} />
-          <form action={async () => {
+          <form action={async (formData: FormData) => {
             'use server';
-            await deleteAllServers();
-          }}>
-            <button className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 font-medium text-red-300 transition hover:bg-red-500/20">
+            const type = formData.get('networkType') as string;
+            if (type === 'all') {
+              await deleteAllServers();
+            } else if (type) {
+              await deleteServersByType(type);
+            }
+          }} className="flex items-center gap-1.5">
+            <select name="networkType" className="rounded-lg border border-red-500/40 bg-black/40 px-2 py-1.5 text-xs text-red-300 outline-none">
+              <option value="all">{t('delete_all', { fallback: 'Delete All' })}</option>
+              {tiers.map(([t]) => (
+                <option key={t} value={t}>{NET[t].label}</option>
+              ))}
+            </select>
+            <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 font-medium text-red-300 transition hover:bg-red-500/20">
               <Trash2 className="h-3.5 w-3.5" />
-              {t('delete_all', { fallback: 'Delete All' })}
+              {t('delete', { fallback: 'Delete' })}
             </button>
           </form>
         </div>

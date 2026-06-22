@@ -54,6 +54,21 @@ export async function deleteAllServers() {
   revalidatePath(`/${locale}/admin/repos`);
 }
 
+export async function deleteServersByType(networkType: string) {
+  const locale = await getLocale();
+  const { admin } = await requireAdmin(locale);
+  
+  const { error } = await admin
+    .from('servers')
+    .delete()
+    .eq('network_type', networkType);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/${locale}/admin/servers`);
+  revalidatePath(`/${locale}/admin/servers/deleted`);
+}
+
 export async function testLatency() {
   const locale = await getLocale();
   const { admin } = await requireAdmin(locale);
