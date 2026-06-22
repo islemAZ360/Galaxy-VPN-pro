@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 200" width="100%" height="200">
+  <defs>
+    <filter id="auroraBlur">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.2"/>
+      <stop offset="50%" stop-color="#A855F7" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#EC4899" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1000" height="200" fill="#050505"/>
+  
+  <!-- Subtle Aurora -->
+  <circle cx="500" cy="100" r="100" fill="#A855F7" opacity="0.3" filter="url(#auroraBlur)">
+    <animate attributeName="r" values="80; 120; 80" dur="5s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Flowing lines -->
+  <path d="M 100 100 Q 300 50 500 100 T 900 100" fill="none" stroke="url(#lineGrad)" stroke-width="2" opacity="0.5">
+    <animate attributeName="d" values="M 100 100 Q 300 50 500 100 T 900 100; M 100 100 Q 300 150 500 100 T 900 100; M 100 100 Q 300 50 500 100 T 900 100" dur="8s" repeatCount="indefinite"/>
+  </path>
+  <path d="M 100 100 Q 300 150 500 100 T 900 100" fill="none" stroke="url(#lineGrad)" stroke-width="2" opacity="0.3">
+    <animate attributeName="d" values="M 100 100 Q 300 150 500 100 T 900 100; M 100 100 Q 300 50 500 100 T 900 100; M 100 100 Q 300 150 500 100 T 900 100" dur="6s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Central Crystal / Node -->
+  <polygon points="500,60 530,100 500,140 470,100" fill="#A855F7" opacity="0.8" filter="url(#glow)">
+     <animateTransform attributeName="transform" type="translate" values="0 -5; 0 5; 0 -5" dur="4s" repeatCount="indefinite"/>
+  </polygon>
+  <polygon points="500,70 520,100 500,130 480,100" fill="#ffffff" opacity="0.9">
+     <animateTransform attributeName="transform" type="translate" values="0 -5; 0 5; 0 -5" dur="4s" repeatCount="indefinite"/>
+  </polygon>
+
+  <!-- Orbits -->
+  <ellipse cx="500" cy="100" rx="150" ry="40" fill="none" stroke="#EC4899" stroke-width="1" opacity="0.4" transform="rotate(15 500 100)"/>
+  <ellipse cx="500" cy="100" rx="150" ry="40" fill="none" stroke="#3B82F6" stroke-width="1" opacity="0.4" transform="rotate(-15 500 100)"/>
+  
+  <!-- Particles on orbits -->
+  <circle r="3" fill="#ffffff" filter="url(#glow)">
+    <animateMotion dur="4s" repeatCount="indefinite" path="M 355.6 61.2 A 150 40 15 1 1 644.4 138.8 A 150 40 15 1 1 355.6 61.2"/>
+  </circle>
+  <circle r="3" fill="#ffffff" filter="url(#glow)">
+    <animateMotion dur="5s" repeatCount="indefinite" path="M 355.6 138.8 A 150 40 -15 1 0 644.4 61.2 A 150 40 -15 1 0 355.6 138.8"/>
+  </circle>
+  
+  <!-- Connecting text -->
+  <text x="500" y="185" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600" fill="#ffffff" text-anchor="middle" letter-spacing="4">
+    QUANTUM CORE ROUTING
+  </text>
+</svg>

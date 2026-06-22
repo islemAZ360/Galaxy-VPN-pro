@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/hacker_interface.svg" alt="GalaxyVPN Radar Terminal" width="100%" />
+  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/galaxy_aurora.svg" alt="Aurora Galaxy VPN Banner" width="100%" />
 
   <br/>
 
@@ -17,7 +17,7 @@
   
 </div>
 
-<img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/neon_separator.svg" width="100%" />
+<img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/cosmic_separator.svg" width="100%" />
 
 <div align="center">
   <p>
@@ -25,7 +25,7 @@
   </p>
 </div>
 
-<img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/neon_separator.svg" width="100%" />
+<img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/cosmic_separator.svg" width="100%" />
 
 ## ✨ Supernatural Features
 
@@ -55,7 +55,7 @@
 <br/>
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/vpn_network.svg" alt="Animated VPN Network Dashboard" width="100%" />
+  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/cosmic_nodes.svg" alt="Cosmic Routing Nodes" width="100%" />
 </div>
 
 <br/>
