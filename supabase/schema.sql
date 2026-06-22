@@ -182,12 +182,11 @@ alter table public.servers          enable row level security;
 alter table public.repos            enable row level security;
 alter table public.support_messages enable row level security;
 
--- users: self read/update; admin reads/updates all
+-- users: self read; admin reads/updates all (self-update removed to prevent Privilege Escalation)
 drop policy if exists users_self_read   on public.users;
 drop policy if exists users_self_update on public.users;
 drop policy if exists users_admin_all   on public.users;
 create policy users_self_read   on public.users for select using (auth.uid() = id);
-create policy users_self_update on public.users for update using (auth.uid() = id);
 create policy users_admin_all   on public.users for all    using (public.is_admin()) with check (public.is_admin());
 
 -- subscriptions: owner read; admin all (inserts are now done exclusively via Server Actions to prevent Mass Assignment)
