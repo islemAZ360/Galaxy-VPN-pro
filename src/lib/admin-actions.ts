@@ -347,3 +347,17 @@ export async function getBalanceModeStatus() {
   const { data } = await admin.from('worker_status').select('last_result').eq('id', 'worker').single();
   return !!data?.last_result?.balance_mode;
 }
+
+// Reset ONLY the test data created by the admin to clean up the statistics.
+export async function resetTestStats() {
+  const adminId = await assertAdmin();
+  const admin = createAdminClient();
+
+  // Delete all payments made by the admin
+  await admin.from('payments').delete().eq('user_id', adminId);
+  
+  // Delete all subscriptions made by the admin
+  await admin.from('subscriptions').delete().eq('user_id', adminId);
+
+  revalidatePath('/', 'layout');
+}
