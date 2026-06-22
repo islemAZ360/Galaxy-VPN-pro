@@ -268,7 +268,7 @@ export default async function HomePage({
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           {PLANS.map((p, i) => (
             <FadeIn key={p.id} delay={i * 0.15} direction="up" className="h-full">
-              <PlanCard plan={p} featured={p.id === 3} href="/login" />
+              <PlanCard plan={p} featured={p.id === 3} />
             </FadeIn>
           ))}
         </div>

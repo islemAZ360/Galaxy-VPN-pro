@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLocale } from 'next-intl';
 import { useState } from 'react';
 
-export function GoogleButton({ label }: { label: string }) {
+export function GoogleButton({ label, nextUrl }: { label: string; nextUrl?: string }) {
   const locale = useLocale();
   const [loading, setLoading] = useState(false);
 
@@ -15,7 +15,7 @@ export function GoogleButton({ label }: { label: string }) {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${origin}/auth/callback?next=/${locale}/profile`,
+        redirectTo: `${origin}/auth/callback?next=${nextUrl ? encodeURIComponent(nextUrl) : `/${locale}/profile`}`,
       },
     });
   }

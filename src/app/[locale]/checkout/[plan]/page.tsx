@@ -26,7 +26,11 @@ export default async function CheckoutPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect({ href: '/login', locale });
+  if (!user) {
+    const { redirect: nextRedirect } = require('next/navigation');
+    const returnUrl = `/${locale}/checkout/${plan.id}?net=${net}`;
+    nextRedirect(`/${locale}/login?next=${encodeURIComponent(returnUrl)}`);
+  }
 
   const t = await getTranslations('checkout');
   const tp = await getTranslations('plans');

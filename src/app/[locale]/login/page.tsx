@@ -8,17 +8,23 @@ import { Orbit, ShieldCheck, Zap, Globe } from 'lucide-react';
 
 export default async function LoginPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ next?: string }>;
 }) {
   const { locale } = await params;
+  const { next } = await searchParams;
   setRequestLocale(locale);
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) redirect({ href: '/profile', locale });
+  if (user) {
+    const { redirect: nextRedirect } = require('next/navigation');
+    nextRedirect(next || `/${locale}/profile`);
+  }
 
   const t = await getTranslations('auth');
 
@@ -43,7 +49,7 @@ export default async function LoginPage({
           <p className="mt-2 text-sm text-white/60">{t('subtitle')}</p>
 
           <div className="mt-8">
-            <GoogleButton label={t('google')} />
+            <GoogleButton label={t('google')} nextUrl={next} />
           </div>
 
           {/* trust strip */}
