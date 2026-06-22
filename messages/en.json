@@ -138,6 +138,8 @@
     "copy": "Copy",
     "copied": "Copied!",
     "serversIncluded": "{count} servers included",
+    "updateTipTitle": "🔄 Resolving Connection Issues",
+    "updateTipDesc": "If the network drops or servers stop working, just click the \"Update Subscription\" button in the app. It will fetch new working servers instantly!",
     "routingGuideTitle": "⚡ Pro Tip: Optimize Speed & Prevent Blocking",
     "routingGuideDesc": "To ensure maximum speed and keep servers from getting blocked, configure Hupp to bypass local websites (like Russian sites or local apps) so they open directly without using the VPN.",
     "routingStep1": "Tap the 'Copy Bypass Rules' button below.",

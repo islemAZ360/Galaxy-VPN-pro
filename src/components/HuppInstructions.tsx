@@ -72,6 +72,25 @@ export function HuppInstructions() {
         </div>
       </div>
 
+      <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 overflow-hidden relative shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-amber-400 to-amber-600" />
+        <div className="p-5 sm:p-6 flex flex-col sm:flex-row gap-5 items-center sm:items-start">
+          <div className="flex-1">
+            <h3 className="font-bold text-amber-400 text-lg mb-2">{t('updateTipTitle')}</h3>
+            <p className="text-sm text-amber-200/90 leading-relaxed">
+              {t('updateTipDesc')}
+            </p>
+          </div>
+          <div className="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+            <img 
+              src="/images/update.png" 
+              alt="Update Subscription" 
+              className="w-full max-w-[250px] sm:w-[200px] object-contain rounded-lg border border-amber-500/20 shadow-lg" 
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-xl bg-red-500/10 border border-red-500/30 overflow-hidden relative shadow-[0_0_15px_rgba(239,68,68,0.1)]">
         <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-red-400 to-red-600" />
         <div className="p-5 sm:p-6">
