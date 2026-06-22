@@ -32,11 +32,6 @@ async function listTxtFiles(owner, repo, branch) {
   return (j.tree || [])
     .filter((n) => {
       if (n.type !== 'blob') return false;
-      // Skip files larger than 2MB to prevent memory/timeout issues
-      if (n.size && n.size > 2000000) {
-        console.warn(`[github] Skipped large file ${n.path} (${(n.size / 1024 / 1024).toFixed(2)} MB) in ${owner}/${repo}`);
-        return false;
-      }
       // Accept .txt, .md, or files with no extension (e.g. config files)
       if (/\.(txt|md)$/i.test(n.path)) return true;
       if (!n.path.includes('.')) return true; // no extension
