@@ -10,7 +10,7 @@ name: server-liveness-scan
 
 on:
   schedule:
-    - cron: '23 */3 * * *'   # every 3 hours, offset to dodge load spikes
+    - cron: '23 */6 * * *'   # every 6 hours, offset to dodge load spikes
   workflow_dispatch: {}     # lets you run it manually from the Actions tab
 
 # Never let two scans overlap.
