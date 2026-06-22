@@ -243,6 +243,5 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv }: AdvancedS
       </div>
 
     </div>
-    </div>
   );
 }
