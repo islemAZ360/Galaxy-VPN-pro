@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/supernatural_galaxy.svg" alt="GalaxyVPN Animated Banner" width="100%" />
+  <img src="https://raw.githubusercontent.com/islemAZ360/Galaxy-VPN-pro/main/public/hacker_interface.svg" alt="GalaxyVPN Radar Terminal" width="100%" />
 
   <br/>
 

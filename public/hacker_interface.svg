@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400" width="100%" height="400">
+  <defs>
+    <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00ffcc" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="neonBlur">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="400" fill="#050a14"/>
+
+  <!-- Grid Background -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#004444" stroke-width="0.5" opacity="0.5"/>
+  </pattern>
+  <rect width="1000" height="400" fill="url(#grid)"/>
+
+  <!-- Radar Interface (Left) -->
+  <g transform="translate(200, 200)">
+    <!-- Radar Base -->
+    <circle cx="0" cy="0" r="150" fill="url(#radarGlow)" stroke="#00ffcc" stroke-width="2"/>
+    <circle cx="0" cy="0" r="100" fill="none" stroke="#00ffcc" stroke-width="1" stroke-dasharray="10 5" opacity="0.6"/>
+    <circle cx="0" cy="0" r="50" fill="none" stroke="#00ffcc" stroke-width="1" opacity="0.4"/>
+    
+    <g opacity="0.5" stroke="#00ffcc" stroke-width="1">
+      <path d="M -150 0 L 150 0" />
+      <path d="M 0 -150 L 0 150" />
+      <path d="M -106 -106 L 106 106" />
+      <path d="M -106 106 L 106 -106" />
+    </g>
+    
+    <!-- Sweeping Scanner -->
+    <path d="M 0 0 L 0 -150 A 150 150 0 0 1 150 0 Z" fill="#00ffcc" opacity="0.2">
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
+    </path>
+
+    <!-- Radar Blips (Nodes found) -->
+    <g fill="#ff0044" filter="url(#neonBlur)">
+      <!-- Target 1 -->
+      <circle cx="60" cy="-40" r="4">
+        <animate attributeName="opacity" values="1;0;0;0;0;0" dur="3s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="60" cy="-40" r="10" fill="none" stroke="#ff0044">
+        <animate attributeName="r" values="4; 15"/>
+        <animate attributeName="opacity" values="1; 0" dur="1s" repeatCount="indefinite"/>
+      </circle>
+      
+      <!-- Target 2 -->
+      <circle cx="-80" cy="-20" r="5">
+        <animate attributeName="opacity" values="0;0;0;1;0;0" dur="3s" repeatCount="indefinite" begin="0.5s"/>
+      </circle>
+      
+      <!-- Target 3 -->
+      <circle cx="-30" cy="90" r="3">
+        <animate attributeName="opacity" values="0;0;0;0;0;1" dur="3s" repeatCount="indefinite" begin="1.5s"/>
+      </circle>
+      
+      <!-- Target 4 -->
+      <circle cx="100" cy="70" r="4.5">
+        <animate attributeName="opacity" values="0;1;0;0;0;0" dur="3s" repeatCount="indefinite" begin="2.5s"/>
+      </circle>
+    </g>
+
+    <text x="-140" y="-160" fill="#00ffcc" font-family="monospace" font-size="12">VLESS RADAR: ACTIVE</text>
+  </g>
+
+  <!-- Hex Matrix / Data Stream (Right) -->
+  <g transform="translate(420, 40)" font-family="monospace" font-size="14" fill="#00ffcc" opacity="0.9">
+    <clipPath id="dataClip"><rect width="550" height="320"/></clipPath>
+    
+    <g clip-path="url(#dataClip)">
+      <!-- Fast scrolling code -->
+      <text x="0" y="0">
+        <animate attributeName="y" values="320; -400" dur="8s" repeatCount="indefinite"/>
+        <tspan x="0" dy="1.5em" fill="#aaaaaa">> INIT GALAXY_CORE v15.0</tspan>
+        <tspan x="0" dy="1.5em">> CONNECTING TO SUPABASE CLUSTER...</tspan>
+        <tspan x="0" dy="1.5em" fill="#00ffcc">[OK] DATABASE SYNC COMPLETE</tspan>
+        <tspan x="0" dy="1.5em">> DISPATCHING TESTER WORKER</tspan>
+        <tspan x="0" dy="1.5em">0x00A1 Fetching payload from GitHub...</tspan>
+        <tspan x="0" dy="1.5em">0x00A2 42 nodes retrieved.</tspan>
+        <tspan x="0" dy="1.5em" fill="#ff00ff">> COMMENCING DEEP PACKET INSPECTION EVASION</tspan>
+        <tspan x="0" dy="1.5em">0x00A3 Handshake XTLS-Reality: SUCCESS</tspan>
+        <tspan x="0" dy="1.5em">0x00A4 Latency to Node_Alpha: 24ms</tspan>
+        <tspan x="0" dy="1.5em">0x00A5 Latency to Node_Beta: 112ms</tspan>
+        <tspan x="0" dy="1.5em" fill="#ff0044">[WARN] Node_Gamma OFFLINE. Purging route.</tspan>
+        <tspan x="0" dy="1.5em">0x00A6 Traffic successfully rerouted.</tspan>
+        <tspan x="0" dy="1.5em">> AWAITING NEXT CYCLE...</tspan>
+        
+        <!-- Duplicate to loop seamlessly -->
+        <tspan x="0" dy="3.0em" fill="#aaaaaa">> INIT GALAXY_CORE v15.0</tspan>
+        <tspan x="0" dy="1.5em">> CONNECTING TO SUPABASE CLUSTER...</tspan>
+        <tspan x="0" dy="1.5em" fill="#00ffcc">[OK] DATABASE SYNC COMPLETE</tspan>
+        <tspan x="0" dy="1.5em">> DISPATCHING TESTER WORKER</tspan>
+      </text>
+
+      <!-- Binary rain column -->
+      <text x="400" y="0" fill="#0044ff" opacity="0.6">
+        <animate attributeName="y" values="-200; 350" dur="4s" repeatCount="indefinite"/>
+        <tspan x="400" dy="1.2em">11010010</tspan>
+        <tspan x="400" dy="1.2em">10101010</tspan>
+        <tspan x="400" dy="1.2em">00001111</tspan>
+        <tspan x="400" dy="1.2em">11100011</tspan>
+        <tspan x="400" dy="1.2em">01010101</tspan>
+        <tspan x="400" dy="1.2em">11110000</tspan>
+        <tspan x="400" dy="1.2em">00110011</tspan>
+        <tspan x="400" dy="1.2em">11001100</tspan>
+      </text>
+      
+      <!-- Another binary rain column -->
+      <text x="480" y="0" fill="#0044ff" opacity="0.4">
+        <animate attributeName="y" values="-100; 350" dur="6s" repeatCount="indefinite"/>
+        <tspan x="480" dy="1.2em">01</tspan>
+        <tspan x="480" dy="1.2em">10</tspan>
+        <tspan x="480" dy="1.2em">11</tspan>
+        <tspan x="480" dy="1.2em">00</tspan>
+        <tspan x="480" dy="1.2em">10</tspan>
+      </text>
+    </g>
+
+    <!-- Sci-fi Box around text -->
+    <rect x="-10" y="-10" width="550" height="340" fill="none" stroke="#00ffcc" stroke-width="2" stroke-dasharray="15 10 5 10"/>
+    <rect x="-10" y="-10" width="550" height="340" fill="none" stroke="#ff00ff" stroke-width="1" stroke-dasharray="5 20" opacity="0.5"/>
+    
+    <!-- Glitching Title inside terminal -->
+    <text x="250" y="50" font-family="monospace" font-size="36" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#neonBlur)">
+      GALAXY_SYSTEM_ONLINE
+      <animate attributeName="opacity" values="1; 1; 0.2; 1; 1; 0.8; 1" dur="2.1s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0; 2 0; -2 0; 0 0" dur="0.15s" repeatCount="indefinite"/>
+      <animate attributeName="fill" values="#ffffff; #00ffcc; #ff00ff; #ffffff" dur="0.3s" repeatCount="indefinite"/>
+    </text>
+
+    <!-- Moving Equalizer Bars -->
+    <g transform="translate(10, 280)" fill="#ff00ff">
+      <rect x="0" y="0" width="12" height="30"><animate attributeName="height" values="10;40;10" dur="0.5s" repeatCount="indefinite"/><animate attributeName="y" values="30;0;30" dur="0.5s" repeatCount="indefinite"/></rect>
+      <rect x="18" y="0" width="12" height="30"><animate attributeName="height" values="30;10;30" dur="0.7s" repeatCount="indefinite"/><animate attributeName="y" values="10;30;10" dur="0.7s" repeatCount="indefinite"/></rect>
+      <rect x="36" y="0" width="12" height="30"><animate attributeName="height" values="20;50;20" dur="0.4s" repeatCount="indefinite"/><animate attributeName="y" values="20;-10;20" dur="0.4s" repeatCount="indefinite"/></rect>
+      <rect x="54" y="0" width="12" height="30"><animate attributeName="height" values="40;15;40" dur="0.8s" repeatCount="indefinite"/><animate attributeName="y" values="0;25;0" dur="0.8s" repeatCount="indefinite"/></rect>
+      <rect x="72" y="0" width="12" height="30"><animate attributeName="height" values="15;45;15" dur="0.6s" repeatCount="indefinite"/><animate attributeName="y" values="25;-5;25" dur="0.6s" repeatCount="indefinite"/></rect>
+    </g>
+    <text x="100" y="310" fill="#ff00ff" font-size="12">BANDWIDTH FLUX</text>
+  </g>
+
+  <!-- Top and Bottom Cinematic Bars -->
+  <rect x="0" y="0" width="1000" height="15" fill="#00ffcc" opacity="0.8"/>
+  <rect x="0" y="385" width="1000" height="15" fill="#ff00ff" opacity="0.8"/>
+  
+  <text x="50" y="11" fill="#000" font-family="monospace" font-size="10" font-weight="bold">SECURE CHANNEL V.99.1</text>
+  <text x="850" y="396" fill="#000" font-family="monospace" font-size="10" font-weight="bold">ENCRYPTION: AES-256-GCM</text>
+</svg>
