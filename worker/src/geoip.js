@@ -1,5 +1,5 @@
-// Resolve hosts to countries via ip-api.com BATCH endpoint (up to 100/req, 15 req/min).
-// Far faster than per-host lookups and stays within the free rate limit.
+import { resolve4 } from 'node:dns/promises';
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function chunk(arr, n) {
@@ -11,11 +11,39 @@ function chunk(arr, n) {
 export async function lookupCountries(hosts) {
   const unique = [...new Set(hosts.filter(Boolean))];
   const out = new Map();
-  const batches = chunk(unique, 100);
+  
+  // 1. Resolve domains to IPs because ip-api batch endpoint strictly requires IPs
+  const ips = new Set();
+  const ipToHosts = new Map();
+  for (const batch of chunk(unique, 100)) {
+    await Promise.all(batch.map(async (h) => {
+      // IPv4 regex (basic)
+      if (/^(\d{1,3}\.){3}\d{1,3}$/.test(h)) {
+        ips.add(h);
+        if (!ipToHosts.has(h)) ipToHosts.set(h, []);
+        ipToHosts.get(h).push(h);
+        return;
+      }
+      try {
+        const records = await resolve4(h);
+        if (records && records.length > 0) {
+          const ip = records[0];
+          ips.add(ip);
+          if (!ipToHosts.has(ip)) ipToHosts.set(ip, []);
+          ipToHosts.get(ip).push(h);
+        }
+      } catch (e) {
+        // DNS failure
+      }
+    }));
+  }
+
+  // 2. Batch lookup the IPs
+  const uniqueIps = [...ips];
+  const batches = chunk(uniqueIps, 100);
 
   for (let i = 0; i < batches.length; i++) {
     const batch = batches[i];
-    // Retry: the first fetch after the TCP test storm can fail transiently.
     for (let attempt = 0; attempt < 4; attempt++) {
       try {
         const res = await fetch('http://ip-api.com/batch?fields=status,country,countryCode,query', {
@@ -27,19 +55,27 @@ export async function lookupCountries(hosts) {
         if (res.ok) {
           const arr = await res.json();
           for (const r of arr) {
-            out.set(r.query, {
-              country: r.status === 'success' ? r.country : null,
-              country_code: r.status === 'success' ? r.countryCode : null,
-            });
+            const hostsForIp = ipToHosts.get(r.query) || [];
+            for (const h of hostsForIp) {
+              out.set(h, {
+                country: r.status === 'success' ? r.country : null,
+                country_code: r.status === 'success' ? r.countryCode : null,
+              });
+            }
           }
           break;
+        } else {
+          console.error(`[geoip] batch ${i} attempt ${attempt + 1} failed: HTTP ${res.status}`);
+          if (res.status === 429) {
+            await sleep(5000); // Wait longer on rate limits
+          }
         }
       } catch (e) {
         console.error(`[geoip] batch ${i} attempt ${attempt + 1} failed:`, e.message);
         await sleep(1500 * (attempt + 1));
       }
     }
-    // 15 req/min cap → ~4s between batches (skip wait after the last batch)
+    // 15 req/min cap → ~4.2s between batches
     if (i < batches.length - 1) await sleep(4200);
   }
 
