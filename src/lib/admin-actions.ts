@@ -268,6 +268,13 @@ export async function deleteRepo(id: string) {
   revalidatePath('/', 'layout');
 }
 
+export async function toggleRepoStatus(id: string, enabled: boolean) {
+  await assertAdmin();
+  const admin = createAdminClient();
+  await admin.from('repos').update({ enabled }).eq('id', id);
+  revalidatePath('/', 'layout');
+}
+
 // Request a fresh sync — inserts a row into sync_requests; the local Tester
 // Worker picks it up over Supabase Realtime, runs the real test, and updates
 // the live server pool.

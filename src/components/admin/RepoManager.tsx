@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { addRepo, deleteRepo, requestSync, triggerGithubScan, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
+import { addRepo, deleteRepo, toggleRepoStatus, requestSync, triggerGithubScan, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
 import { useWorkerPresence } from '@/hooks/useWorkerPresence';
 
 type Repo = { id: string; repo_url: string; enabled: boolean };
@@ -142,6 +142,12 @@ export function RepoManager({
   const remove = (id: string) =>
     startTransition(async () => {
       await deleteRepo(id);
+      router.refresh();
+    });
+
+  const toggleStatus = (id: string, currentEnabled: boolean) =>
+    startTransition(async () => {
+      await toggleRepoStatus(id, !currentEnabled);
       router.refresh();
     });
 
@@ -465,12 +471,20 @@ export function RepoManager({
         {repos.map((r) => {
           const s = statsMap.get(r.repo_url);
           return (
-            <div key={r.id} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4 transition-colors hover:border-white/15 hover:bg-white/[0.04]">
-              {/* Header: URL + delete */}
+            <div key={r.id} className={`rounded-xl border border-white/[0.07] bg-white/[0.025] p-4 transition-colors hover:border-white/15 hover:bg-white/[0.04] ${!r.enabled ? 'opacity-40 grayscale' : ''}`}>
+              {/* Header: URL + Actions */}
               <div className="flex items-center gap-3">
                 <span className="me-auto truncate text-sm font-medium" dir="ltr">
                   {r.repo_url.replace('https://github.com/', '')}
+                  {!r.enabled && <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/50">Disabled</span>}
                 </span>
+                <button
+                  onClick={() => toggleStatus(r.id, r.enabled)}
+                  disabled={isPending}
+                  className={`rounded-md border px-2 py-1 text-xs disabled:opacity-50 ${r.enabled ? 'border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/10' : 'border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10'}`}
+                >
+                  {r.enabled ? 'Disable' : 'Enable'}
+                </button>
                 <button
                   onClick={() => remove(r.id)}
                   disabled={isPending}
