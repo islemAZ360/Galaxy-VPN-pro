@@ -122,6 +122,12 @@ export const log = {
 
   // Animated countdown
   countdown: async (seconds) => {
+    const isCI = process.env.CI || !process.stdout.isTTY;
+    if (isCI) {
+      log.info(`Waiting ${seconds}s...`);
+      await new Promise((r) => setTimeout(r, seconds * 1000));
+      return;
+    }
     for (let i = seconds; i > 0; i--) {
       process.stdout.write(`\r${C.gray}${ts()}${C.reset} ${GUTTER} ${C.amber}⏳${C.reset}  ${C.amber}Waiting ${i}s...${C.reset}\x1b[K`);
       await new Promise(r => setTimeout(r, 1000));
@@ -131,10 +137,17 @@ export const log = {
 
   // Smooth gradient progress bar with an animated spinner; overwrites its line.
   progress: (pct, msg) => {
+    const isCI = process.env.CI || !process.stdout.isTTY;
+    if (isCI) {
+      // In CI, we skip printing the animated progress bar to avoid spam.
+      // The caller usually logs start/finish separately.
+      return;
+    }
+
     const p = Math.max(0, Math.min(100, pct));
     const w = 28;
     const filled = Math.round((p / 100) * w);
-    const bar = gradient(filled, '█') + `${C.gray}${'░'.repeat(w - filled)}${C.reset}`;
+    const bar = gradient(filled, '━') + `${C.gray}${'━'.repeat(w - filled)}${C.reset}`;
     const spin = SPIN[frame++ % SPIN.length];
     
     // Highlight message
@@ -146,7 +159,8 @@ export const log = {
     );
   },
   clearProgress: () => {
-    process.stdout.write('\r\x1b[K');
+    const isCI = process.env.CI || !process.stdout.isTTY;
+    if (!isCI) process.stdout.write('\r\x1b[K');
   },
 };
 

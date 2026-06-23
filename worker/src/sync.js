@@ -211,8 +211,10 @@ async function fetchAllPaginated(table, select, filters = {}) {
   const report = () => {
     let loaded = 0;
     for (const p of pages) if (p) loaded += p.length;
-    if (loaded - lastLogged >= Math.max(size, 200)) {
-      log.info(`Loaded ${loaded}/${total} ${table} rows…`);
+    const isCI = process.env.CI || !process.stdout.isTTY;
+    const logInterval = isCI ? Math.max(size * 10, 10000) : Math.max(size, 200);
+    if (loaded - lastLogged >= logInterval) {
+      log.info(`Loaded ${loaded}/${total} ${table} rows...`);
       lastLogged = loaded;
     }
   };
