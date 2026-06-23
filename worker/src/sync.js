@@ -428,10 +428,10 @@ export async function runWifiCascade({ percentage = 100 } = {}) {
     await vpnOffGate('Make sure your HOME Wi-Fi is connected.');
 
     let testUris = uris;
-    if (percentage < 100 && percentage > 0) {
-      const limit = Math.ceil(testUris.length * (percentage / 100));
+    if (basePercentage < 100 && basePercentage > 0) {
+      const limit = Math.ceil(testUris.length * (basePercentage / 100));
       testUris = testUris.sort(() => Math.random() - 0.5).slice(0, limit);
-      log.info(`Percentage limit applied: testing ${percentage}% (${testUris.length}) of candidate servers`);
+      log.info(`Base limit applied: testing ${basePercentage}% (${testUris.length}) of candidate servers`);
     }
 
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
@@ -448,9 +448,17 @@ export async function runWifiCascade({ percentage = 100 } = {}) {
     }
 
     log.step('Phase 2 — Gemini availability…');
-    const geminiKeys = await geminiKeysFor(working.map((w) => w.uri), meta);
+    let geminiCandidates = working.map((w) => w.uri);
+    if (detailsPercentage < 100 && detailsPercentage > 0) {
+      const limit = Math.ceil(geminiCandidates.length * (detailsPercentage / 100));
+      geminiCandidates = geminiCandidates.sort(() => Math.random() - 0.5).slice(0, limit);
+      log.info(`Gemini details limit applied: testing ${detailsPercentage}% (${geminiCandidates.length}) of Wi-Fi working servers`);
+    }
+
+    const testedGeminiKeys = new Set(geminiCandidates.map(keyOf));
+    const geminiKeys = await geminiKeysFor(geminiCandidates, meta);
     stats.gemini = working.filter((w) => geminiKeys.has(keyOf(w.uri))).length;
-    log.ok(`${stats.gemini} of the Wi-Fi servers reach Gemini.`);
+    log.ok(`${stats.gemini} tested servers reach Gemini.`);
 
     vpnOnPrompt();
     log.step('Uploading results to Supabase…');
@@ -496,16 +504,24 @@ export async function runWifiCascade({ percentage = 100 } = {}) {
       .filter((w) => !existingDeleted.has(hashConfig(w.uri)))
       .map((w) => {
         const hash = hashConfig(w.uri);
+        const k = keyOf(w.uri);
         const g = geo.get(w.host) || {};
         const country = g.country || 'Server';
         const cc = g.country_code ?? null;
         counters[country] = (counters[country] || 0) + 1;
         const base = `${flagEmoji(cc)} ${country} #${counters[country]}`;
-        // dimensional tier: keep LTE dimension from before, set Gemini from this run
+        // dimensional tier: keep LTE dimension from before
         const prev = existingTiers.get(hash);
         const lteDim = prev === 'lte' || prev === 'gemini_lte';
-        const gem = geminiKeys.has(keyOf(w.uri));
-        const tier = lteDim ? (gem ? 'gemini_lte' : 'lte') : (gem ? 'gemini_wifi' : 'wifi');
+        
+        let gemDim;
+        if (testedGeminiKeys.has(k)) {
+          gemDim = geminiKeys.has(k);
+        } else {
+          gemDim = (prev === 'gemini_wifi' || prev === 'gemini_lte' || prev === 'gemini_whitelist');
+        }
+        
+        const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
         const name = retag(base, tier);
         return {
           name, country: g.country ?? null, country_code: cc, protocol: PROTOCOL_OF(w.uri),
@@ -555,7 +571,7 @@ export async function runWifiCascade({ percentage = 100 } = {}) {
 // ───────────────────────── LTE button cascade ─────────────────────────────
 // Pool = the current Wi-Fi pool → Phase 1 LTE DPI → Phase 2 Gemini. Sets the
 // LTE dimension; non-passers are demoted to Wi-Fi-only (Gemini dimension kept).
-export async function runLteCascade({ percentage = 100 } = {}) {
+export async function runLteCascade({ basePercentage = 100, detailsPercentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'lte' };
@@ -583,10 +599,10 @@ export async function runLteCascade({ percentage = 100 } = {}) {
     await vpnOffGate('Connect to your PHONE hotspot (mobile data), NOT home Wi-Fi.');
 
     let lteCandidates = existing.map((s) => s.config_uri);
-    if (percentage < 100 && percentage > 0) {
-      const limit = Math.ceil(lteCandidates.length * (percentage / 100));
+    if (basePercentage < 100 && basePercentage > 0) {
+      const limit = Math.ceil(lteCandidates.length * (basePercentage / 100));
       lteCandidates = lteCandidates.sort(() => Math.random() - 0.5).slice(0, limit);
-      log.info(`Percentage limit applied: testing ${percentage}% (${lteCandidates.length}) of Wi-Fi working servers`);
+      log.info(`Base limit applied: testing ${basePercentage}% (${lteCandidates.length}) of Wi-Fi working servers`);
     }
 
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
@@ -602,10 +618,17 @@ export async function runLteCascade({ percentage = 100 } = {}) {
     }
 
     log.step('Phase 2 — Gemini availability…');
-    const lteUris = existing.filter((s) => lteKeys.has(keyOf(s.config_uri))).map((s) => s.config_uri);
+    let lteUris = existing.filter((s) => lteKeys.has(keyOf(s.config_uri))).map((s) => s.config_uri);
+    if (detailsPercentage < 100 && detailsPercentage > 0) {
+      const limit = Math.ceil(lteUris.length * (detailsPercentage / 100));
+      lteUris = lteUris.sort(() => Math.random() - 0.5).slice(0, limit);
+      log.info(`Gemini details limit applied: testing ${detailsPercentage}% (${lteUris.length}) of LTE working servers`);
+    }
+
+    const testedGeminiKeys = new Set(lteUris.map(keyOf));
     const geminiKeys = await geminiKeysFor(lteUris, meta);
     stats.gemini = lteUris.filter((u) => geminiKeys.has(keyOf(u))).length;
-    log.ok(`${stats.gemini} of the LTE servers reach Gemini.`);
+    log.ok(`${stats.gemini} tested servers reach Gemini.`);
 
     vpnOnPrompt();
     log.step('Uploading results to Supabase…');
@@ -619,9 +642,14 @@ export async function runLteCascade({ percentage = 100 } = {}) {
       }
       
       const lteDim = lteKeys.has(k);
-      const gemDim = lteDim
-        ? geminiKeys.has(k)
-        : (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
+      
+      let gemDim;
+      if (testedGeminiKeys.has(k)) {
+        gemDim = geminiKeys.has(k);
+      } else {
+        gemDim = (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
+      }
+      
       const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
       
       if (s.network_type !== tier) {
@@ -676,7 +704,7 @@ export async function runLteCascade({ percentage = 100 } = {}) {
 // tests them over the restricted white-list connection. Servers that pass are
 // promoted to the white-list tier. The Gemini dimension is determined by the
 // server's egress country (same as Wi-Fi/LTE cascades).
-export async function runWhitelistCascade({ percentage = 100 } = {}) {
+export async function runWhitelistCascade({ basePercentage = 100, detailsPercentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'whitelist' };
@@ -703,10 +731,10 @@ export async function runWhitelistCascade({ percentage = 100 } = {}) {
     await vpnOffGate('Make sure you are on the WHITE-LISTED LTE connection (government white-list mode active).');
 
     let testUris = uris;
-    if (percentage < 100 && percentage > 0) {
-      const limit = Math.ceil(testUris.length * (percentage / 100));
+    if (basePercentage < 100 && basePercentage > 0) {
+      const limit = Math.ceil(testUris.length * (basePercentage / 100));
       testUris = testUris.sort(() => Math.random() - 0.5).slice(0, limit);
-      log.info(`Percentage limit applied: testing ${percentage}% (${testUris.length}) of candidate servers`);
+      log.info(`Base limit applied: testing ${basePercentage}% (${testUris.length}) of candidate servers`);
     }
 
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
@@ -722,7 +750,15 @@ export async function runWhitelistCascade({ percentage = 100 } = {}) {
     }
 
     log.step('Phase 2 — Gemini availability…');
-    const geminiKeys = await geminiKeysFor(working.map((w) => w.uri), meta);
+    let geminiCandidates = working.map((w) => w.uri);
+    if (detailsPercentage < 100 && detailsPercentage > 0) {
+      const limit = Math.ceil(geminiCandidates.length * (detailsPercentage / 100));
+      geminiCandidates = geminiCandidates.sort(() => Math.random() - 0.5).slice(0, limit);
+      log.info(`Gemini details limit applied: testing ${detailsPercentage}% (${geminiCandidates.length}) of WhiteList working servers`);
+    }
+
+    const testedGeminiKeys = new Set(geminiCandidates.map(keyOf));
+    const geminiKeys = await geminiKeysFor(geminiCandidates, meta);
     stats.gemini = working.filter((w) => geminiKeys.has(keyOf(w.uri))).length;
     log.ok(`${stats.gemini} of the WhiteList servers reach Gemini.`);
 
@@ -773,7 +809,15 @@ export async function runWhitelistCascade({ percentage = 100 } = {}) {
         const cc = g.country_code ?? null;
         counters[country] = (counters[country] || 0) + 1;
         const base = `${flagEmoji(cc)} ${country} #${counters[country]}`;
-        const gem = geminiKeys.has(keyOf(w.uri));
+        
+        let gem;
+        const k = keyOf(w.uri);
+        if (testedGeminiKeys.has(k)) {
+          gem = geminiKeys.has(k);
+        } else {
+          gem = (existingTiers.get(hash) === 'gemini_whitelist');
+        }
+        
         const tier = gem ? 'gemini_whitelist' : 'whitelist';
         const name = retag(base, tier);
         return {
@@ -1225,7 +1269,7 @@ export async function runGeminiLteRecheck() {
 }
 
 // Latency re-check: Just pings servers via TCP to update their latency_ms
-export async function runLatencyCheck() {
+export async function runLatencyCheck({ basePercentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'latency' };

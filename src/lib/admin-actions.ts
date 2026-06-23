@@ -271,12 +271,12 @@ export async function deleteRepo(id: string) {
 // Request a fresh sync — inserts a row into sync_requests; the local Tester
 // Worker picks it up over Supabase Realtime, runs the real test, and updates
 // the live server pool.
-export async function requestSync(kind: 'wifi' | 'lte' | 'whitelist' = 'wifi', percentage: number = 100) {
+export async function requestSync(kind: 'wifi' | 'lte' | 'whitelist' = 'wifi', percentage: number = 100, detailsPercentage: number = 100) {
   const adminId = await assertAdmin();
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('sync_requests')
-    .insert({ requested_by: adminId, kind, percentage })
+    .insert({ requested_by: adminId, kind, percentage, details_percentage: detailsPercentage })
     .select('id')
     .single();
   if (error) throw new Error(error.message);
