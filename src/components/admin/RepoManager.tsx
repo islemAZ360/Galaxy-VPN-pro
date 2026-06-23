@@ -65,6 +65,12 @@ export function RepoManager({
   const [whitelistDetailsPercentage, setWhitelistDetailsPercentage] = useState<number>(100);
   const [initialLoaded, setInitialLoaded] = useState(false);
 
+  // Optimistic Repos State
+  const [optimisticRepos, setOptimisticRepos] = useState<Repo[]>(repos);
+  useEffect(() => {
+    setOptimisticRepos(repos);
+  }, [repos]);
+
   // Load initial global limits from Supabase
   useEffect(() => {
     let mounted = true;
@@ -145,11 +151,16 @@ export function RepoManager({
       router.refresh();
     });
 
-  const toggleStatus = (id: string, currentEnabled: boolean) =>
+  const toggleStatus = (id: string, currentEnabled: boolean) => {
+    // Instant optimistic UI update
+    setOptimisticRepos(prev => prev.map(r => r.id === id ? { ...r, enabled: !currentEnabled } : r));
+    
     startTransition(async () => {
       await toggleRepoStatus(id, !currentEnabled);
-      router.refresh();
+      // We don't call router.refresh() here because revalidatePath in the action 
+      // will smoothly stream the updated RSC payload in the background.
     });
+  };
 
   const [syncMsg, setSyncMsg] = useState<{ type: 'error' | 'success' | 'warning', text: string } | null>(null);
   const requestKind = (kind: 'wifi' | 'lte' | 'whitelist') => {
@@ -467,8 +478,8 @@ export function RepoManager({
       )}
 
       <div className="mt-4 space-y-2">
-        {repos.length === 0 && <p className="py-4 text-center text-sm text-white/50">{t('none')}</p>}
-        {repos.map((r) => {
+        {optimisticRepos.length === 0 && <p className="py-4 text-center text-sm text-white/50">{t('none')}</p>}
+        {optimisticRepos.map((r) => {
           const s = statsMap.get(r.repo_url);
           return (
             <div key={r.id} className={`rounded-xl border border-white/[0.07] bg-white/[0.025] p-4 transition-colors hover:border-white/15 hover:bg-white/[0.04] ${!r.enabled ? 'opacity-40 grayscale' : ''}`}>
