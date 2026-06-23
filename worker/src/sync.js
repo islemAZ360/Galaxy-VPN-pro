@@ -401,7 +401,7 @@ const elapsed = (stats) => Math.round((Date.parse(stats.finishedAt) - Date.parse
 // ───────────────────────── Wi-Fi button cascade ───────────────────────────
 // Pool = GitHub-verified candidates → Phase 1 Wi-Fi DPI → Phase 2 Gemini.
 // Sets the base tier (wifi/gemini_wifi) and PRESERVES the LTE dimension.
-export async function runWifiCascade({ percentage = 100 } = {}) {
+export async function runWifiCascade({ basePercentage = 100, detailsPercentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'wifi' };
