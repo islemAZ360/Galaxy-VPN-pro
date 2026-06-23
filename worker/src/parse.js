@@ -44,6 +44,16 @@ export function extractConfigs(text) {
   const out = new Map(); // true_identity_hash -> uri
   for (let line of decoded.split(/\r?\n/)) {
     line = line.trim();
+    
+    // Postgres strict JSONB/Text safety: strip literal null bytes and \u0000 escape sequences
+    // which cause "unsupported Unicode escape sequence" during Supabase upsert.
+    // Also remove unpaired surrogates or weird escapes if any.
+    line = line.replace(/\0/g, '').replace(/\\u0000/g, '');
+    
+    // Some configs might have invisible unicode chars or unpaired surrogates in remarks
+    // A broader sanitize for \uXXXX where it's a null or unpaired surrogate
+    line = line.replace(/\\uD[89A-F][0-9A-F]{2}/i, ''); // Strip high surrogates not followed by low
+    
     if (!looksLikeConfig(line)) continue;
     // Deduplicate by core server identity, ignoring the remark
     out.set(hashConfig(stripRemark(line)), line);
