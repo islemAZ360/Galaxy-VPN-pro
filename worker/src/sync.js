@@ -401,7 +401,7 @@ const elapsed = (stats) => Math.round((Date.parse(stats.finishedAt) - Date.parse
 // ───────────────────────── Wi-Fi button cascade ───────────────────────────
 // Pool = GitHub-verified candidates → Phase 1 Wi-Fi DPI → Phase 2 Gemini.
 // Sets the base tier (wifi/gemini_wifi) and PRESERVES the LTE dimension.
-export async function runWifiCascade({ percentage = 100 } = {}) {
+export async function runWifiCascade({ basePercentage = 100, detailsPercentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'wifi' };
@@ -428,10 +428,10 @@ export async function runWifiCascade({ percentage = 100 } = {}) {
     await vpnOffGate('Make sure your HOME Wi-Fi is connected.');
 
     let testUris = uris;
-    if (percentage < 100 && percentage > 0) {
-      const limit = Math.ceil(testUris.length * (percentage / 100));
+    if (basePercentage < 100 && basePercentage > 0) {
+      const limit = Math.ceil(testUris.length * (basePercentage / 100));
       testUris = testUris.sort(() => Math.random() - 0.5).slice(0, limit);
-      log.info(`Base limit applied: testing ${percentage}% (${testUris.length}) of candidate servers`);
+      log.info(`Base limit applied: testing ${basePercentage}% (${testUris.length}) of candidate servers`);
     }
 
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
