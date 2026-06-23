@@ -63,10 +63,10 @@ export default async function AdminStatsPage({
         let type = 'TCP';
         let sec = 'TLS';
         
-        if (uriLower.includes('type=ws')) type = 'WS';
-        else if (uriLower.includes('type=grpc')) type = 'GRPC';
+        if (uriLower.includes('type=grpc')) type = 'GRPC';
         
         if (uriLower.includes('security=reality')) sec = 'REALITY';
+        else if (uriLower.includes('security=tls')) sec = 'TLS';
         else if (uriLower.includes('security=none')) sec = 'NONE';
         
         p = `VLESS ${type}/${sec}`;
@@ -90,14 +90,14 @@ export default async function AdminStatsPage({
   const avgLatency = latencyCount > 0 ? Math.round(totalLatency / latencyCount) : 0;
   
   const colorMap: Record<string, string> = {
-    'VLESS TCP/REALITY': '#8b5cf6',
-    'VLESS TCP/TLS': '#3b82f6',
-    'VLESS WS/TLS': '#0ea5e9',
-    'VLESS WS/NONE': '#38bdf8',
-    'VLESS TCP/NONE': '#60a5fa',
-    'VMESS': '#10b981',
-    'TROJAN': '#f59e0b',
-    'SHADOWSOCKS': '#ef4444',
+    'VLESS TCP/REALITY': '#8b5cf6',   // Purple (Best)
+    'VLESS GRPC/REALITY': '#d946ef',  // Fuchsia (Excellent)
+    'VLESS TCP/TLS': '#3b82f6',       // Blue (Good)
+    'VLESS GRPC/TLS': '#0ea5e9',      // Sky (Good)
+    'VLESS WS/TLS': '#94a3b8',        // Slate (Deprecated)
+    'VMESS': '#10b981',               // Green (Deprecated)
+    'TROJAN': '#f59e0b',              // Amber (Deprecated)
+    'SHADOWSOCKS': '#ef4444',         // Red (Deprecated)
   };
   
   const protocols = Object.entries(protocolCount)
