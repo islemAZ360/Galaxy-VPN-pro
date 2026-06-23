@@ -62,3 +62,15 @@ jobs:
           LIVENESS_THREADS: '100'
           LIVENESS_PERCENTAGE: ${{ github.event.inputs.percentage || '100' }}
         run: node src/liveness-scan.js
+
+      - name: Trigger SourceCraft DPI Sync
+        if: success()
+        run: |
+          git clone https://islamaz:${{ secrets.SOURCECRAFT_TOKEN }}@git.sourcecraft.dev/islamaz/vpn-russia-scanner.git sc
+          cd sc
+          date > .sourcecraft/trigger.txt
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .sourcecraft/trigger.txt
+          git commit -m "Auto-trigger from GitHub Liveness Scan"
+          git push origin main
