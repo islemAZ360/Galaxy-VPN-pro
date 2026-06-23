@@ -25,6 +25,9 @@ concurrency:
 
 jobs:
   scan:
+    strategy:
+      matrix:
+        chunk: [0, 1, 2, 3]
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -61,10 +64,16 @@ jobs:
           XRAY_KNIFE_CORE: auto
           LIVENESS_THREADS: '100'
           LIVENESS_PERCENTAGE: ${{ github.event.inputs.percentage || '100' }}
+          TEST_CHUNKS_TOTAL: '4'
+          TEST_CHUNK_INDEX: ${{ matrix.chunk }}
         run: node src/liveness-scan.js
 
+  trigger:
+    needs: scan
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger SourceCraft DPI Sync
-        if: success()
         run: |
           git clone https://islamaz:${{ secrets.SOURCECRAFT_TOKEN }}@git.sourcecraft.dev/islamaz/vpn-russia-scanner.git sc
           cd sc

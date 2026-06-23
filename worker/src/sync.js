@@ -430,10 +430,19 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
     let testUris = uris;
     if (chunkTotal !== undefined && chunkTotal > 1) {
       const idx = chunkIndex || 0;
-      const chunkSize = Math.ceil(testUris.length / chunkTotal);
-      const start = idx * chunkSize;
-      testUris = testUris.slice(start, start + chunkSize);
-      log.info(`Chunk limit applied: testing chunk ${idx + 1}/${chunkTotal} (${testUris.length} servers)`);
+      if (testUris.length > 20000) {
+        const chunkSize = Math.ceil(testUris.length / chunkTotal);
+        const start = idx * chunkSize;
+        testUris = testUris.slice(start, start + chunkSize);
+        log.info(`Chunk limit applied: testing chunk ${idx + 1}/${chunkTotal} (${testUris.length} servers)`);
+      } else {
+        if (idx === 0) {
+          log.info(`Pool is small (${testUris.length} <= 20000) — bypassing division, testing everything in Chunk 1.`);
+        } else {
+          testUris = [];
+          log.info(`Pool is small — skipping this chunk (all servers handled by Chunk 1).`);
+        }
+      }
     } else if (basePercentage < 100 && basePercentage > 0) {
       const limit = Math.ceil(testUris.length * (basePercentage / 100));
       testUris = testUris.sort(() => Math.random() - 0.5).slice(0, limit);
