@@ -428,10 +428,10 @@ export async function runWifiCascade({ percentage = 100 } = {}) {
     await vpnOffGate('Make sure your HOME Wi-Fi is connected.');
 
     let testUris = uris;
-    if (basePercentage < 100 && basePercentage > 0) {
-      const limit = Math.ceil(testUris.length * (basePercentage / 100));
+    if (percentage < 100 && percentage > 0) {
+      const limit = Math.ceil(testUris.length * (percentage / 100));
       testUris = testUris.sort(() => Math.random() - 0.5).slice(0, limit);
-      log.info(`Base limit applied: testing ${basePercentage}% (${testUris.length}) of candidate servers`);
+      log.info(`Base limit applied: testing ${percentage}% (${testUris.length}) of candidate servers`);
     }
 
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
