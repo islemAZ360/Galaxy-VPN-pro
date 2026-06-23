@@ -69,7 +69,7 @@ export async function testConfig(uri, timeoutMs = 4000) {
 
 // Run xray-knife over a file of configs; returns the subset that PASSED the real
 // test. Throws { enoent: true } if the binary isn't installed.
-function runXrayKnife(inFile, outFile, threads, url) {
+function runXrayKnife(inFile, outFile, threads, url, timeoutMs) {
   return new Promise((resolve, reject) => {
     const args = [
       'http',
@@ -79,7 +79,7 @@ function runXrayKnife(inFile, outFile, threads, url) {
                    // pass/fail + latency + egress country, no extra runs needed
 
       '-t', String(threads),
-      '-d', String(XK_MDELAY),
+      '-d', String(timeoutMs || XK_MDELAY),
       '-z', XK_CORE,
       '-u', url || XK_URL, // custom test target (e.g. a Gemini endpoint) or default
     ];
@@ -233,7 +233,7 @@ export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } 
   const outFile = path.join(dir, 'valid.csv');
   try {
     await writeFile(inFile, pool.join('\n'), 'utf8');
-    await runXrayKnife(inFile, outFile, concurrency, url);
+    await runXrayKnife(inFile, outFile, concurrency, url, timeoutMs);
     const text = await readFile(outFile, 'utf8').catch(() => '');
     rows = parseXkCsv(text);
   } catch (e) {

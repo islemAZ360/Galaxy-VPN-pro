@@ -338,13 +338,13 @@ async function loadAliveCandidates() {
   return { uris: data.map((c) => c.config_uri), meta, source: 'GitHub candidates' };
 }
 
-async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 100, phaseLabel = 'Test' }) {
+async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 100, phaseLabel = 'Test', url }) {
   const working = [];
   const batches = chunk(uris, batchSize);
   let tested = 0;
   log.progress(0, `${phaseLabel}: 0 passed`);
   for (const b of batches) {
-    const results = await testAll(b, { concurrency: conc, timeoutMs });
+    const results = await testAll(b, { concurrency: conc, timeoutMs, url });
     working.push(...results.filter((r) => r.ok));
     tested += b.length;
     log.progress((tested / Math.max(1, uris.length)) * 100, `${phaseLabel}: ${working.length} passed`);
@@ -462,8 +462,41 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
       if (w.exitCc && !meta.get(k)?.exit_cc) meta.set(k, { ...(meta.get(k) || {}), exit_cc: w.exitCc });
     }
 
-    log.step('Phase 2 — Gemini availability…');
-    let geminiCandidates = working.map((w) => w.uri);
+    let finalWorking = working;
+    const fastKeys = new Set();
+    if (process.env.ENABLE_SPEED_TEST === 'true') {
+      log.step('Phase 2 — Download Speed Test (Cloudflare 5MB)…');
+      const speedUris = working.map((w) => w.uri);
+      // Run deepTest with 5MB file and generous timeout
+      const speedResults = await deepTest(speedUris, {
+        conc: CONC,
+        batchSize: 500,
+        phaseLabel: 'Speed Test',
+        timeoutMs: 10000,
+        url: 'https://speed.cloudflare.com/__down?bytes=5242880',
+      });
+      
+      const speedWorking = speedResults.filter((r) => r.ok && r.latencyMs != null);
+      const sortedBySpeed = [...speedWorking].sort((a, b) => a.latencyMs - b.latencyMs);
+      
+      // Top 50% get the rocket
+      const half = Math.floor(sortedBySpeed.length / 2);
+      for (let i = 0; i < half; i++) {
+        fastKeys.add(keyOf(sortedBySpeed[i].uri));
+      }
+      
+      log.ok(`${speedWorking.length} / ${working.length} passed speed test. Top 50% (${half}) marked as 🚀`);
+      // Update working set to ONLY servers that passed the speed test.
+      // We keep the original 'w' from Phase 1 so we don't overwrite w.latencyMs (ping).
+      const passedSpeed = new Set(speedWorking.map(r => r.uri));
+      finalWorking = working.filter(w => passedSpeed.has(w.uri));
+      stats.working = finalWorking.length;
+    } else {
+      log.info('Phase 2 — Speed Test skipped (ENABLE_SPEED_TEST !== true)');
+    }
+
+    log.step('Phase 3 — Gemini availability…');
+    let geminiCandidates = finalWorking.map((w) => w.uri);
     if (detailsPercentage < 100 && detailsPercentage > 0) {
       const limit = Math.ceil(geminiCandidates.length * (detailsPercentage / 100));
       geminiCandidates = geminiCandidates.sort(() => Math.random() - 0.5).slice(0, limit);
@@ -472,7 +505,7 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
 
     const testedGeminiKeys = new Set(geminiCandidates.map(keyOf));
     const geminiKeys = await geminiKeysFor(geminiCandidates, meta);
-    stats.gemini = working.filter((w) => geminiKeys.has(keyOf(w.uri))).length;
+    stats.gemini = finalWorking.filter((w) => geminiKeys.has(keyOf(w.uri))).length;
     log.ok(`${stats.gemini} tested servers reach Gemini.`);
 
     vpnOnPrompt();
@@ -496,14 +529,14 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
     // one: drop excluded countries (Russia is pointless here) and servers slower
     // than MAX_LATENCY_MS. Excluded servers fall out of `keep` below, so they are
     // also removed from the live pool. Costs no extra time (data already in hand).
-    const eligible = working.filter((w) => {
+    const eligible = finalWorking.filter((w) => {
       const cc = geo.get(w.host)?.country_code;
       if (!cc || EXCLUDE_HOST_CC.has(cc)) return false;
       if (w.latencyMs == null || w.latencyMs > MAX_LATENCY_MS) return false;
       return true;
     });
-    if (eligible.length !== working.length) {
-      log.info(`Quality gate: kept ${eligible.length}/${working.length} (dropped ${working.length - eligible.length} — excl. ${[...EXCLUDE_HOST_CC].join('/') || 'none'} · ping > ${MAX_LATENCY_MS}ms)`);
+    if (eligible.length !== finalWorking.length) {
+      log.info(`Quality gate: kept ${eligible.length}/${finalWorking.length} (dropped ${finalWorking.length - eligible.length} — excl. ${[...EXCLUDE_HOST_CC].join('/') || 'none'} · ping > ${MAX_LATENCY_MS}ms)`);
     }
     stats.eligible = eligible.length;
 
@@ -524,7 +557,8 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
         const country = g.country || 'Server';
         const cc = g.country_code ?? null;
         counters[country] = (counters[country] || 0) + 1;
-        const base = `${flagEmoji(cc)} ${country} #${counters[country]}`;
+        const rocket = fastKeys.has(k) ? '🚀 ' : '';
+        const base = `${rocket}${flagEmoji(cc)} ${country} #${counters[country]}`;
         // dimensional tier: keep LTE dimension from before
         const prev = existingTiers.get(hash);
         const lteDim = prev === 'lte' || prev === 'gemini_lte';
