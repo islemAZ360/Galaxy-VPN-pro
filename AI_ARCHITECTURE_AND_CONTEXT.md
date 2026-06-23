@@ -74,7 +74,12 @@ Columns below reflect what the code actually reads/writes.
 ## 4. The Tester Worker (`/worker`) — Deep Dive
 
 ### 4.1 Strict Protocol Filtering (`parse.js`)
-We employ an ultra-strict protocol filter because Russian DPI is incredibly advanced:
+We employ an ultra-strict protocol filter because Russian DPI is incredibly advanced. We ONLY accept the following "Golden Combinations":
+1. ✅ `VLESS + REALITY + TCP`
+2. ✅ `VLESS + REALITY + GRPC`
+3. ✅ `VLESS + REALITY + WS`
+
+**Rules:**
 - **Allowed Base:** `vless://` ONLY. (VMess, Trojan, SS are banned).
 - **Allowed Shields:** `security=reality` ONLY. (Standard TLS is banned because of DPI fingerprinting vulnerabilities).
 - **Allowed Wheels:** `type=tcp` OR `type=grpc` OR `type=ws`.
