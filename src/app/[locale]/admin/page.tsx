@@ -56,11 +56,29 @@ export default async function AdminStatsPage({
   let totalLatency = 0;
   let latencyCount = 0;
   servers?.forEach(s => {
-    let p = 'VLESS TCP/TLS';
+    let p = 'UNKNOWN';
     if (s.config_uri) {
       const uriLower = s.config_uri.toLowerCase();
-      if (uriLower.includes('security=reality')) p = 'VLESS TCP/REALITY';
-      else if (uriLower.includes('security=tls')) p = 'VLESS TCP/TLS';
+      if (uriLower.startsWith('vless://')) {
+        let type = 'TCP';
+        let sec = 'TLS';
+        
+        if (uriLower.includes('type=ws')) type = 'WS';
+        else if (uriLower.includes('type=grpc')) type = 'GRPC';
+        
+        if (uriLower.includes('security=reality')) sec = 'REALITY';
+        else if (uriLower.includes('security=none')) sec = 'NONE';
+        
+        p = `VLESS ${type}/${sec}`;
+      } else if (uriLower.startsWith('vmess://')) {
+        p = 'VMESS';
+      } else if (uriLower.startsWith('trojan://')) {
+        p = 'TROJAN';
+      } else if (uriLower.startsWith('ss://')) {
+        p = 'SHADOWSOCKS';
+      } else {
+        p = 'OTHER';
+      }
     }
     
     protocolCount[p] = (protocolCount[p] || 0) + 1;
@@ -71,13 +89,27 @@ export default async function AdminStatsPage({
   });
   const avgLatency = latencyCount > 0 ? Math.round(totalLatency / latencyCount) : 0;
   
+  const colorMap: Record<string, string> = {
+    'VLESS TCP/REALITY': '#8b5cf6',
+    'VLESS TCP/TLS': '#3b82f6',
+    'VLESS WS/TLS': '#0ea5e9',
+    'VLESS WS/NONE': '#38bdf8',
+    'VLESS TCP/NONE': '#60a5fa',
+    'VMESS': '#10b981',
+    'TROJAN': '#f59e0b',
+    'SHADOWSOCKS': '#ef4444',
+  };
+  
   const protocols = Object.entries(protocolCount)
     .sort((a, b) => b[1] - a[1])
-    .map(([name, value]) => ({
-      name,
-      value,
-      color: name === 'VLESS TCP/REALITY' ? '#8b5cf6' : '#3b82f6'
-    }));
+    .map(([name, value], i) => {
+      const fallbackColors = ['#64748b', '#84cc16', '#14b8a6', '#6366f1'];
+      return {
+        name,
+        value,
+        color: colorMap[name] || fallbackColors[i % fallbackColors.length]
+      };
+    });
 
   const advancedData = {
     mrr: Math.round(mrr),
