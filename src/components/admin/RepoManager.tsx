@@ -161,35 +161,36 @@ export function RepoManager({
 
   return (
     <div className="admin-panel p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">{t('title')}</h2>
-          <p className="mt-1 text-sm text-white/60">{t('hint')}</p>
+      <div className="flex flex-col gap-6 xl:flex-row xl:justify-between">
+        <div className="xl:max-w-xs shrink-0">
+          <h2 className="text-xl font-bold">{t('title')}</h2>
+          <p className="mt-2 text-sm text-white/60 leading-relaxed">{t('hint')}</p>
         </div>
         
         {/* Actions & Slider Row */}
-        <div className="flex shrink-0 flex-col items-end gap-3">
-          {/* Sliders Area (Flat & Horizontal) */}
-          <div className="flex flex-wrap items-center gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm shadow-sm">
-            <div className="flex items-center gap-2 border-r border-white/10 pr-4">
+        <div className="flex flex-col gap-4 w-full xl:items-end">
+          
+          {/* Sliders Area */}
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm shadow-sm">
+            <div className="flex items-center gap-2 px-2">
               <svg className="h-4 w-4 text-galaxy-accent" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" /></svg>
-              <span className="font-medium text-white/80">Test Limits</span>
+              <span className="font-medium text-white/80">Limits</span>
             </div>
             
             {/* Base Limit */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-white/60" title="Percentage of servers to run the basic Wi-Fi/LTE reachability tests on">Base:</span>
+            <div className="flex items-center gap-3 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+              <span className="text-xs text-white/60">Base:</span>
               <input
                 type="range" min="1" max="100" value={basePercentage}
                 onChange={(e) => setBasePercentage(parseInt(e.target.value))}
-                className="w-24 cursor-pointer accent-sky-400 hover:accent-sky-300"
+                className="w-20 cursor-pointer accent-sky-400 hover:accent-sky-300"
               />
               <span className="w-8 text-right font-mono text-xs font-bold text-sky-400">{basePercentage}%</span>
             </div>
             
             {/* Wi-Fi Limit */}
-            <div className="flex items-center gap-3 border-l border-white/10 pl-4">
-              <span className="text-xs text-white/60" title="Percentage of Wi-Fi working servers to run the Gemini details test on">Wi-Fi Deep:</span>
+            <div className="flex items-center gap-3 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+              <span className="text-xs text-white/60">Wi-Fi:</span>
               <input
                 type="range" min="1" max="100" value={wifiDetailsPercentage}
                 onChange={(e) => setWifiDetailsPercentage(parseInt(e.target.value))}
@@ -199,8 +200,8 @@ export function RepoManager({
             </div>
 
             {/* LTE Limit */}
-            <div className="flex items-center gap-3 border-l border-white/10 pl-4">
-              <span className="text-xs text-white/60" title="Percentage of LTE working servers to run the Gemini details test on">LTE Deep:</span>
+            <div className="flex items-center gap-3 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+              <span className="text-xs text-white/60">LTE:</span>
               <input
                 type="range" min="1" max="100" value={lteDetailsPercentage}
                 onChange={(e) => setLteDetailsPercentage(parseInt(e.target.value))}
@@ -210,8 +211,8 @@ export function RepoManager({
             </div>
 
             {/* Whitelist Limit */}
-            <div className="flex items-center gap-3 border-l border-white/10 pl-4">
-              <span className="text-xs text-white/60" title="Percentage of Whitelist working servers to run the Gemini details test on">WL Deep:</span>
+            <div className="flex items-center gap-3 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+              <span className="text-xs text-white/60">WL:</span>
               <input
                 type="range" min="1" max="100" value={whitelistDetailsPercentage}
                 onChange={(e) => setWhitelistDetailsPercentage(parseInt(e.target.value))}
@@ -221,52 +222,55 @@ export function RepoManager({
             </div>
           </div>
           
-          <div className="flex flex-wrap justify-end gap-2">
-          <button
-            onClick={runGithubScan}
-            disabled={isPending || ghRunning}
-            title="Force GitHub to scan all repos right now"
-            className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/20 disabled:opacity-60 flex items-center gap-1"
-          >
-            {ghRunning ? '⚙️ Scanning...' : '🤖 Run GitHub Scan'}
-          </button>
-          <button
-            onClick={wifiRecheck}
-            disabled={isPending}
-            title={t('wifiCascadeHint')}
-            className="rounded-lg border border-galaxy-accent/40 bg-galaxy-accent/10 px-3 py-2 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 disabled:opacity-60"
-          >
-            📡 {t('wifiCascade')}
-          </button>
-          <button
-            onClick={lteRecheck}
-            disabled={isPending}
-            title={t('lteCascadeHint')}
-            className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/20 disabled:opacity-60"
-          >
-            📶 {t('lteCascade')}
-          </button>
-          <button
-            onClick={whitelistRecheck}
-            disabled={isPending}
-            title="Run while the government white-list block is active on LTE — re-tests the LTE pool and tags the survivors as White-List (served to LTE & Gemini subscribers)."
-            className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20 disabled:opacity-60"
-          >
-            🛡️ WhiteList
-          </button>
-          <button
-            onClick={() => setShowInstructions(!showInstructions)}
-            className="rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-400/20"
-          >
-            ❓ {t('instructionsBtn')}
-          </button>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/20"
-          >
-            📋 {t('scanHistoryBtn')}
-          </button>
-        </div>
+          {/* Buttons Area */}
+          <div className="flex flex-wrap items-center xl:justify-end gap-2 w-full">
+            <button
+              onClick={runGithubScan}
+              disabled={isPending || ghRunning}
+              title="Force GitHub to scan all repos right now"
+              className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/20 disabled:opacity-60 flex items-center gap-1.5"
+            >
+              {ghRunning ? '⚙️ Scanning...' : '🤖 GitHub Scan'}
+            </button>
+            <div className="w-[1px] h-6 bg-white/10 hidden sm:block mx-1"></div>
+            <button
+              onClick={wifiRecheck}
+              disabled={isPending}
+              title={t('wifiCascadeHint')}
+              className="rounded-lg border border-galaxy-accent/40 bg-galaxy-accent/10 px-3 py-2 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 disabled:opacity-60 flex items-center gap-1.5"
+            >
+              📡 {t('wifiCascade')}
+            </button>
+            <button
+              onClick={lteRecheck}
+              disabled={isPending}
+              title={t('lteCascadeHint')}
+              className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/20 disabled:opacity-60 flex items-center gap-1.5"
+            >
+              📶 {t('lteCascade')}
+            </button>
+            <button
+              onClick={whitelistRecheck}
+              disabled={isPending}
+              title="Run while the government white-list block is active on LTE — re-tests the LTE pool and tags the survivors as White-List (served to LTE & Gemini subscribers)."
+              className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20 disabled:opacity-60 flex items-center gap-1.5"
+            >
+              🛡️ WhiteList
+            </button>
+            <div className="w-[1px] h-6 bg-white/10 hidden sm:block mx-1"></div>
+            <button
+              onClick={() => setShowInstructions(!showInstructions)}
+              className="rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-400/20 flex items-center gap-1.5"
+            >
+              ❓ {t('instructionsBtn')}
+            </button>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/20 flex items-center gap-1.5"
+            >
+              📋 {t('scanHistoryBtn')}
+            </button>
+          </div>
         </div>
       </div>
       
