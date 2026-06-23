@@ -3,7 +3,6 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { requireAdmin } from '@/lib/admin';
 import { Trash2, Server } from 'lucide-react';
 import { deleteServer, deleteAllServers, deleteServersByType } from './actions';
-import { TestLatencyButton } from '@/components/admin/TestLatencyButton';
 import DeleteServersForm from '@/components/admin/DeleteServersForm';
 import { BalanceToggle } from '@/components/admin/BalanceToggle';
 import { getBalanceModeStatus } from '@/lib/admin-actions';
@@ -127,7 +126,6 @@ export default async function AdminServersPage({
               </span>
             );
           })}
-          <TestLatencyButton label={t('test_latency', { fallback: 'Test Latency' })} />
           <DeleteServersForm 
             tiers={tiers} 
             netLabels={NET} 
