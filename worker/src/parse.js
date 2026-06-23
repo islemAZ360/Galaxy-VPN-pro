@@ -14,7 +14,7 @@ export function looksLikeConfig(line) {
     const type = (params.get('type') || 'tcp').toLowerCase();
     const security = (params.get('security') || '').toLowerCase();
     
-    if (type !== 'tcp' && type !== 'grpc') return false;
+    if (type !== 'tcp' && type !== 'grpc' && type !== 'ws') return false;
     if (security !== 'reality') return false;
     
     return true;
