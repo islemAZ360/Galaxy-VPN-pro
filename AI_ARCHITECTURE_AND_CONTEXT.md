@@ -204,6 +204,9 @@ Next.js re-evaluates client modules aggressively. Before `.channel().on().subscr
 ---
 
 ## 8. Changelog (recent, load-bearing)
+- **Virtual Balance URI Rewriter** — Refactored the "Balance Mode" to use dynamic, on-the-fly URI rewriting inside `/api/sub/[token]/route.ts`. Instead of destructively modifying database rows, the API now transparently swaps "Gemini" tier tags for Standard tags at request time, meaning clients instantly see the updated server names while the database retains the original `network_type` source of truth.
+- **Strict VLESS/TCP/TLS Parsing Enforcement** — Unified validation logic using `looksLikeConfig` across both GitHub ingestion (`liveness-scan.js`) and database re-syncs (`sync.js`). Any server configurations leaking into the DB via previous loopholes (like xhttp or shadowsocks) are actively filtered out.
+- **Protocol Visualization Update** — Modified the `admin_stats` UI to parse `config_uri` dynamically, distinguishing between `VLESS TCP/TLS` and `VLESS TCP/REALITY` for more accurate chart visualisations.
 - **Time-Series Advanced Admin Stats** — Implemented MRR, ARPU, Daily Revenue (AreaChart), and Daily User Signups (BarChart) using Supabase views for massive scalability and real-time insights.
 - **Zero-Trust Security Pass** — Hardened Server Actions against Mass Assignment, locked down Database sizing limits to prevent OOM / Storage Exhaustion DoS attacks, and implemented Race Condition prevention for the GGSel system.
 - **Soft Delete Servers Pipeline** — Changed server deletion to be non-destructive (`is_deleted=true`), allowing the admin to recover incorrectly-flagged servers from a dedicated Trash dashboard.
