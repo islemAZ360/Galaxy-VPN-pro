@@ -166,25 +166,39 @@ export function RepoManager({
         
         {/* Actions & Slider Row */}
         <div className="flex shrink-0 flex-col items-end gap-3">
-          {/* Sliders */}
-          <div className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-white/60 w-32" title="Percentage of servers to run the basic Wi-Fi/LTE reachability tests on">Base Limit:</span>
+          {/* Sliders Area */}
+          <div className="flex w-64 flex-col gap-4 rounded-xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-4 shadow-lg backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-galaxy-accent/20 text-galaxy-accent">
+                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" /></svg>
+              </div>
+              <span className="text-sm font-semibold text-white/90">Test Config</span>
+            </div>
+            
+            {/* Base Limit */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-white/60" title="Percentage of servers to run the basic Wi-Fi/LTE reachability tests on">Base (Reachability)</span>
+                <span className="font-mono text-xs font-bold text-sky-400">{basePercentage}%</span>
+              </div>
               <input
                 type="range" min="1" max="100" value={basePercentage}
                 onChange={(e) => setBasePercentage(parseInt(e.target.value))}
-                className="w-24 accent-galaxy-accent"
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-sky-400 hover:accent-sky-300 focus:outline-none"
               />
-              <span className="min-w-[3rem] text-right font-mono text-galaxy-accent">{basePercentage}%</span>
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-white/60 w-32" title="Percentage of working servers to run the Gemini details test on">Gemini Details Limit:</span>
+            
+            {/* Gemini Limit */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-white/60" title="Percentage of working servers to run the Gemini details test on">Deep Scan (Gemini)</span>
+                <span className="font-mono text-xs font-bold text-purple-400">{detailsPercentage}%</span>
+              </div>
               <input
                 type="range" min="1" max="100" value={detailsPercentage}
                 onChange={(e) => setDetailsPercentage(parseInt(e.target.value))}
-                className="w-24 accent-purple-400"
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-purple-500 hover:accent-purple-400 focus:outline-none"
               />
-              <span className="min-w-[3rem] text-right font-mono text-purple-400">{detailsPercentage}%</span>
             </div>
           </div>
           
