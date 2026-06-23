@@ -592,8 +592,11 @@ export async function runLteCascade({ basePercentage = 100, detailsPercentage = 
     // Egress country (for the Gemini dimension) from GitHub's candidates.
     const meta = new Map();
     try {
-      const data = await fetchAllPaginated('candidates', 'config_uri, exit_cc', { alive: true });
-      for (const c of data ?? []) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null });
+      const hashes = existing.map(s => hashConfig(s.config_uri));
+      for (const hashBatch of chunk(hashes, 100)) {
+        const { data } = await supa.from('candidates').select('config_uri, exit_cc').in('config_hash', hashBatch);
+        for (const c of data ?? []) meta.set(keyOf(c.config_uri), { exit_cc: c.exit_cc || null });
+      }
     } catch { /* probe will cover unknowns */ }
 
     await vpnOffGate('Connect to your PHONE hotspot (mobile data), NOT home Wi-Fi.');
