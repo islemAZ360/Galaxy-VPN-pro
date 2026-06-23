@@ -59,7 +59,10 @@ async function recordStatus(result) {
 (async () => {
   let result;
   try {
-    result = await chosen.fn();
+    result = await chosen.fn({
+      chunkIndex: Number(process.env.TEST_CHUNK_INDEX) || 0,
+      chunkTotal: Number(process.env.TEST_CHUNKS_TOTAL) || 1
+    });
     await recordStatus(result);
   } catch (e) {
     log.err(`Run failed: ${e.message}`);
