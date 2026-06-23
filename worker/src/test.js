@@ -213,7 +213,7 @@ async function tcpPrefilter(uris) {
     })
   );
   const kept = reachable.length + bypass.length;
-  log.info(`TCP pre-filter: ${kept}/${uris.length} kept (${uris.length - kept} unreachable dropped · ${bypass.length} udp/unknown bypassed)`);
+  // Progress bar is active in the caller, so we don't log.info here to avoid flickering.
   return [...reachable, ...bypass];
 }
 
