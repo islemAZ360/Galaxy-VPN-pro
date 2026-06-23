@@ -137,14 +137,19 @@ export const log = {
 
   // Smooth gradient progress bar with an animated spinner; overwrites its line.
   progress: (pct, msg) => {
+    const p = Math.max(0, Math.min(100, pct));
     const isCI = process.env.CI || !process.stdout.isTTY;
+    
     if (isCI) {
-      // In CI, we skip printing the animated progress bar to avoid spam.
-      // The caller usually logs start/finish separately.
+      if (p === 0) lastProgress = -1;
+      const rounded = Math.floor(p / 10) * 10;
+      if (rounded > lastProgress) {
+        out('▸', C.cyan, C.gray, `Progress: ${rounded.toString().padStart(3, ' ')}%  ${msg}`);
+        lastProgress = rounded;
+      }
       return;
     }
 
-    const p = Math.max(0, Math.min(100, pct));
     const w = 28;
     const filled = Math.round((p / 100) * w);
     const bar = gradient(filled, '━') + `${C.gray}${'━'.repeat(w - filled)}${C.reset}`;
