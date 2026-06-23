@@ -161,14 +161,14 @@ export function RepoManager({
 
   return (
     <div className="admin-panel p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-5">
+        <div className="max-w-2xl">
           <h2 className="text-lg font-semibold">{t('title')}</h2>
           <p className="mt-1 text-sm text-white/60">{t('hint')}</p>
         </div>
 
         {/* Actions & Slider Row */}
-        <div className="flex shrink-0 flex-col items-end gap-3">
+        <div className="flex shrink-0 flex-col items-start xl:items-end gap-3">
           {/* Sliders Area (Flat & Horizontal) */}
           <div className="flex flex-wrap items-center gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm shadow-sm">
             <div className="flex items-center gap-2 border-r border-white/10 pr-4">
