@@ -152,6 +152,13 @@ async function loadKnownHostGeo() {
 
       perRepo.set(r.repo_url, { files_found: fileCount, configs_extracted: found.length });
       log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${found.length} configs`);
+      
+      if (found.length === 0) {
+        const { error: banErr } = await supa.from('repos').update({ enabled: false, is_banned: true }).eq('repo_url', r.repo_url);
+        if (banErr) log.err(`Failed to auto-ban ${r.repo_url}: ${banErr.message}`);
+        else log.info(`    🚫 Auto-banned empty repository: ${r.repo_url}`);
+      }
+
       for (const uri of found) configs.set(hashConfig(uri), { uri, source: r.repo_url });
     } catch (e) {
       log.err(`repo ${r.repo_url}: ${e.message}`);

@@ -238,7 +238,13 @@ export async function addRepo(repoUrl: string) {
   const url = repoUrl.trim();
   if (!/github\.com\//i.test(url)) throw new Error('invalid github url');
   const admin = createAdminClient();
-  await admin.from('repos').upsert({ repo_url: url, enabled: true }, { onConflict: 'repo_url' });
+
+  const { data: existing } = await admin.from('repos').select('is_banned').eq('repo_url', url).maybeSingle();
+  if (existing && existing.is_banned) {
+    throw new Error('BANNED_REPO');
+  }
+
+  await admin.from('repos').upsert({ repo_url: url, enabled: true, is_banned: false }, { onConflict: 'repo_url' });
 
   revalidatePath('/', 'layout');
 }
@@ -264,6 +270,20 @@ export async function toggleRepoStatus(id: string, enabled: boolean) {
   await assertAdmin();
   const admin = createAdminClient();
   await admin.from('repos').update({ enabled }).eq('id', id);
+  revalidatePath('/', 'layout');
+}
+
+export async function unbanRepo(id: string) {
+  await assertAdmin();
+  const admin = createAdminClient();
+  await admin.from('repos').update({ is_banned: false, enabled: true }).eq('id', id);
+  revalidatePath('/', 'layout');
+}
+
+export async function banRepo(id: string) {
+  await assertAdmin();
+  const admin = createAdminClient();
+  await admin.from('repos').update({ is_banned: true, enabled: false }).eq('id', id);
   revalidatePath('/', 'layout');
 }
 

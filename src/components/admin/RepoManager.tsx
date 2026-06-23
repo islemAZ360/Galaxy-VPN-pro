@@ -3,10 +3,10 @@
 import { useState, useTransition, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { addRepo, deleteRepo, toggleRepoStatus, requestSync, triggerGithubScan, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
+import { addRepo, deleteRepo, toggleRepoStatus, unbanRepo, requestSync, triggerGithubScan, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
 import { useWorkerPresence } from '@/hooks/useWorkerPresence';
 
-type Repo = { id: string; repo_url: string; enabled: boolean };
+type Repo = { id: string; repo_url: string; enabled: boolean; is_banned: boolean };
 type RepoStat = {
   repo_url: string;
   files_found: number;
@@ -139,9 +139,25 @@ export function RepoManager({
     const v = url.trim();
     if (!v || isDuplicate) return;
     startTransition(async () => {
-      await addRepo(v);
-      setUrl('');
-      router.refresh();
+      try {
+        await addRepo(v);
+        setUrl('');
+        router.refresh();
+      } catch (e: any) {
+        if (e.message === 'BANNED_REPO') {
+          setSyncMsg({ type: 'error', text: '🚫 ' + t('bannedRepoError', { defaultMessage: 'هذا المستودع محظور لأنه فارغ ولن تتم إضافته. (Banned Repository)' }) });
+        } else {
+          setSyncMsg({ type: 'error', text: 'Error: ' + e.message });
+        }
+      }
+    });
+  };
+
+  const unban = (id: string) => {
+    // Optimistic UI
+    setOptimisticRepos(prev => prev.map(r => r.id === id ? { ...r, is_banned: false, enabled: true } : r));
+    startTransition(async () => {
+      await unbanRepo(id);
     });
   };
 
@@ -478,8 +494,8 @@ export function RepoManager({
       )}
 
       <div className="mt-4 space-y-2">
-        {optimisticRepos.length === 0 && <p className="py-4 text-center text-sm text-white/50">{t('none')}</p>}
-        {optimisticRepos.map((r) => {
+        {optimisticRepos.filter(r => !r.is_banned).length === 0 && <p className="py-4 text-center text-sm text-white/50">{t('none')}</p>}
+        {optimisticRepos.filter(r => !r.is_banned).map((r) => {
           const s = statsMap.get(r.repo_url);
           return (
             <div key={r.id} className={`rounded-xl border border-white/[0.07] bg-white/[0.025] p-4 transition-colors hover:border-white/15 hover:bg-white/[0.04] ${!r.enabled ? 'opacity-40 grayscale' : ''}`}>
@@ -556,6 +572,38 @@ export function RepoManager({
           );
         })}
       </div>
+
+      {optimisticRepos.filter(r => r.is_banned).length > 0 && (
+        <div className="mt-8 space-y-2 border-t border-white/10 pt-6">
+          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-red-400">
+            <span className="text-base">🚫</span> Banned Repositories (0 Configs Found)
+          </h3>
+          {optimisticRepos.filter(r => r.is_banned).map((r) => (
+            <div key={r.id} className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 transition-colors hover:border-red-500/30">
+              <div className="flex items-center gap-3">
+                <span className="me-auto truncate text-sm font-medium text-white/50 line-through" dir="ltr">
+                  {r.repo_url.replace('https://github.com/', '')}
+                </span>
+                <button
+                  onClick={() => unban(r.id)}
+                  disabled={isPending}
+                  className="rounded-md border border-emerald-500/40 px-2 py-1 text-xs text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+                  title="Move to normal list"
+                >
+                  Unban
+                </button>
+                <button
+                  onClick={() => remove(r.id)}
+                  disabled={isPending}
+                  className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                >
+                  {t('delete')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

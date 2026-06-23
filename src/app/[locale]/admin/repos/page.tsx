@@ -16,7 +16,7 @@ export default async function AdminReposPage({
 
   const { data: repos } = await admin
     .from('repos')
-    .select('id, repo_url, enabled')
+    .select('id, repo_url, enabled, is_banned')
     .order('created_at', { ascending: true });
 
   const { data: repoStats } = await admin
