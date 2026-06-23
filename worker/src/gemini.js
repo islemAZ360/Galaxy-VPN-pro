@@ -33,7 +33,7 @@ import { log } from './log.js';
 // ---------------------------------------------------------------------------
 
 const XK_PATH = process.env.XRAY_KNIFE_PATH || 'xray-knife';
-const XK_CORE = process.env.XRAY_KNIFE_CORE || 'auto';
+const XK_CORE = process.env.XRAY_KNIFE_CORE || 'singbox'; // auto | singbox | xray
 
 // Invalid key on purpose — we only care which 400 comes back (key vs location),
 // but the FAST path keys off the egress country, not the body.
