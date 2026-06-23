@@ -573,12 +573,17 @@ export function RepoManager({
         })}
       </div>
 
-      {optimisticRepos.filter(r => r.is_banned).length > 0 && (
-        <div className="mt-8 space-y-2 border-t border-white/10 pt-6">
-          <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-red-400">
-            <span className="text-base">🚫</span> Banned Repositories (0 Configs Found)
-          </h3>
-          {optimisticRepos.filter(r => r.is_banned).map((r) => (
+      <div className="mt-8 space-y-2 border-t border-white/10 pt-6">
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-red-400">
+          <span className="text-base">🚫</span> Banned Repositories (0 Configs Found)
+        </h3>
+        
+        {optimisticRepos.filter(r => r.is_banned).length === 0 ? (
+          <p className="py-4 text-center text-sm text-white/50">
+            No banned repositories yet. Repositories with 0 configs will be moved here automatically.
+          </p>
+        ) : (
+          optimisticRepos.filter(r => r.is_banned).map((r) => (
             <div key={r.id} className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 transition-colors hover:border-red-500/30">
               <div className="flex items-center gap-3">
                 <span className="me-auto truncate text-sm font-medium text-white/50 line-through" dir="ltr">
@@ -601,9 +606,9 @@ export function RepoManager({
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }
