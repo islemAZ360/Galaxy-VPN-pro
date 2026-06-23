@@ -83,6 +83,7 @@ const out = (icon, iconColor, textColor, msg) => {
 
 const SPIN = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 let frame = 0;
+let lastProgress = -1;
 
 export const log = {
   info: (m) => out('•', C.cyan, C.gray, m), // Dim grey for text, cyan for icon/keywords
