@@ -226,6 +226,7 @@ export function RepoManager({
             📋 {t('scanHistoryBtn')}
           </button>
         </div>
+        </div>
       </div>
       
       {/* Smart Indicator for GitHub Actions */}
