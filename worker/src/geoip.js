@@ -1,4 +1,8 @@
-import { resolve4 } from 'node:dns/promises';
+import { resolve4, setServers } from 'node:dns/promises';
+import { isIP } from 'node:net';
+
+// Use public DNS to avoid local resolver timeouts
+try { setServers(['8.8.8.8', '1.1.1.1']); } catch {}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -17,8 +21,7 @@ export async function lookupCountries(hosts) {
   const ipToHosts = new Map();
   for (const batch of chunk(unique, 100)) {
     await Promise.all(batch.map(async (h) => {
-      // IPv4 regex (basic)
-      if (/^(\d{1,3}\.){3}\d{1,3}$/.test(h)) {
+      if (isIP(h) === 4) {
         ips.add(h);
         if (!ipToHosts.has(h)) ipToHosts.set(h, []);
         ipToHosts.get(h).push(h);

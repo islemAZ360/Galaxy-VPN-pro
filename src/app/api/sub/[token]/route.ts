@@ -9,6 +9,33 @@ export const dynamic = 'force-dynamic';
 // Tunable via the SUB_UPDATE_INTERVAL_HOURS env var (set 1 for hourly).
 const UPDATE_INTERVAL_HOURS = Number(process.env.SUB_UPDATE_INTERVAL_HOURS) || 1;
 
+const TIER_TAGS: Record<string, string> = {
+  wifi: ' | WIFI',
+  lte: ' | WIFI/LTE',
+  gemini_wifi: ' | WIFI/GEMINI',
+  gemini_lte: ' | WIFI/LTE/GEMINI',
+  whitelist: ' | WIFI/LTE/WhiteList',
+  gemini_whitelist: ' | WIFI/LTE/GEMINI/WhiteList',
+};
+
+const retag = (name: string, tier: string) => `${(name || '').split(' | ')[0]}${TIER_TAGS[tier] || TIER_TAGS.wifi}`;
+
+function renameConfig(uri: string, name: string): string {
+  const scheme = (uri.split('://')[0] || '').toLowerCase();
+  try {
+    if (scheme === 'vmess') {
+      const json = JSON.parse(Buffer.from(uri.slice('vmess://'.length), 'base64').toString('utf8'));
+      json.ps = name;
+      return 'vmess://' + Buffer.from(JSON.stringify(json), 'utf8').toString('base64');
+    }
+    const hashIdx = uri.indexOf('#');
+    const base = hashIdx >= 0 ? uri.slice(0, hashIdx) : uri;
+    return base + '#' + encodeURIComponent(name);
+  } catch {
+    return uri;
+  }
+}
+
 // A single "server" the VPN client will display when the subscription is not
 // usable — this is how the link is "boobytrapped" after expiry.
 function noticeConfig(text: string) {
@@ -140,7 +167,7 @@ export async function GET(
 
   const { data: rawServers } = await supa
     .from('servers')
-    .select('id, config_uri, network_type, country')
+    .select('id, name, config_uri, network_type, country')
     .eq('is_working', true)
     .eq('is_deleted', false)
     .in('network_type', fetchPools)
@@ -151,10 +178,19 @@ export async function GET(
 
   if (balanceMode) {
     // Apply deterministic balancing
-    servers = servers.filter(s => {
+    const filtered: typeof servers = [];
+    for (const s of servers) {
       const balancedType = getBalancedType(s.id, s.network_type);
-      return pools.includes(balancedType);
-    });
+      if (pools.includes(balancedType)) {
+        // If type changed, dynamically rewrite the config_uri to match the new type's tag
+        if (balancedType !== s.network_type) {
+          const newName = retag(s.name || s.country || 'Unknown', balancedType);
+          s.config_uri = renameConfig(s.config_uri, newName);
+        }
+        filtered.push(s);
+      }
+    }
+    servers = filtered;
   }
 
   // Country-based Round Robin Distribution

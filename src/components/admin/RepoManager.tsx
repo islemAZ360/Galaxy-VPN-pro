@@ -60,7 +60,9 @@ export function RepoManager({
 
   // Percentage Slider State
   const [basePercentage, setBasePercentage] = useState<number>(100);
-  const [detailsPercentage, setDetailsPercentage] = useState<number>(100);
+  const [wifiDetailsPercentage, setWifiDetailsPercentage] = useState<number>(100);
+  const [lteDetailsPercentage, setLteDetailsPercentage] = useState<number>(100);
+  const [whitelistDetailsPercentage, setWhitelistDetailsPercentage] = useState<number>(100);
 
   // Poll GitHub Action Status every 15 seconds
   useEffect(() => {
@@ -128,6 +130,7 @@ export function RepoManager({
     startTransition(async () => {
       setSyncMsg(null);
       try {
+        const detailsPercentage = kind === 'wifi' ? wifiDetailsPercentage : kind === 'lte' ? lteDetailsPercentage : whitelistDetailsPercentage;
         await requestSync(kind, basePercentage, detailsPercentage);
         setSyncMsg({ type: 'success', text: kind === 'lte' ? t('lteRequested') : kind === 'whitelist' ? 'White-list re-check requested — run it while the LTE white-list block is active.' : t('syncRequested') });
       } catch (e) {
@@ -184,15 +187,37 @@ export function RepoManager({
               <span className="w-8 text-right font-mono text-xs font-bold text-sky-400">{basePercentage}%</span>
             </div>
             
-            {/* Gemini Limit */}
+            {/* Wi-Fi Limit */}
             <div className="flex items-center gap-3 border-l border-white/10 pl-4">
-              <span className="text-xs text-white/60" title="Percentage of working servers to run the Gemini details test on">Deep Scan:</span>
+              <span className="text-xs text-white/60" title="Percentage of Wi-Fi working servers to run the Gemini details test on">Wi-Fi Deep:</span>
               <input
-                type="range" min="1" max="100" value={detailsPercentage}
-                onChange={(e) => setDetailsPercentage(parseInt(e.target.value))}
-                className="w-24 cursor-pointer accent-purple-500 hover:accent-purple-400"
+                type="range" min="1" max="100" value={wifiDetailsPercentage}
+                onChange={(e) => setWifiDetailsPercentage(parseInt(e.target.value))}
+                className="w-20 cursor-pointer accent-fuchsia-400 hover:accent-fuchsia-300"
               />
-              <span className="w-8 text-right font-mono text-xs font-bold text-purple-400">{detailsPercentage}%</span>
+              <span className="w-8 text-right font-mono text-xs font-bold text-fuchsia-400">{wifiDetailsPercentage}%</span>
+            </div>
+
+            {/* LTE Limit */}
+            <div className="flex items-center gap-3 border-l border-white/10 pl-4">
+              <span className="text-xs text-white/60" title="Percentage of LTE working servers to run the Gemini details test on">LTE Deep:</span>
+              <input
+                type="range" min="1" max="100" value={lteDetailsPercentage}
+                onChange={(e) => setLteDetailsPercentage(parseInt(e.target.value))}
+                className="w-20 cursor-pointer accent-purple-500 hover:accent-purple-400"
+              />
+              <span className="w-8 text-right font-mono text-xs font-bold text-purple-500">{lteDetailsPercentage}%</span>
+            </div>
+
+            {/* Whitelist Limit */}
+            <div className="flex items-center gap-3 border-l border-white/10 pl-4">
+              <span className="text-xs text-white/60" title="Percentage of Whitelist working servers to run the Gemini details test on">WL Deep:</span>
+              <input
+                type="range" min="1" max="100" value={whitelistDetailsPercentage}
+                onChange={(e) => setWhitelistDetailsPercentage(parseInt(e.target.value))}
+                className="w-20 cursor-pointer accent-indigo-400 hover:accent-indigo-300"
+              />
+              <span className="w-8 text-right font-mono text-xs font-bold text-indigo-400">{whitelistDetailsPercentage}%</span>
             </div>
           </div>
           

@@ -372,3 +372,87 @@ export async function deleteSales(paymentIds: string[]) {
 
   revalidatePath('/', 'layout');
 }
+
+const TIER_TAGS: Record<string, string> = {
+  wifi: ' | WIFI',
+  lte: ' | WIFI/LTE',
+  gemini_wifi: ' | WIFI/GEMINI',
+  gemini_lte: ' | WIFI/LTE/GEMINI',
+  whitelist: ' | WIFI/LTE/WhiteList',
+  gemini_whitelist: ' | WIFI/LTE/GEMINI/WhiteList',
+};
+
+function renameConfig(uri: string, name: string): string {
+  const scheme = (uri.split('://')[0] || '').toLowerCase();
+  try {
+    if (scheme === 'vmess') {
+      const json = JSON.parse(Buffer.from(uri.slice('vmess://'.length), 'base64').toString('utf8'));
+      json.ps = name;
+      return 'vmess://' + Buffer.from(JSON.stringify(json), 'utf8').toString('base64');
+    }
+    const hashIdx = uri.indexOf('#');
+    const base = hashIdx >= 0 ? uri.slice(0, hashIdx) : uri;
+    return base + '#' + encodeURIComponent(name);
+  } catch {
+    return uri;
+  }
+}
+
+export async function executePhysicalBalance() {
+  const adminId = await assertAdmin();
+  const admin = createAdminClient();
+
+  // Fetch all gemini servers
+  const { data: servers, error } = await admin
+    .from('servers')
+    .select('id, name, config_uri, network_type')
+    .in('network_type', ['gemini_wifi', 'gemini_lte', 'gemini_whitelist']);
+  
+  if (error || !servers) return;
+
+  const updates: any[] = [];
+  
+  const groups: Record<string, typeof servers> = {
+    gemini_wifi: [], gemini_lte: [], gemini_whitelist: []
+  };
+
+  for (const s of servers) {
+    if (groups[s.network_type]) groups[s.network_type].push(s);
+  }
+
+  const retag = (name: string, tier: string) => \\;
+
+  for (const [type, list] of Object.entries(groups)) {
+    // Shuffle deterministically or randomly (random is fine, it's a one-time operation)
+    const shuffled = list.sort(() => Math.random() - 0.5);
+    const half = Math.floor(shuffled.length / 2);
+    
+    for (let i = 0; i < half; i++) {
+      const s = shuffled[i];
+      const newType = type.replace('gemini_', '');
+      const newName = retag(s.name, newType);
+      
+      updates.push({
+        id: s.id,
+        network_type: newType,
+        name: newName,
+        config_uri: renameConfig(s.config_uri, newName),
+      });
+    }
+  }
+
+  if (updates.length > 0) {
+    // Chunk updates
+    for (let i = 0; i < updates.length; i += 200) {
+      const batch = updates.slice(i, i + 200);
+      await admin.from('servers').upsert(batch, { onConflict: 'id' });
+    }
+  }
+  
+  // Disable the virtual balance mode
+  await admin.from('worker_status').update({
+    last_result: { balance_mode: false }
+  }).eq('id', 'worker');
+
+  revalidatePath('/', 'layout');
+}

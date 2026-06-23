@@ -1,5 +1,5 @@
 import { supa } from './supa.js';
-import { hashConfig, PROTOCOL_OF } from './parse.js';
+import { hashConfig, PROTOCOL_OF, looksLikeConfig } from './parse.js';
 import { flagEmoji, renameConfig } from './uri.js';
 import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
@@ -272,7 +272,7 @@ async function fetchAllPaginated(table, select, filters = {}) {
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
-  const allData = pages.filter(Boolean).flat();
+  const allData = pages.filter(Boolean).flat().filter(row => !row.config_uri || looksLikeConfig(row.config_uri));
   if (skipped > 0) log.warn(`Loaded ${allData.length}/${total} ${table} rows (${skipped} page(s) skipped — DPI-blocked).`);
   else log.info(`Loaded ${allData.length}/${total} ${table} rows total.`);
   return allData;
@@ -483,7 +483,7 @@ export async function runWifiCascade({ percentage = 100 } = {}) {
     // also removed from the live pool. Costs no extra time (data already in hand).
     const eligible = working.filter((w) => {
       const cc = geo.get(w.host)?.country_code;
-      if (cc && EXCLUDE_HOST_CC.has(cc)) return false;
+      if (!cc || EXCLUDE_HOST_CC.has(cc)) return false;
       if (w.latencyMs == null || w.latencyMs > MAX_LATENCY_MS) return false;
       return true;
     });
@@ -785,7 +785,7 @@ export async function runWhitelistCascade({ basePercentage = 100, detailsPercent
     // Quality gate — drop excluded countries and high-latency servers.
     const eligible = working.filter((w) => {
       const cc = geo.get(w.host)?.country_code;
-      if (cc && EXCLUDE_HOST_CC.has(cc)) return false;
+      if (!cc || EXCLUDE_HOST_CC.has(cc)) return false;
       if (w.latencyMs == null || w.latencyMs > MAX_LATENCY_MS) return false;
       return true;
     });

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 const SCHEMES = ['vless://'];
 
-function looksLikeConfig(line) {
+export function looksLikeConfig(line) {
   if (!line.startsWith('vless://')) return false;
   try {
     const qIdx = line.indexOf('?');
