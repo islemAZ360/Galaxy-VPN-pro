@@ -18,7 +18,7 @@ export default async function AdminStatsPage({
 
   // 2. Fetch Raw Data for Advanced Analytics
   const { data: subs } = await admin.from('subscriptions').select('status, network_type, price_rub, duration_days').eq('status', 'active');
-  const { data: servers } = await admin.from('servers').select('protocol, is_working, latency_ms').eq('is_working', true);
+  const { data: servers } = await admin.from('servers').select('config_uri, is_working, latency_ms').eq('is_working', true);
   const { data: uniquePaidUsers } = await admin.from('payments').select('user_id').eq('status', 'approved');
   const { data: salesRecord } = await admin.from('payments')
     .select('id, amount_rub, plan, created_at, user_id, users!payments_user_id_fkey(email)')
@@ -56,7 +56,13 @@ export default async function AdminStatsPage({
   let totalLatency = 0;
   let latencyCount = 0;
   servers?.forEach(s => {
-    const p = (s.protocol || 'unknown').toLowerCase();
+    let p = 'VLESS TCP/TLS';
+    if (s.config_uri) {
+      const uriLower = s.config_uri.toLowerCase();
+      if (uriLower.includes('security=reality')) p = 'VLESS TCP/REALITY';
+      else if (uriLower.includes('security=tls')) p = 'VLESS TCP/TLS';
+    }
+    
     protocolCount[p] = (protocolCount[p] || 0) + 1;
     if (s.latency_ms) {
       totalLatency += s.latency_ms;
@@ -68,11 +74,9 @@ export default async function AdminStatsPage({
   const protocols = Object.entries(protocolCount)
     .sort((a, b) => b[1] - a[1])
     .map(([name, value]) => ({
-      name: name.toUpperCase(),
+      name,
       value,
-      color: ['vless', 'reality'].includes(name) ? '#3b82f6' : 
-             name === 'trojan' ? '#8b5cf6' : 
-             name === 'vmess' ? '#10b981' : '#64748b'
+      color: name === 'VLESS TCP/REALITY' ? '#8b5cf6' : '#3b82f6'
     }));
 
   const advancedData = {
