@@ -492,9 +492,19 @@ export function RepoManager({
                 <button
                   onClick={() => toggleStatus(r.id, r.enabled)}
                   disabled={isPending}
-                  className={`rounded-md border px-2 py-1 text-xs disabled:opacity-50 ${r.enabled ? 'border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/10' : 'border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10'}`}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                    r.enabled ? 'bg-emerald-500' : 'bg-white/20'
+                  }`}
+                  role="switch"
+                  aria-checked={r.enabled}
+                  title={r.enabled ? 'Disable Repository' : 'Enable Repository'}
                 >
-                  {r.enabled ? 'Disable' : 'Enable'}
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      r.enabled ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
                 </button>
                 <button
                   onClick={() => remove(r.id)}
