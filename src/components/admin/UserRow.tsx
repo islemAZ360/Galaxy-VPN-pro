@@ -139,7 +139,22 @@ export function UserRow({
                   · 🌐 {sub.active_ip_count}/20 IPs (24h)
                 </span>
                 <span className="text-white/50 ml-auto flex items-center gap-2">
-                  {t('subEnds')}: {sub.end_at ? new Date(sub.end_at).toLocaleString() : t('none')}
+                  {t('subEnds')}: {sub.end_at ? (
+                    <>
+                      {new Date(sub.end_at).toLocaleString()}
+                      <span className="text-galaxy-accent font-medium ml-1">
+                        {(() => {
+                          const ms = new Date(sub.end_at).getTime() - Date.now();
+                          if (ms <= 0) return '(Expired)';
+                          const d = Math.floor(ms / 86400000);
+                          const h = Math.floor((ms % 86400000) / 3600000);
+                          if (d > 0) return `(${d}d ${h}h left)`;
+                          const m = Math.floor((ms % 3600000) / 60000);
+                          return `(${h}h ${m}m left)`;
+                        })()}
+                      </span>
+                    </>
+                  ) : t('none')}
                   <button 
                     onClick={(e) => {
                       const url = `${window.location.origin}/sub/${sub.id}`;
