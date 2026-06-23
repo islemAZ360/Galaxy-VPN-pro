@@ -401,7 +401,7 @@ const elapsed = (stats) => Math.round((Date.parse(stats.finishedAt) - Date.parse
 // ───────────────────────── Wi-Fi button cascade ───────────────────────────
 // Pool = GitHub-verified candidates → Phase 1 Wi-Fi DPI → Phase 2 Gemini.
 // Sets the base tier (wifi/gemini_wifi) and PRESERVES the LTE dimension.
-export async function runWifiCascade() {
+export async function runWifiCascade({ percentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'wifi' };
@@ -427,9 +427,16 @@ export async function runWifiCascade() {
 
     await vpnOffGate('Make sure your HOME Wi-Fi is connected.');
 
+    let testUris = uris;
+    if (percentage < 100 && percentage > 0) {
+      const limit = Math.ceil(testUris.length * (percentage / 100));
+      testUris = testUris.sort(() => Math.random() - 0.5).slice(0, limit);
+      log.info(`Percentage limit applied: testing ${percentage}% (${testUris.length}) of candidate servers`);
+    }
+
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     log.step('Phase 1 — Wi-Fi reachability…');
-    const working = await deepTest(uris, { conc: CONC, batchSize: 500, phaseLabel: 'Wi-Fi' });
+    const working = await deepTest(testUris, { conc: CONC, batchSize: 500, phaseLabel: 'Wi-Fi' });
     stats.working = working.length;
     log.ok(`${working.length} / ${stats.total} pass Wi-Fi.`);
 
@@ -515,12 +522,13 @@ export async function runWifiCascade() {
       }
     }, { label: 'upsert' });
 
-    // delete servers that no longer pass (not in the working set)
+    // delete servers that no longer pass (not in the working set), BUT only if we actually tested them!
     const keep = new Set(rows.map((r) => r.config_hash));
+    const testedHashes = new Set(testUris.map((u) => hashConfig(u)));
     const existing = await withVpnRetry(async () => {
       return await fetchAllPaginated('servers', 'id, config_hash, is_deleted');
     }, { label: 'select-stale' });
-    const toDelete = existing.filter((s) => !keep.has(s.config_hash) && !s.is_deleted).map((s) => s.id);
+    const toDelete = existing.filter((s) => testedHashes.has(s.config_hash) && !keep.has(s.config_hash) && !s.is_deleted).map((s) => s.id);
     stats.deleted = toDelete.length;
     if (stats.deleted) {
       log.info(`Deleting ${stats.deleted} stale servers…`);
@@ -547,7 +555,7 @@ export async function runWifiCascade() {
 // ───────────────────────── LTE button cascade ─────────────────────────────
 // Pool = the current Wi-Fi pool → Phase 1 LTE DPI → Phase 2 Gemini. Sets the
 // LTE dimension; non-passers are demoted to Wi-Fi-only (Gemini dimension kept).
-export async function runLteCascade() {
+export async function runLteCascade({ percentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'lte' };
@@ -574,9 +582,16 @@ export async function runLteCascade() {
 
     await vpnOffGate('Connect to your PHONE hotspot (mobile data), NOT home Wi-Fi.');
 
+    let lteCandidates = existing.map((s) => s.config_uri);
+    if (percentage < 100 && percentage > 0) {
+      const limit = Math.ceil(lteCandidates.length * (percentage / 100));
+      lteCandidates = lteCandidates.sort(() => Math.random() - 0.5).slice(0, limit);
+      log.info(`Percentage limit applied: testing ${percentage}% (${lteCandidates.length}) of Wi-Fi working servers`);
+    }
+
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     log.step('Phase 1 — LTE reachability…');
-    const working = await deepTest(existing.map((s) => s.config_uri), { conc: CONC, batchSize: 500, phaseLabel: 'LTE' });
+    const working = await deepTest(lteCandidates, { conc: CONC, batchSize: 500, phaseLabel: 'LTE' });
     const lteKeys = new Set(working.map((w) => keyOf(w.uri)));
     log.ok(`${working.length} / ${stats.total} pass LTE.`);
 
@@ -595,15 +610,23 @@ export async function runLteCascade() {
     vpnOnPrompt();
     log.step('Uploading results to Supabase…');
     const buckets = { gemini_lte: [], lte: [], gemini_wifi: [], wifi: [] };
+    const testedKeys = new Set(lteCandidates.map((u) => keyOf(u)));
+    const extraUpdates = [];
     for (const s of existing) {
       const k = keyOf(s.config_uri);
+      if (!testedKeys.has(k)) {
+        continue;
+      }
+      
       const lteDim = lteKeys.has(k);
-      // gemini: this run's result for LTE-passers; preserve existing bit otherwise
       const gemDim = lteDim
         ? geminiKeys.has(k)
         : (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
       const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
-      buckets[tier].push(s.id);
+      
+      if (s.network_type !== tier) {
+        buckets[tier].push(s.id);
+      }
     }
     const now = new Date().toISOString();
     const classify = async (ids, type) => {
@@ -653,7 +676,7 @@ export async function runLteCascade() {
 // tests them over the restricted white-list connection. Servers that pass are
 // promoted to the white-list tier. The Gemini dimension is determined by the
 // server's egress country (same as Wi-Fi/LTE cascades).
-export async function runWhitelistCascade() {
+export async function runWhitelistCascade({ percentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'whitelist' };
@@ -679,9 +702,16 @@ export async function runWhitelistCascade() {
 
     await vpnOffGate('Make sure you are on the WHITE-LISTED LTE connection (government white-list mode active).');
 
+    let testUris = uris;
+    if (percentage < 100 && percentage > 0) {
+      const limit = Math.ceil(testUris.length * (percentage / 100));
+      testUris = testUris.sort(() => Math.random() - 0.5).slice(0, limit);
+      log.info(`Percentage limit applied: testing ${percentage}% (${testUris.length}) of candidate servers`);
+    }
+
     const CONC = Number(process.env.TEST_CONCURRENCY || 50);
     log.step('Phase 1 — White-list reachability…');
-    const working = await deepTest(uris, { conc: CONC, batchSize: 500, phaseLabel: 'WhiteList' });
+    const working = await deepTest(testUris, { conc: CONC, batchSize: 500, phaseLabel: 'WhiteList' });
     stats.working = working.length;
     log.ok(`${working.length} / ${stats.total} survive the white-list.`);
 
@@ -772,8 +802,10 @@ export async function runWhitelistCascade() {
     const existingWl = await withVpnRetry(async () => {
       return await fetchAllPaginated('servers', 'id, config_hash, network_type');
     }, { label: 'select-demote' });
+    const testedHashes = new Set(testUris.map(hashConfig));
     const demotable = existingWl.filter((s) =>
       (s.network_type === 'whitelist' || s.network_type === 'gemini_whitelist') &&
+      testedHashes.has(s.config_hash) &&
       !wlKeys.has(s.config_hash)
     );
     if (demotable.length) {

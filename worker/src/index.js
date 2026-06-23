@@ -93,10 +93,10 @@ async function runWithStatus(reason, fn) {
   return result;
 }
 
-const wifiWithStatus = (reason) => runWithStatus(reason, runWifiCascade);
-const lteWithStatus = (reason) => runWithStatus(reason, runLteCascade);
-const whitelistWithStatus = (reason) => runWithStatus(reason, runWhitelistCascade);
-const latencyWithStatus = (reason) => runWithStatus(reason, runLatencyCheck);
+const wifiWithStatus = (reason, percentage) => runWithStatus(reason, () => runWifiCascade({ percentage }));
+const lteWithStatus = (reason, percentage) => runWithStatus(reason, () => runLteCascade({ percentage }));
+const whitelistWithStatus = (reason, percentage) => runWithStatus(reason, () => runWhitelistCascade({ percentage }));
+const latencyWithStatus = (reason, percentage) => runWithStatus(reason, () => runLatencyCheck({ percentage }));
 
 // --- Process admin sync requests --------------------------------------------
 // The POLL_MS poll loop is the primary, reliable trigger: it reads pending
@@ -109,7 +109,7 @@ async function drainPending(source) {
   draining = true;
   try {
     const { data: pending, error } = await supa
-      .from('sync_requests').select('id, kind').is('processed_at', null);
+      .from('sync_requests').select('id, kind, percentage').is('processed_at', null);
     if (error || !pending?.length) return;
 
     // Two cascades now. Map any legacy kinds onto them:
@@ -125,10 +125,10 @@ async function drainPending(source) {
       supa.from('sync_requests').update({ processed_at: new Date().toISOString(), result }).in('id', ids);
 
     // Order: Wi-Fi (rebuilds the base pool) → LTE (refines) → White-list → latency
-    if (wifiReqs.length) await markDone(wifiReqs.map((p) => p.id), await wifiWithStatus('admin-wifi'));
-    if (lteReqs.length) await markDone(lteReqs.map((p) => p.id), await lteWithStatus('admin-lte'));
-    if (whitelistReqs.length) await markDone(whitelistReqs.map((p) => p.id), await whitelistWithStatus('admin-whitelist'));
-    if (latencyReqs.length) await markDone(latencyReqs.map((p) => p.id), await latencyWithStatus('admin-latency'));
+    if (wifiReqs.length) await markDone(wifiReqs.map((p) => p.id), await wifiWithStatus('admin-wifi', wifiReqs[0].percentage));
+    if (lteReqs.length) await markDone(lteReqs.map((p) => p.id), await lteWithStatus('admin-lte', lteReqs[0].percentage));
+    if (whitelistReqs.length) await markDone(whitelistReqs.map((p) => p.id), await whitelistWithStatus('admin-whitelist', whitelistReqs[0].percentage));
+    if (latencyReqs.length) await markDone(latencyReqs.map((p) => p.id), await latencyWithStatus('admin-latency', latencyReqs[0].percentage));
   } catch (e) {
     log.err(`drain failed: ${e.message}`);
   } finally {

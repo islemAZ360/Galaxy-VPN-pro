@@ -271,12 +271,12 @@ export async function deleteRepo(id: string) {
 // Request a fresh sync — inserts a row into sync_requests; the local Tester
 // Worker picks it up over Supabase Realtime, runs the real test, and updates
 // the live server pool.
-export async function requestSync(kind: 'wifi' | 'lte' | 'whitelist' = 'wifi') {
+export async function requestSync(kind: 'wifi' | 'lte' | 'whitelist' = 'wifi', percentage: number = 100) {
   const adminId = await assertAdmin();
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('sync_requests')
-    .insert({ requested_by: adminId, kind })
+    .insert({ requested_by: adminId, kind, percentage })
     .select('id')
     .single();
   if (error) throw new Error(error.message);
@@ -284,7 +284,7 @@ export async function requestSync(kind: 'wifi' | 'lte' | 'whitelist' = 'wifi') {
 }
 
 // ---- GitHub Actions Integration ----
-export async function triggerGithubScan() {
+export async function triggerGithubScan(percentage: number = 100) {
   try {
     await assertAdmin();
     const token = process.env.GITHUB_TOKEN?.trim();
@@ -297,7 +297,10 @@ export async function triggerGithubScan() {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ref: 'main' }),
+      body: JSON.stringify({ 
+        ref: 'main',
+        inputs: { percentage: String(percentage) }
+      }),
     });
 
     if (!res.ok) {

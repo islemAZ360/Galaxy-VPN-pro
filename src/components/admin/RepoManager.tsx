@@ -58,6 +58,9 @@ export function RepoManager({
   const [ghRunning, setGhRunning] = useState(false);
   const [ghError, setGhError] = useState('');
 
+  // Percentage Slider State
+  const [percentage, setPercentage] = useState<number>(100);
+
   // Poll GitHub Action Status every 15 seconds
   useEffect(() => {
     let mounted = true;
@@ -124,7 +127,7 @@ export function RepoManager({
     startTransition(async () => {
       setSyncMsg(null);
       try {
-        await requestSync(kind);
+        await requestSync(kind, percentage);
         setSyncMsg({ type: 'success', text: kind === 'lte' ? t('lteRequested') : kind === 'whitelist' ? 'White-list re-check requested — run it while the LTE white-list block is active.' : t('syncRequested') });
       } catch (e) {
         setSyncMsg({ type: 'error', text: t('syncFailed') + ' ' + (e instanceof Error ? e.message : '') });
@@ -139,7 +142,7 @@ export function RepoManager({
     startTransition(async () => {
       setSyncMsg(null);
       try {
-        const res = await triggerGithubScan();
+        const res = await triggerGithubScan(percentage);
         if (res?.error) {
           setSyncMsg({ type: 'error', text: 'Failed to trigger GitHub Scan: ' + res.error });
         } else {
@@ -159,7 +162,25 @@ export function RepoManager({
           <h2 className="text-lg font-semibold">{t('title')}</h2>
           <p className="mt-1 text-sm text-white/60">{t('hint')}</p>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        
+        {/* Actions & Slider Row */}
+        <div className="flex shrink-0 flex-col items-end gap-3">
+          {/* Slider */}
+          <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">
+            <span className="text-white/60">Test Limit:</span>
+            <input
+              type="range"
+              min="1"
+              max="100"
+              value={percentage}
+              onChange={(e) => setPercentage(parseInt(e.target.value))}
+              className="w-24 accent-galaxy-accent"
+              title={`Only process ${percentage}% of candidate servers`}
+            />
+            <span className="min-w-[3rem] text-right font-mono text-galaxy-accent">{percentage}%</span>
+          </div>
+          
+          <div className="flex flex-wrap justify-end gap-2">
           <button
             onClick={runGithubScan}
             disabled={isPending || ghRunning}

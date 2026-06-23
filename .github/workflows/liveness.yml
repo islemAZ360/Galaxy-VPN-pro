@@ -11,7 +11,12 @@ name: server-liveness-scan
 on:
   schedule:
     - cron: '23 */6 * * *'   # every 6 hours, offset to dodge load spikes
-  workflow_dispatch: {}     # lets you run it manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      percentage:
+        description: 'Percentage of servers to test (1-100)'
+        required: false
+        default: '100'
 
 # Never let two scans overlap.
 concurrency:
@@ -55,4 +60,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           XRAY_KNIFE_CORE: auto
           LIVENESS_THREADS: '100'
+          LIVENESS_PERCENTAGE: ${{ github.event.inputs.percentage || '100' }}
         run: node src/liveness-scan.js

@@ -160,6 +160,15 @@ async function loadKnownHostGeo() {
   log.ok(`Discovered ${configs.size} unique configs`);
   if (configs.size === 0) { log.warn('0 configs — leaving candidates untouched.'); await closeSupa(); process.exit(0); }
 
+  const PCT = Number(process.env.LIVENESS_PERCENTAGE || 100);
+  if (PCT < 100 && PCT > 0) {
+    const entries = [...configs.entries()].sort(() => Math.random() - 0.5);
+    const limit = Math.ceil(entries.length * (PCT / 100));
+    configs.clear();
+    for (const [k, v] of entries.slice(0, limit)) configs.set(k, v);
+    log.info(`Percentage limit applied: testing and upserting ${PCT}% (${configs.size}) of extracted configs`);
+  }
+
   // 2. batched liveness + egress country
   const uris = [...configs.values()].map((c) => c.uri);
   const live = new Map();
