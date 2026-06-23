@@ -59,9 +59,23 @@ async function recordStatus(result) {
 (async () => {
   let result;
   try {
+    let basePercentage = 100;
+    let detailsPercentage = 100;
+    try {
+      const { data: limits } = await supa.from('worker_settings').select('*').eq('id', 'global').maybeSingle();
+      if (limits) {
+        basePercentage = limits.base_pct ?? 100;
+        if (mode === 'wifi') detailsPercentage = limits.wifi_deep_pct ?? 100;
+        else if (mode === 'lte') detailsPercentage = limits.lte_deep_pct ?? 100;
+        else if (mode === 'whitelist') detailsPercentage = limits.wl_deep_pct ?? 100;
+      }
+    } catch { /* proceed with 100% defaults if fetch fails */ }
+
     result = await chosen.fn({
       chunkIndex: Number(process.env.TEST_CHUNK_INDEX) || 0,
-      chunkTotal: Number(process.env.TEST_CHUNKS_TOTAL) || 1
+      chunkTotal: Number(process.env.TEST_CHUNKS_TOTAL) || 1,
+      basePercentage,
+      detailsPercentage
     });
     await recordStatus(result);
   } catch (e) {
