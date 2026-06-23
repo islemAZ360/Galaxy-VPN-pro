@@ -181,7 +181,7 @@ const keyOf = (u) => renameConfig(u, '');
 // wall-clock) ≈ 8 pages/sec → 160 pages in ~20-30s of wall-clock, vs ~10min
 // serial. Stalls still cost time but never freeze the whole load.
 async function fetchAllPaginated(table, select, filters = {}) {
-  const size = Math.max(1, Math.min(30, Number(process.env.SUPA_PAGE_SIZE) || 20));
+  const size = Math.max(1, Number(process.env.SUPA_PAGE_SIZE) || 20);
   const concurrency = Math.max(1, Number(process.env.SUPA_CONCURRENCY) || 8);
 
   // 1. Total count via HEAD (small response, sails through DPI).
