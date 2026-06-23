@@ -47,8 +47,10 @@ async function recordStatus(result) {
     const now = new Date().toISOString();
     await supa.from('worker_status').upsert({
       id: 'worker',
+      state: 'idle',
       updated_at: now,
       last_sync_at: now,
+      last_seen: now,
       last_result: { ...prev, reason: chosen.reason, ...result },
     }, { onConflict: 'id' });
   } catch {
@@ -56,9 +58,23 @@ async function recordStatus(result) {
   }
 }
 
+let heartbeatTimer;
+async function heartbeat() {
+  try {
+    await supa.from('worker_status').upsert({
+      id: 'worker',
+      state: 'syncing',
+      last_seen: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+  } catch { /* ignore */ }
+}
+
 (async () => {
   let result;
   try {
+    await heartbeat();
+    heartbeatTimer = setInterval(heartbeat, 15000);
     let basePercentage = 100;
     let detailsPercentage = 100;
     try {
@@ -82,6 +98,7 @@ async function recordStatus(result) {
     log.err(`Run failed: ${e.message}`);
     result = { error: e.message };
   } finally {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
     await closeSupa();
   }
   console.log('\n' + JSON.stringify(result, null, 2));
