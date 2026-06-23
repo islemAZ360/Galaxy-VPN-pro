@@ -99,7 +99,7 @@ function runBatch(uris) {
     } catch (e) {
       log.warn(`liveness batch failed: ${e.message}`);
     } finally {
-      await rm(dir, { recursive: true, force: true }).catch(() => {});
+      await rm(dir, { recursive: true, force: true }).catch(() => { });
     }
     resolve(map);
   });
@@ -148,7 +148,7 @@ async function loadKnownHostGeo() {
     try {
       const { text, fileCount } = await fetchRepoTexts(r.repo_url);
       let found = extractConfigs(text);
-      
+
 
       perRepo.set(r.repo_url, { files_found: fileCount, configs_extracted: found.length });
       log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${found.length} configs`);

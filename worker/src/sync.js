@@ -181,7 +181,7 @@ const keyOf = (u) => renameConfig(u, '');
 // wall-clock) ≈ 8 pages/sec → 160 pages in ~20-30s of wall-clock, vs ~10min
 // serial. Stalls still cost time but never freeze the whole load.
 async function fetchAllPaginated(table, select, filters = {}) {
-  const size = Math.max(1, Number(process.env.SUPA_PAGE_SIZE) || 20);
+  const size = Math.max(1, Math.min(30, Number(process.env.SUPA_PAGE_SIZE) || 20));
   const concurrency = Math.max(1, Number(process.env.SUPA_CONCURRENCY) || 8);
 
   // 1. Total count via HEAD (small response, sails through DPI).
@@ -211,10 +211,8 @@ async function fetchAllPaginated(table, select, filters = {}) {
   const report = () => {
     let loaded = 0;
     for (const p of pages) if (p) loaded += p.length;
-    const isCI = process.env.CI || !process.stdout.isTTY;
-    const logInterval = isCI ? Math.max(size * 10, 10000) : Math.max(size, 200);
-    if (loaded - lastLogged >= logInterval) {
-      log.info(`Loaded ${loaded}/${total} ${table} rows...`);
+    if (loaded - lastLogged >= Math.max(size, 200)) {
+      log.info(`Loaded ${loaded}/${total} ${table} rows…`);
       lastLogged = loaded;
     }
   };
@@ -350,7 +348,7 @@ async function deepTest(uris, { conc, timeoutMs = 4000, batchSize = 100, phaseLa
     working.push(...results.filter((r) => r.ok));
     tested += b.length;
     log.progress((tested / Math.max(1, uris.length)) * 100, `${phaseLabel}: ${working.length} passed`);
-    
+
     // Short cooling delay between batches — only Windows' Wi-Fi driver needs it;
     // skip it elsewhere (e.g. the phone/Termux on Linux) to save time.
     if (process.platform === 'win32' && tested < uris.length) {
@@ -403,7 +401,7 @@ const elapsed = (stats) => Math.round((Date.parse(stats.finishedAt) - Date.parse
 // ───────────────────────── Wi-Fi button cascade ───────────────────────────
 // Pool = GitHub-verified candidates → Phase 1 Wi-Fi DPI → Phase 2 Gemini.
 // Sets the base tier (wifi/gemini_wifi) and PRESERVES the LTE dimension.
-export async function runWifiCascade({ basePercentage = 100, detailsPercentage = 100 } = {}) {
+export async function runWifiCascade({ percentage = 100 } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'wifi' };
@@ -515,14 +513,14 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
         // dimensional tier: keep LTE dimension from before
         const prev = existingTiers.get(hash);
         const lteDim = prev === 'lte' || prev === 'gemini_lte';
-        
+
         let gemDim;
         if (testedGeminiKeys.has(k)) {
           gemDim = geminiKeys.has(k);
         } else {
           gemDim = (prev === 'gemini_wifi' || prev === 'gemini_lte' || prev === 'gemini_whitelist');
         }
-        
+
         const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
         const name = retag(base, tier);
         return {
@@ -645,18 +643,18 @@ export async function runLteCascade({ basePercentage = 100, detailsPercentage = 
       if (!testedKeys.has(k)) {
         continue;
       }
-      
+
       const lteDim = lteKeys.has(k);
-      
+
       let gemDim;
       if (testedGeminiKeys.has(k)) {
         gemDim = geminiKeys.has(k);
       } else {
         gemDim = (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
       }
-      
+
       const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
-      
+
       if (s.network_type !== tier) {
         buckets[tier].push(s.id);
       }
@@ -814,7 +812,7 @@ export async function runWhitelistCascade({ basePercentage = 100, detailsPercent
         const cc = g.country_code ?? null;
         counters[country] = (counters[country] || 0) + 1;
         const base = `${flagEmoji(cc)} ${country} #${counters[country]}`;
-        
+
         let gem;
         const k = keyOf(w.uri);
         if (testedGeminiKeys.has(k)) {
@@ -822,7 +820,7 @@ export async function runWhitelistCascade({ basePercentage = 100, detailsPercent
         } else {
           gem = (existingTiers.get(hash) === 'gemini_whitelist');
         }
-        
+
         const tier = gem ? 'gemini_whitelist' : 'whitelist';
         const name = retag(base, tier);
         return {
@@ -929,7 +927,7 @@ export async function runLteRecheck() {
     log.bell(`║  We need to test the servers on your REAL connection.   ║`);
     log.bell(`║  Testing will begin automatically in 15 seconds...      ║`);
     log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
-    
+
     // Countdown
     for (let i = 15; i > 0; i--) {
       process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
@@ -942,7 +940,7 @@ export async function runLteRecheck() {
     // because 50 is too high for raw Wi-Fi/LTE adapters and will cause the driver to crash.
     const CONC = 20;
     log.info(`Re-testing ${stats.total} servers over the current network (concurrency ${CONC})…`);
-    
+
     const working = [];
     const BATCH_SIZE = 150; // smaller batch size so progress bar updates frequently
     const candidateBatches = chunk(existing.map(s => s.config_uri), BATCH_SIZE);
@@ -958,7 +956,7 @@ export async function runLteRecheck() {
       log.progress((testedCount / stats.total) * 100, `Xray: ${working.length} passed`);
     }
     log.clearProgress();
-    
+
     const workingKeys = new Set(working.map((r) => keyOf(r.uri)));
 
     const geminiWifiIds = [];
@@ -981,7 +979,7 @@ export async function runLteRecheck() {
     stats.lte = lteIds.length;
     stats.wifi = wifiIds.length;
     stats.gemini = stats.gemini_lte + stats.gemini_wifi;
-    
+
     // ──────── PHASE 2: Upload results to Supabase ────────
     log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
     log.bell(`║  ✅ TESTING FINISHED!                                   ║`);
@@ -1000,7 +998,7 @@ export async function runLteRecheck() {
           const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
           if (selErr) throw new Error(selErr.message);
           if (!current || current.length === 0) continue;
-          
+
           const updates = current.map(c => {
             const newName = retag(c.name, type);
             return {
@@ -1015,7 +1013,7 @@ export async function runLteRecheck() {
 
           const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
           if (error) throw new Error(error.message);
-          
+
           cCount += updates.length;
           log.progress((cCount / ids.length) * 100, `Uploading ${type} (${cCount}/${ids.length})`);
         }
@@ -1142,7 +1140,7 @@ export async function runGeminiWifiRecheck() {
           const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
           if (selErr) throw new Error(selErr.message);
           if (!current || current.length === 0) continue;
-          
+
           const updates = current.map(c => {
             const newName = retag(c.name, type);
             return {
@@ -1154,10 +1152,10 @@ export async function runGeminiWifiRecheck() {
               last_checked_at: now
             };
           });
-          
+
           const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
           if (error) throw new Error(error.message);
-          
+
           cCount += updates.length;
           log.progress((cCount / ids.length) * 100, `Uploading ${type} (${cCount}/${ids.length})`);
         }
@@ -1235,7 +1233,7 @@ export async function runGeminiLteRecheck() {
           const { data: current, error: selErr } = await supa.from('servers').select('id, name, config_uri, config_hash').in('id', idBatch);
           if (selErr) throw new Error(selErr.message);
           if (!current || current.length === 0) continue;
-          
+
           const updates = current.map(c => {
             const newName = retag(c.name, type);
             return {
@@ -1247,10 +1245,10 @@ export async function runGeminiLteRecheck() {
               last_checked_at: now
             };
           });
-          
+
           const { error } = await supa.from('servers').upsert(updates, { onConflict: 'id' });
           if (error) throw new Error(error.message);
-          
+
           cCount += updates.length;
           log.progress((cCount / ids.length) * 100, `Uploading ${type} (${cCount}/${ids.length})`);
         }
@@ -1286,31 +1284,31 @@ export async function runLatencyCheck({ basePercentage = 100 } = {}) {
       if (error) throw new Error(error.message);
       return data ?? [];
     }, { label: 'select-pool' });
-    
+
     stats.total = existing.length;
     if (!stats.total) {
       log.warn('No servers to check latency.');
       stats.finishedAt = new Date().toISOString();
       return stats;
     }
-    
+
     log.info(`Pinging ${stats.total} servers for latency…`);
     const CONC = 100; // TCP pings are lightweight, can go higher
     const results = await tcpTestAll(existing.map((s) => s.config_uri), {
       concurrency: CONC,
       timeoutMs: 4000,
     });
-    
+
     const idToUri = new Map(existing.map((s) => [s.config_uri, s.id]));
     const updates = [];
-    
+
     for (const r of results) {
       const id = idToUri.get(r.uri);
       if (id && r.latencyMs !== null) {
         updates.push({ id, latency_ms: r.latencyMs, updated_at: new Date().toISOString() });
       }
     }
-    
+
     stats.updated = updates.length;
     if (updates.length > 0) {
       log.info(`Updating latency for ${updates.length} servers…`);
@@ -1323,7 +1321,7 @@ export async function runLatencyCheck({ basePercentage = 100 } = {}) {
     }
 
     stats.finishedAt = new Date().toISOString();
-    log.done(`Done — updated latencies for ${stats.updated} servers · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt))/1000)}s`);
+    log.done(`Done — updated latencies for ${stats.updated} servers · took ${Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000)}s`);
     return stats;
   } catch (e) {
     log.err(`Latency check failed: ${e.message}`);
@@ -1355,7 +1353,7 @@ export async function updateRepoStats() {
     const { data: existingStats } = await supa.from('repo_stats').select('*');
     const syncTime = new Date().toISOString();
     const statRows = [];
-    
+
     for (const st of existingStats ?? []) {
       const live = liveByRepo.get(st.repo_url) || { working: 0, wifi: 0, lte: 0, gemini_wifi: 0, gemini_lte: 0 };
       statRows.push({

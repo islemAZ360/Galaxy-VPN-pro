@@ -122,9 +122,9 @@ export async function extendSubscription(userId: string, days = 30) {
 // Set or add remaining time on a specific subscription.
 // If subscriptionId is null, creates a new admin-granted subscription.
 export async function setSubscriptionTime(
-  subscriptionId: string | null, 
-  userId: string, 
-  ms: number, 
+  subscriptionId: string | null,
+  userId: string,
+  ms: number,
   mode: 'set' | 'add',
   networkType: 'wifi' | 'lte' | 'gemini' = 'lte',
   customServerCount?: number
@@ -142,18 +142,18 @@ export async function setSubscriptionTime(
       .maybeSingle();
 
     if (sub) {
-    const base =
-      mode === 'add' && sub.end_at && new Date(sub.end_at).getTime() > now
-        ? new Date(sub.end_at).getTime()
-        : now;
-    await admin
-      .from('subscriptions')
-      .update({
-        status: 'active',
-        start_at: new Date(now).toISOString(),
-        end_at: new Date(base + ms).toISOString(),
-      })
-      .eq('id', sub.id);
+      const base =
+        mode === 'add' && sub.end_at && new Date(sub.end_at).getTime() > now
+          ? new Date(sub.end_at).getTime()
+          : now;
+      await admin
+        .from('subscriptions')
+        .update({
+          status: 'active',
+          start_at: new Date(now).toISOString(),
+          end_at: new Date(base + ms).toISOString(),
+        })
+        .eq('id', sub.id);
     }
   } else {
     // No subscription yet → create an admin-granted one matching the duration.
@@ -184,13 +184,13 @@ export async function setSubscriptionTime(
 export async function changeSubscriptionNetwork(subscriptionId: string, networkType: 'wifi' | 'lte' | 'gemini') {
   await assertAdmin();
   const admin = createAdminClient();
-  
+
   const { data: sub } = await admin
     .from('subscriptions')
     .select('id, plan')
     .eq('id', subscriptionId)
     .maybeSingle();
-    
+
   if (sub && sub.plan) {
     const plan = getPlan(sub.plan);
     if (plan) {
@@ -239,7 +239,7 @@ export async function addRepo(repoUrl: string) {
   if (!/github\.com\//i.test(url)) throw new Error('invalid github url');
   const admin = createAdminClient();
   await admin.from('repos').upsert({ repo_url: url, enabled: true }, { onConflict: 'repo_url' });
-  
+
   // Attempt to trigger a GitHub scan automatically
   try {
     const res = await triggerGithubScan();
@@ -254,17 +254,17 @@ export async function addRepo(repoUrl: string) {
 export async function deleteRepo(id: string) {
   await assertAdmin();
   const admin = createAdminClient();
-  
+
   // Get the repo_url first so we can delete its stats
   const { data } = await admin.from('repos').select('repo_url').eq('id', id).single();
-  
+
   await admin.from('repos').delete().eq('id', id);
-  
+
   // Clean up ghost stats
   if (data?.repo_url) {
     await admin.from('repo_stats').delete().eq('repo_url', data.repo_url);
   }
-  
+
   revalidatePath('/', 'layout');
 }
 
@@ -297,7 +297,7 @@ export async function triggerGithubScan(percentage: number = 100) {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         ref: 'main',
         inputs: { percentage: String(percentage) }
       }),
@@ -329,7 +329,7 @@ export async function checkGithubScanStatus() {
   });
 
   if (!res.ok) return { isRunning: false, error: 'Failed to fetch status from GitHub API' };
-  
+
   const data = await res.json();
   const isRunning = data.workflow_runs?.some((r: any) => r.name === 'server-liveness-scan');
   return { isRunning, count: data.total_count || 0 };
@@ -364,7 +364,7 @@ export async function deleteSales(paymentIds: string[]) {
 
   // Delete payments
   await admin.from('payments').delete().in('id', paymentIds);
-  
+
   // Delete associated subscriptions
   if (subIds.length > 0) {
     await admin.from('subscriptions').delete().in('id', subIds);
