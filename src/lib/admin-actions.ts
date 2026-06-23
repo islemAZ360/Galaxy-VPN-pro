@@ -240,14 +240,6 @@ export async function addRepo(repoUrl: string) {
   const admin = createAdminClient();
   await admin.from('repos').upsert({ repo_url: url, enabled: true }, { onConflict: 'repo_url' });
 
-  // Attempt to trigger a GitHub scan automatically
-  try {
-    const res = await triggerGithubScan();
-    if (res?.error) console.error('Auto-trigger GitHub scan failed:', res.error);
-  } catch (e) {
-    // Ignore unexpected errors
-  }
-
   revalidatePath('/', 'layout');
 }
 
