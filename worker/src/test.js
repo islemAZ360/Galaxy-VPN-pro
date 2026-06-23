@@ -31,7 +31,7 @@ async function cleanupNetwork() {
 // found, we fall back to a TCP-reachability check so the pipeline still runs.
 // ---------------------------------------------------------------------------
 const XK_PATH = process.env.XRAY_KNIFE_PATH || 'xray-knife';
-const XK_CORE = process.env.XRAY_KNIFE_CORE || 'singbox'; // auto | singbox | xray
+const XK_CORE = process.env.XRAY_KNIFE_CORE || 'xray'; // auto | singbox | xray
 const XK_URL = process.env.XRAY_KNIFE_URL || 'https://cloudflare.com/cdn-cgi/trace';
 const XK_MDELAY = process.env.XRAY_KNIFE_MDELAY || '5000'; // max acceptable delay (ms)
 
