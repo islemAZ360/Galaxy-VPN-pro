@@ -14,11 +14,8 @@ export function looksLikeConfig(line) {
     const type = (params.get('type') || 'tcp').toLowerCase();
     const security = (params.get('security') || '').toLowerCase();
     
-    // The golden transports: TCP (direct), gRPC (multiplexed), WS (CDN routing)
-    if (type !== 'tcp' && type !== 'grpc' && type !== 'ws') return false;
-    
-    // The golden shields: REALITY (stealth) and TLS (standard encryption)
-    if (security !== 'reality' && security !== 'tls') return false;
+    if (type !== 'tcp' && type !== 'grpc') return false;
+    if (security !== 'reality') return false;
     
     return true;
   } catch {
