@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { addRepo, deleteRepo, requestSync, triggerGithubScan, checkGithubScanStatus } from '@/lib/admin-actions';
+import { addRepo, deleteRepo, requestSync, triggerGithubScan, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
 import { useWorkerPresence } from '@/hooks/useWorkerPresence';
 
 type Repo = { id: string; repo_url: string; enabled: boolean };
@@ -63,6 +63,35 @@ export function RepoManager({
   const [wifiDetailsPercentage, setWifiDetailsPercentage] = useState<number>(100);
   const [lteDetailsPercentage, setLteDetailsPercentage] = useState<number>(100);
   const [whitelistDetailsPercentage, setWhitelistDetailsPercentage] = useState<number>(100);
+  const [initialLoaded, setInitialLoaded] = useState(false);
+
+  // Load initial global limits from Supabase
+  useEffect(() => {
+    let mounted = true;
+    getGlobalLimits().then((limits) => {
+      if (!mounted) return;
+      setBasePercentage(limits.base);
+      setWifiDetailsPercentage(limits.wifi_deep);
+      setLteDetailsPercentage(limits.lte_deep);
+      setWhitelistDetailsPercentage(limits.wl_deep);
+      setInitialLoaded(true);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  // Auto-save sliders on change (debounced)
+  useEffect(() => {
+    if (!initialLoaded) return;
+    const t = setTimeout(() => {
+      updateGlobalLimits({
+        base: basePercentage,
+        wifi_deep: wifiDetailsPercentage,
+        lte_deep: lteDetailsPercentage,
+        wl_deep: whitelistDetailsPercentage
+      }).catch(console.error);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [basePercentage, wifiDetailsPercentage, lteDetailsPercentage, whitelistDetailsPercentage, initialLoaded]);
 
   // Poll GitHub Action Status every 15 seconds
   useEffect(() => {
