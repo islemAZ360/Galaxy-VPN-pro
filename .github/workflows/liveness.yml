@@ -98,7 +98,7 @@ jobs:
 
   trigger:
     needs: scan
-    if: success() && (github.event_name == 'schedule' || github.event.inputs.trigger_sourcecraft != 'false')
+    if: success() && (github.event_name == 'schedule' || inputs.trigger_sourcecraft == true || inputs.trigger_sourcecraft == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
