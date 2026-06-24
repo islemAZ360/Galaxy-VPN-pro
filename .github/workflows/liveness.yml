@@ -96,13 +96,31 @@ jobs:
     if: success()
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install worker deps
+        working-directory: worker
+        run: npm ci || npm install
       - name: Trigger SourceCraft DPI Sync
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          # Clone into 'sc' directory
           git clone https://islamaz:${{ secrets.SOURCECRAFT_TOKEN }}@git.sourcecraft.dev/islamaz/vpn-russia-scanner.git sc
-          cd sc
-          date > .sourcecraft/trigger.txt
+          
+          # Run script to generate dynamic ci.yaml inside 'sc/.sourcecraft/ci.yaml'
+          cd worker
+          node src/generate-sourcecraft-ci.js
+          cd ../sc
+          
+          # Commit the dynamically generated file
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+          git add .sourcecraft/ci.yaml
+          date > .sourcecraft/trigger.txt
           git add .sourcecraft/trigger.txt
-          git commit -m "Auto-trigger from GitHub Liveness Scan"
+          git commit -m "Auto-trigger adaptive tasks from GitHub Liveness Scan"
           git push origin main
