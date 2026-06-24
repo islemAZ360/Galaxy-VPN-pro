@@ -46,10 +46,17 @@ export function WorkerStatus({ initial }: { initial: Status | null }) {
     };
   }, []);
 
+  // Force re-render every 5 seconds to accurately reflect timeouts
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   const r = pcStatus?.last_result;
 
   // Phone is considered online if last_seen is within the last 25 seconds (polls every 15 sec)
-  const phoneOnline = phoneStatus?.last_seen && (Date.now() - new Date(phoneStatus.last_seen).getTime() < 25 * 1000);
+  const phoneOnline = phoneStatus?.last_seen && (now - new Date(phoneStatus.last_seen).getTime() < 25 * 1000);
   
   const pcDot = pcSyncingRealtime ? 'bg-amber-400 animate-pulse' : pcOnlineRealtime ? 'bg-emerald-400' : 'bg-red-500';
   const phoneDot = phoneOnline ? 'bg-emerald-400' : 'bg-red-500';
