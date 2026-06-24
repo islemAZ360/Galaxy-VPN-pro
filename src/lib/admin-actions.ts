@@ -303,7 +303,7 @@ export async function requestSync(kind: 'wifi' | 'lte' | 'whitelist' = 'wifi', p
 }
 
 // ---- GitHub Actions Integration ----
-export async function triggerGithubScan(percentage: number = 100) {
+export async function triggerGithubScan(percentage: number = 100, triggerSourcecraft: boolean = true) {
   try {
     await assertAdmin();
     const token = process.env.GITHUB_TOKEN?.trim();
@@ -318,7 +318,39 @@ export async function triggerGithubScan(percentage: number = 100) {
       },
       body: JSON.stringify({
         ref: 'main',
-        inputs: { percentage: String(percentage) }
+        inputs: { 
+          percentage: String(percentage),
+          trigger_sourcecraft: String(triggerSourcecraft)
+        }
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      return { error: `GitHub API error: ${res.status} ${text}` };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+export async function triggerSourcecraftOnly() {
+  try {
+    await assertAdmin();
+    const token = process.env.GITHUB_TOKEN?.trim();
+    if (!token) return { error: 'GITHUB_TOKEN environment variable is not set in Vercel. Please add it to your project settings.' };
+
+    const res = await fetch('https://api.github.com/repos/islemAZ360/Galaxy-VPN-pro/actions/workflows/trigger-sourcecraft.yml/dispatches', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ref: 'main'
       }),
     });
 

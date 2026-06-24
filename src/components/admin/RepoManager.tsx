@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { addRepo, deleteRepo, toggleRepoStatus, unbanRepo, requestSync, triggerGithubScan, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
+import { addRepo, deleteRepo, toggleRepoStatus, unbanRepo, requestSync, triggerGithubScan, triggerSourcecraftOnly, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
 import { useWorkerPresence } from '@/hooks/useWorkerPresence';
 
 type Repo = { id: string; repo_url: string; enabled: boolean; is_banned: boolean };
@@ -196,19 +196,52 @@ export function RepoManager({
   const lteRecheck = () => requestKind('lte');
   const whitelistRecheck = () => requestKind('whitelist');
 
-  const runGithubScan = () => {
+  const runFullAutoPipeline = () => {
     startTransition(async () => {
       setSyncMsg(null);
       try {
-        const res = await triggerGithubScan(basePercentage);
+        const res = await triggerGithubScan(basePercentage, true);
+        if (res?.error) {
+          setSyncMsg({ type: 'error', text: 'Failed to trigger pipeline: ' + res.error });
+        } else {
+          setGhRunning(true);
+          setSyncMsg({ type: 'success', text: 'Full pipeline triggered! (GitHub ➔ SourceCraft ➔ Phone)' });
+        }
+      } catch (e) {
+        setSyncMsg({ type: 'error', text: 'Failed to trigger pipeline: ' + (e instanceof Error ? e.message : 'Unknown error') });
+      }
+    });
+  };
+
+  const runGithubOnly = () => {
+    startTransition(async () => {
+      setSyncMsg(null);
+      try {
+        const res = await triggerGithubScan(basePercentage, false);
         if (res?.error) {
           setSyncMsg({ type: 'error', text: 'Failed to trigger GitHub Scan: ' + res.error });
         } else {
           setGhRunning(true);
-          setSyncMsg({ type: 'success', text: 'GitHub Actions scan triggered successfully! The background scan will run for a few minutes.' });
+          setSyncMsg({ type: 'success', text: 'GitHub Scan started successfully! (SourceCraft will NOT trigger afterwards)' });
         }
       } catch (e) {
         setSyncMsg({ type: 'error', text: 'Failed to trigger GitHub Scan: ' + (e instanceof Error ? e.message : 'Unknown error') });
+      }
+    });
+  };
+
+  const runSourcecraftOnly = () => {
+    startTransition(async () => {
+      setSyncMsg(null);
+      try {
+        const res = await triggerSourcecraftOnly();
+        if (res?.error) {
+          setSyncMsg({ type: 'error', text: 'Failed to trigger SourceCraft: ' + res.error });
+        } else {
+          setSyncMsg({ type: 'success', text: 'SourceCraft scan triggered successfully! (Phone will auto-trigger when done)' });
+        }
+      } catch (e) {
+        setSyncMsg({ type: 'error', text: 'Failed to trigger SourceCraft: ' + (e instanceof Error ? e.message : 'Unknown error') });
       }
     });
   };
@@ -257,12 +290,28 @@ export function RepoManager({
 
           <div className="flex flex-wrap justify-start gap-2">
             <button
-              onClick={runGithubScan}
+              onClick={runFullAutoPipeline}
               disabled={isPending || ghRunning}
-              title="Force GitHub to scan all repos right now"
+              title="Force full pipeline (GitHub -> SourceCraft -> Phone) to scan all repos right now"
               className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/20 disabled:opacity-60 flex items-center gap-1"
             >
-              {ghRunning ? '⚙️ Scanning...' : '🤖 Run GitHub Scan'}
+              {ghRunning ? '⚙️ Scanning...' : '🤖 Run Full Pipeline'}
+            </button>
+            <button
+              onClick={runGithubOnly}
+              disabled={isPending || ghRunning}
+              title="Only run GitHub Liveness Scan (does NOT trigger SourceCraft/Phone)"
+              className="rounded-lg border border-indigo-400/40 bg-indigo-400/10 px-3 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-400/20 disabled:opacity-60 flex items-center gap-1"
+            >
+              🐱 GitHub Only
+            </button>
+            <button
+              onClick={runSourcecraftOnly}
+              disabled={isPending}
+              title="Trigger SourceCraft DPI scan manually in the cloud"
+              className="rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-400/20 disabled:opacity-60"
+            >
+              ☁️ SourceCraft
             </button>
             <button
               onClick={wifiRecheck}
@@ -270,7 +319,7 @@ export function RepoManager({
               title={t('wifiCascadeHint')}
               className="rounded-lg border border-galaxy-accent/40 bg-galaxy-accent/10 px-3 py-2 text-sm font-medium text-galaxy-accent hover:bg-galaxy-accent/20 disabled:opacity-60"
             >
-              📡 {t('wifiCascade')}
+              💻 Local Wi-Fi Scan
             </button>
             <button
               onClick={lteRecheck}
@@ -278,7 +327,7 @@ export function RepoManager({
               title={t('lteCascadeHint')}
               className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-400/20 disabled:opacity-60"
             >
-              📶 {t('lteCascade')}
+              📱 Local Phone Scan (LTE)
             </button>
             <button
               onClick={whitelistRecheck}

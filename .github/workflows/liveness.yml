@@ -17,6 +17,11 @@ on:
         description: 'Percentage of servers to test (1-100)'
         required: false
         default: '100'
+      trigger_sourcecraft:
+        description: 'Trigger SourceCraft DPI sync after liveness scan?'
+        required: false
+        type: boolean
+        default: true
 
 # Never let two scans overlap.
 concurrency:
@@ -93,7 +98,7 @@ jobs:
 
   trigger:
     needs: scan
-    if: success()
+    if: success() && (github.event_name == 'schedule' || github.event.inputs.trigger_sourcecraft != 'false')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
