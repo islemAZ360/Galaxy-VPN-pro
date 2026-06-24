@@ -195,11 +195,18 @@ setInterval(() => { heartbeat().catch(() => {}); }, HEARTBEAT_MS);
   log.ok('Ready! Waiting for manual trigger from admin dashboard...');
 })();
 
-process.on('SIGINT', () => {
-  log.warn('Shutting down…');
-  if (presenceChannel) {
-    presenceChannel.untrack().finally(() => process.exit(0));
-  } else {
-    process.exit(0);
-  }
-});
+async function handleShutdown() {
+  log.info('Shutting down worker...');
+  try {
+    if (presenceChannel) await presenceChannel.untrack();
+    await supa.from('worker_status').upsert({
+      id: 'worker',
+      state: 'offline',
+      last_seen: new Date(Date.now() - 60000).toISOString()
+    }, { onConflict: 'id' });
+  } catch { /* best effort */ }
+  process.exit(0);
+}
+
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);

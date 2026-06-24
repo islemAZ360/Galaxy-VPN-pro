@@ -247,13 +247,19 @@ async function trackPresence(state) {
 })();
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
+async function handleShutdown() {
   log.info('Shutting down watcher...');
+  try {
+    if (presenceChannel) await presenceChannel.untrack();
+    await supa.from('worker_status').upsert({
+      id: 'phone-worker',
+      state: 'offline',
+      last_seen: new Date(Date.now() - 60000).toISOString() // Force DB age > 25s
+    }, { onConflict: 'id' });
+  } catch { /* best effort */ }
   await closeSupa();
   process.exit(0);
-});
-process.on('SIGTERM', async () => {
-  log.info('Shutting down watcher...');
-  await closeSupa();
-  process.exit(0);
-});
+}
+
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);

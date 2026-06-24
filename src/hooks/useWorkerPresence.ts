@@ -3,21 +3,28 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-let globalPcOnline = false;
-let globalPcSyncing = false;
-let globalPhoneOnline = false;
-let globalPhoneSyncing = false;
+let rtPcOnline = false;
+let rtPcSyncing = false;
+let dbPcOnline = false;
+let dbPcSyncing = false;
+
+let rtPhoneOnline = false;
+let rtPhoneSyncing = false;
+let dbPhoneOnline = false;
+let dbPhoneSyncing = false;
+
 let listeners = new Set<(pcOnline: boolean, pcSyncing: boolean, phoneOnline: boolean, phoneSyncing: boolean) => void>();
 let isSubscribed = false;
 
 const DB_ONLINE_MS = 25_000;
 const DB_POLL_MS = 5_000;
 
-function applyState(pcO: boolean, pcS: boolean, phoneO: boolean, phoneS: boolean) {
-  globalPcOnline = pcO;
-  globalPcSyncing = pcS;
-  globalPhoneOnline = phoneO;
-  globalPhoneSyncing = phoneS;
+function evaluateState() {
+  const pcO = rtPcOnline || dbPcOnline;
+  const pcS = rtPcOnline ? rtPcSyncing : dbPcSyncing;
+  const phoneO = rtPhoneOnline || dbPhoneOnline;
+  const phoneS = rtPhoneOnline ? rtPhoneSyncing : dbPhoneSyncing;
+  
   listeners.forEach((l) => l(pcO, pcS, phoneO, phoneS));
 }
 
@@ -39,19 +46,14 @@ function initPresence() {
       const state = channel.presenceState();
       
       const workerData = state['worker']?.[0] as any;
-      const presencePcOnline = !!workerData;
-      const presencePcSyncing = workerData?.state === 'syncing';
+      rtPcOnline = !!workerData;
+      rtPcSyncing = workerData?.state === 'syncing';
       
       const phoneData = state['phone-worker']?.[0] as any;
-      const presencePhoneOnline = !!phoneData;
-      const presencePhoneSyncing = phoneData?.state === 'syncing';
+      rtPhoneOnline = !!phoneData;
+      rtPhoneSyncing = phoneData?.state === 'syncing';
       
-      applyState(
-        presencePcOnline || globalPcOnline, 
-        presencePcOnline ? presencePcSyncing : globalPcSyncing,
-        presencePhoneOnline || globalPhoneOnline,
-        presencePhoneOnline ? presencePhoneSyncing : globalPhoneSyncing
-      );
+      evaluateState();
     })
     .subscribe();
 
@@ -65,10 +67,6 @@ function initPresence() {
         
       if (data) {
         const now = Date.now();
-        let newPcOnline = globalPcOnline;
-        let newPcSyncing = globalPcSyncing;
-        let newPhoneOnline = globalPhoneOnline;
-        let newPhoneSyncing = globalPhoneSyncing;
         
         for (const row of data) {
           if (!row.last_seen) continue;
@@ -76,25 +74,15 @@ function initPresence() {
           const isAliveDb = age < DB_ONLINE_MS;
           
           if (row.id === 'worker') {
-            if (isAliveDb) {
-              newPcOnline = true;
-              newPcSyncing = row.state === 'syncing' || globalPcSyncing;
-            } else {
-              // Only DB is dead; presence channel might still be alive
-            }
+            dbPcOnline = isAliveDb && row.state !== 'offline';
+            dbPcSyncing = row.state === 'syncing';
           } else if (row.id === 'phone-worker') {
-            if (isAliveDb) {
-              newPhoneOnline = true;
-              newPhoneSyncing = row.state === 'syncing' || globalPhoneSyncing;
-            }
+            dbPhoneOnline = isAliveDb && row.state !== 'offline';
+            dbPhoneSyncing = row.state === 'syncing';
           }
         }
         
-        // Also if we have NO realtime data, we should allow DB to timeout
-        // But doing it here might conflict with the realtime websocket if it's connected but quiet.
-        // Usually, presence channel removes itself on disconnect. So we just update if DB says ALIVE.
-        
-        applyState(newPcOnline, newPcSyncing, newPhoneOnline, newPhoneSyncing);
+        evaluateState();
       }
     } catch { /* ignore */ }
   };
@@ -103,10 +91,10 @@ function initPresence() {
 }
 
 export function useWorkerPresence() {
-  const [pcOnline, setPcOnline] = useState(globalPcOnline);
-  const [pcSyncing, setPcSyncing] = useState(globalPcSyncing);
-  const [phoneOnline, setPhoneOnline] = useState(globalPhoneOnline);
-  const [phoneSyncing, setPhoneSyncing] = useState(globalPhoneSyncing);
+  const [pcOnline, setPcOnline] = useState(rtPcOnline || dbPcOnline);
+  const [pcSyncing, setPcSyncing] = useState(rtPcOnline ? rtPcSyncing : dbPcSyncing);
+  const [phoneOnline, setPhoneOnline] = useState(rtPhoneOnline || dbPhoneOnline);
+  const [phoneSyncing, setPhoneSyncing] = useState(rtPhoneOnline ? rtPhoneSyncing : dbPhoneSyncing);
 
   useEffect(() => {
     initPresence();
@@ -119,10 +107,10 @@ export function useWorkerPresence() {
     };
 
     listeners.add(listener);
-    setPcOnline(globalPcOnline);
-    setPcSyncing(globalPcSyncing);
-    setPhoneOnline(globalPhoneOnline);
-    setPhoneSyncing(globalPhoneSyncing);
+    setPcOnline(rtPcOnline || dbPcOnline);
+    setPcSyncing(rtPcOnline ? rtPcSyncing : dbPcSyncing);
+    setPhoneOnline(rtPhoneOnline || dbPhoneOnline);
+    setPhoneSyncing(rtPhoneOnline ? rtPhoneSyncing : dbPhoneSyncing);
 
     return () => {
       listeners.delete(listener);
