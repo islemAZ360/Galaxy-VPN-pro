@@ -48,8 +48,8 @@ export function WorkerStatus({ initial }: { initial: Status | null }) {
 
   const r = pcStatus?.last_result;
 
-  // Phone is considered online if last_seen is within the last 4 minutes (polls every 3 min)
-  const phoneOnline = phoneStatus?.last_seen && (Date.now() - new Date(phoneStatus.last_seen).getTime() < 4 * 60 * 1000);
+  // Phone is considered online if last_seen is within the last 25 seconds (polls every 15 sec)
+  const phoneOnline = phoneStatus?.last_seen && (Date.now() - new Date(phoneStatus.last_seen).getTime() < 25 * 1000);
   
   const pcDot = pcSyncingRealtime ? 'bg-amber-400 animate-pulse' : pcOnlineRealtime ? 'bg-emerald-400' : 'bg-red-500';
   const phoneDot = phoneOnline ? 'bg-emerald-400' : 'bg-red-500';

@@ -18,7 +18,7 @@ import { runLteCascade } from './sync.js';
 import { supa, closeSupa } from './supa.js';
 import { log, banner } from './log.js';
 
-const POLL_MS   = (Number(process.env.POLL_INTERVAL_MIN) || 3) * 60_000;
+const POLL_MS   = 15_000; // Poll every 15s for fast UI updates
 const STABLE_MS = (Number(process.env.STABILITY_WAIT_MIN) || 5) * 60_000;
 
 // Track what we've already processed so we don't re-trigger
