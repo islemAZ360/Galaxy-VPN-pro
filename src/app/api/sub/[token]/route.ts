@@ -227,24 +227,61 @@ export async function GET(
   }
 
   // Country-based Round Robin Distribution
-  // Group servers by country to ensure user gets a diverse set of countries
-  const serversByCountry: Record<string, typeof servers> = {};
+  // Separate into rockets and normals, group by country
+  const rocketByCountry: Record<string, typeof servers> = {};
+  const normalByCountry: Record<string, typeof servers> = {};
+  
   for (const s of servers) {
     const c = s.country || 'Unknown';
-    if (!serversByCountry[c]) serversByCountry[c] = [];
-    serversByCountry[c].push(s);
+    if (s.name?.includes('🚀')) {
+      if (!rocketByCountry[c]) rocketByCountry[c] = [];
+      rocketByCountry[c].push(s);
+    } else {
+      if (!normalByCountry[c]) normalByCountry[c] = [];
+      normalByCountry[c].push(s);
+    }
   }
 
   const selectedServers: typeof servers = [];
-  const countryKeys = Object.keys(serversByCountry);
+  // Target 3 to 5 rocket servers (but don't exceed the user's total limit)
+  const targetRockets = Math.min(sub.server_count, Math.floor(Math.random() * 3) + 3); 
+  
+  // 1. Pick Rocket Servers
   let added = true;
+  const rocketCountries = Object.keys(rocketByCountry);
+  while (selectedServers.length < targetRockets && added) {
+    added = false;
+    for (const c of rocketCountries) {
+      if (selectedServers.length >= targetRockets) break;
+      if (rocketByCountry[c].length > 0) {
+        selectedServers.push(rocketByCountry[c].shift()!);
+        added = true;
+      }
+    }
+  }
 
+  // 2. Pick Normal Servers
+  added = true;
+  const normalCountries = Object.keys(normalByCountry);
   while (selectedServers.length < sub.server_count && added) {
     added = false;
-    for (const c of countryKeys) {
+    for (const c of normalCountries) {
       if (selectedServers.length >= sub.server_count) break;
-      if (serversByCountry[c].length > 0) {
-        selectedServers.push(serversByCountry[c].shift()!);
+      if (normalByCountry[c].length > 0) {
+        selectedServers.push(normalByCountry[c].shift()!);
+        added = true;
+      }
+    }
+  }
+
+  // 3. Fill with remaining rockets if we ran out of normal servers
+  added = true;
+  while (selectedServers.length < sub.server_count && added) {
+    added = false;
+    for (const c of rocketCountries) {
+      if (selectedServers.length >= sub.server_count) break;
+      if (rocketByCountry[c].length > 0) {
+        selectedServers.push(rocketByCountry[c].shift()!);
         added = true;
       }
     }
