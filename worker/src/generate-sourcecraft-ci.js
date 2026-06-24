@@ -64,6 +64,7 @@ tasks:
           SUPABASE_SERVICE_ROLE_KEY: \${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENABLE_SPEED_TEST: \${{ secrets.ENABLE_SPEED_TEST }}
           XRAY_KNIFE_CORE: auto
+          TEST_CONCURRENCY: "30"
           SUPA_PAGE_SIZE: "1000"
           SUPA_CONCURRENCY: "10"
           TEST_CHUNKS_TOTAL: "${targetTasks}"
