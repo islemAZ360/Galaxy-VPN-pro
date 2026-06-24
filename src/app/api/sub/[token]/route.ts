@@ -173,23 +173,35 @@ export async function GET(
   }
   // -----------------------------------------
 
-  // White-list servers are LTE-capable + extra-resilient, so they ship to LTE
-  // (and Gemini) subscribers alongside the normal pool.
-  let pools = ['wifi']; // fallback
-  if (sub.network_type === 'wifi') pools = ['wifi'];
-  else if (sub.network_type === 'lte') pools = ['lte', 'whitelist'];
-  else if (sub.network_type === 'gemini') pools = ['gemini_wifi', 'gemini_lte', 'gemini_whitelist'];
+  // Gemini servers are supersets of their non-Gemini counterparts (same VPN
+  // capability, just a better exit IP). Non-Gemini subscribers can still use
+  // them as regular VPN servers, so we always include the Gemini tier in the
+  // fetch and retag the names to hide the Gemini branding.
+  let pools = ['wifi']; // fallback — the logical tier for this subscription
+  let fetchPools: string[];
+  if (sub.network_type === 'wifi') {
+    pools = ['wifi'];
+    fetchPools = ['wifi', 'gemini_wifi'];
+  } else if (sub.network_type === 'lte') {
+    pools = ['lte', 'whitelist'];
+    fetchPools = ['lte', 'gemini_lte', 'whitelist', 'gemini_whitelist'];
+  } else if (sub.network_type === 'gemini') {
+    pools = ['gemini_wifi', 'gemini_lte', 'gemini_whitelist'];
+    fetchPools = [...pools];
+  } else {
+    fetchPools = [...pools];
+  }
 
   const balanceMode = await getBalanceModeStatus();
 
   // If balance mode is on, we need to fetch the parent pools as well to find the pseudo-balanced servers
-  let fetchPools = [...pools];
   if (balanceMode) {
-    if (pools.includes('wifi')) fetchPools.push('gemini_wifi');
-    if (pools.includes('lte')) fetchPools.push('gemini_lte');
-    if (pools.includes('whitelist')) fetchPools.push('gemini_whitelist');
+    if (fetchPools.includes('wifi') || pools.includes('wifi')) fetchPools.push('gemini_wifi');
+    if (fetchPools.includes('lte') || pools.includes('lte')) fetchPools.push('gemini_lte');
+    if (fetchPools.includes('whitelist') || pools.includes('whitelist')) fetchPools.push('gemini_whitelist');
     fetchPools = Array.from(new Set(fetchPools));
   }
+  fetchPools = Array.from(new Set(fetchPools));
 
   // Fetch up to 4000 servers in parallel to bypass Supabase's 1000 row limit
   const fetchPromises = [];
@@ -207,6 +219,25 @@ export async function GET(
   const rawServers = results.flatMap(r => r.data || []);
 
   let servers = rawServers || [];
+
+  // Retag Gemini-tier servers for non-Gemini subscribers so they see the
+  // correct tier label (e.g. "WIFI/LTE" instead of "WIFI/LTE/GEMINI").
+  const GEMINI_DOWNGRADE: Record<string, string> = {
+    gemini_wifi: 'wifi',
+    gemini_lte: 'lte',
+    gemini_whitelist: 'whitelist',
+  };
+  if (sub.network_type !== 'gemini') {
+    for (const s of servers) {
+      const downTo = GEMINI_DOWNGRADE[s.network_type];
+      if (downTo && pools.includes(downTo)) {
+        const newName = retag(s.name || s.country || 'Unknown', downTo);
+        s.config_uri = renameConfig(s.config_uri, newName);
+        s.name = newName;
+        s.network_type = downTo;
+      }
+    }
+  }
 
   // Sort in JS: Prioritize premium network types (whitelist > lte > wifi), then by latency
   const typeWeight: Record<string, number> = {
