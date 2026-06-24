@@ -42,6 +42,54 @@ type Device = {
   last_seen_at: string;
 };
 
+function DeviceCard({ d }: { d: Device }) {
+  const [info, setInfo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchInfo = async () => {
+    if (info || loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`https://ipwho.is/${d.ip_address}`);
+      const data = await res.json();
+      if (data.success) {
+        setInfo(`${data.country} — ${data.connection?.org || data.connection?.isp || 'Unknown ISP'}`);
+      } else {
+        setInfo('Info not found');
+      }
+    } catch (e) {
+      setInfo('Error fetching');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="flex flex-col rounded bg-black/20 px-2 py-1 border border-white/5 min-w-[140px]">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-galaxy-accent font-mono">{d.ip_address}</span>
+        <button 
+          onClick={fetchInfo}
+          disabled={loading}
+          className="text-white/30 hover:text-white transition-colors cursor-pointer"
+          title="Lookup IP Info (Country & ISP)"
+        >
+          {loading ? '...' : '🔍'}
+        </button>
+      </div>
+      <div className="flex items-center gap-1 mt-0.5 text-white/50">
+        <span>{d.device_type}</span>
+        <span>·</span>
+        <span>{new Date(d.last_seen_at).toLocaleDateString()}</span>
+      </div>
+      {info && (
+        <div className="text-emerald-400/90 text-[11px] mt-1 border-t border-white/5 pt-1 break-words max-w-[200px]">
+          {info}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UserRow({
   userId,
   email,
@@ -176,14 +224,7 @@ export function UserRow({
                 <div className="mt-2 mb-3 flex flex-wrap gap-2 text-xs">
                   <span className="text-white/50 w-full mb-1">Devices ({devices.length}):</span>
                   {devices.map((d, i) => (
-                    <div key={i} className="flex flex-col rounded bg-black/20 px-2 py-1 border border-white/5">
-                      <span className="text-galaxy-accent font-mono">{d.ip_address}</span>
-                      <div className="flex items-center gap-1 mt-0.5 text-white/50">
-                        <span>{d.device_type}</span>
-                        <span>·</span>
-                        <span>{new Date(d.last_seen_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
+                    <DeviceCard key={i} d={d} />
                   ))}
                 </div>
               )}

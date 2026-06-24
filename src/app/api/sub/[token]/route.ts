@@ -43,6 +43,12 @@ function noticeConfig(text: string) {
   return `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:1?type=tcp&security=none#${remark}`;
 }
 
+// Same as above, but for non-error informational messages (e.g. ID, instructions)
+function infoConfig(text: string) {
+  const remark = encodeURIComponent(text);
+  return `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:1?type=tcp&security=none#${remark}`;
+}
+
 function toSubscription(lines: string[], expireUnix?: number) {
   const body = Buffer.from(lines.join('\n'), 'utf8').toString('base64');
   const headers: Record<string, string> = {
@@ -167,14 +173,27 @@ export async function GET(
 
   const { data: rawServers } = await supa
     .from('servers')
-    .select('id, name, config_uri, network_type, country')
+    .select('id, name, config_uri, network_type, country, latency_ms')
     .eq('is_working', true)
     .eq('is_deleted', false)
     .in('network_type', fetchPools)
-    .order('latency_ms', { ascending: true, nullsFirst: false })
     .limit(3000); // Fetch a large pool to ensure we can balance by country
 
   let servers = rawServers || [];
+
+  // Sort in JS: Prioritize premium network types (whitelist > lte > wifi), then by latency
+  const typeWeight: Record<string, number> = {
+    whitelist: 3, gemini_whitelist: 3,
+    lte: 2, gemini_lte: 2,
+    wifi: 1, gemini_wifi: 1,
+  };
+
+  servers.sort((a, b) => {
+    const weightA = typeWeight[a.network_type] || 0;
+    const weightB = typeWeight[b.network_type] || 0;
+    if (weightA !== weightB) return weightB - weightA; // Descending weight
+    return (a.latency_ms || 9999) - (b.latency_ms || 9999); // Ascending latency
+  });
 
   if (balanceMode) {
     // Apply deterministic balancing
@@ -219,10 +238,19 @@ export async function GET(
 
   servers = selectedServers;
 
-  const configs = (servers ?? []).map((s) => s.config_uri).filter(Boolean);
+  const configs = (servers ?? []).map((s) => {
+    if (!s.config_uri) return null;
+    const properName = retag(s.name || s.country || 'Unknown', s.network_type);
+    return renameConfig(s.config_uri, properName);
+  }).filter(Boolean) as string[];
   if (configs.length === 0) {
     return toSubscription([noticeConfig('No servers available right now')]);
   }
+
+  // Inject informational headers at the top of the list
+  const shortId = sub.id.split('-')[0].toUpperCase();
+  configs.unshift(infoConfig(`Нажмите кнопку 🔄, если у Вас не работает VPN`));
+  configs.unshift(infoConfig(`ID: usr-${shortId}`));
 
   const expireUnix = Math.floor(new Date(sub.end_at as string).getTime() / 1000);
 
