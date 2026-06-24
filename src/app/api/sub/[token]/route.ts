@@ -70,7 +70,7 @@ function toSubscription(lines: string[], expireUnix?: number, shortId?: string, 
     if (email) announceText += `📧 Email: ${email}\n`;
     if (networkType) {
       announceText += `📶 Network: ${netName}\n`;
-      announceText += `🚀 Servers: ${serverCount || 'Unlimited'}\n`;
+      announceText += `🌍 Servers: ${serverCount || 'Unlimited'}\n`;
     }
     announceText += `━━━━━━━━━━━━━━━━━━━━\n`;
     announceText += `💡 Нажмите кнопку 🔄, если у Вас не работает VPN`;
