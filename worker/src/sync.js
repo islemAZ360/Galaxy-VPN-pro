@@ -379,8 +379,16 @@ async function geminiKeysFor(uris, meta) {
   return geminiKeys;
 }
 
+// AUTO_MODE: skip VPN prompts for unattended runs (e.g. Termux on phone).
+// The phone is already on its real LTE connection — no VPN to toggle.
+const AUTO_MODE = process.env.AUTO_MODE === 'true' || process.env.AUTO_MODE === '1';
+
 // VPN choreography: OFF for the real test, ON for the DB.
 async function vpnOffGate(connectionMsg) {
+  if (AUTO_MODE) {
+    log.ok('AUTO_MODE: skipping VPN-off gate (phone is on raw LTE).');
+    return;
+  }
   log.panel('🛑  ACTION REQUIRED: TURN OFF VPN', [
     connectionMsg,
     'The DPI test must run on your REAL local connection.',
@@ -390,6 +398,10 @@ async function vpnOffGate(connectionMsg) {
   log.ok('Testing now!');
 }
 function vpnOnPrompt() {
+  if (AUTO_MODE) {
+    log.ok('AUTO_MODE: skipping VPN-on prompt.');
+    return;
+  }
   log.panel('✅  TESTING FINISHED', [
     'TURN YOUR VPN BACK ON NOW.',
     'We need a secure connection to upload results to Supabase.'
@@ -971,18 +983,22 @@ export async function runLteRecheck() {
     }
 
     // Phase 2: Wait for user to turn off VPN
-    log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
-    log.bell(`║  🛑 STOP! TURN OFF YOUR VPN NOW!                        ║`);
-    log.bell(`║  We need to test the servers on your REAL connection.   ║`);
-    log.bell(`║  Testing will begin automatically in 15 seconds...      ║`);
-    log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
+    if (AUTO_MODE) {
+      log.ok('AUTO_MODE: skipping VPN-off countdown (phone is on raw connection).');
+    } else {
+      log.bell(`\n╔══════════════════════════════════════════════════════════╗`);
+      log.bell(`║  🛑 STOP! TURN OFF YOUR VPN NOW!                        ║`);
+      log.bell(`║  We need to test the servers on your REAL connection.   ║`);
+      log.bell(`║  Testing will begin automatically in 15 seconds...      ║`);
+      log.bell(`╚══════════════════════════════════════════════════════════╝\n`);
 
-    // Countdown
-    for (let i = 15; i > 0; i--) {
-      process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
-      await sleep(1000);
+      // Countdown
+      for (let i = 15; i > 0; i--) {
+        process.stdout.write(`\r⏳ Starting test in ${i} seconds... `);
+        await sleep(1000);
+      }
+      process.stdout.write('\r\x1b[K'); // clear line
     }
-    process.stdout.write('\r\x1b[K'); // clear line
     log.ok('Starting testing now!');
 
     // Force concurrency to 20 for raw network tests. Do not use TEST_CONCURRENCY from .env
