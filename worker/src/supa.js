@@ -59,12 +59,9 @@ const dispatcher = new Agent({
 
 // Short: on a flaky Russian LTE+VPN link the DPI stalls requests inconsistently
 // (even small ones), so we want a hung request detected FAST and retried rather
-// than waiting 30s per hang. A healthy request is <1s, so 12s never trips a
-// working call — but a stalled one is caught at 12s instead of 30s, letting
-// withRetry absorb transient DPI stalls silently (4 attempts × 12s = 48s budget
-// before the outer withVpnRetry shows its "VPN down" panel). Body is buffered
-// (no streaming), so body transfer is near-instant once headers arrive.
-const CALL_TIMEOUT = num(process.env.SUPA_CALL_TIMEOUT_MS, 12000); // last-resort per-call ceiling
+// than waiting 30s per hang. But for phones, 12s is too short for large payloads.
+// We bump it to 30s as a safer ceiling.
+const CALL_TIMEOUT = num(process.env.SUPA_CALL_TIMEOUT_MS, 30000); // last-resort per-call ceiling
 
 const customFetch = async (input, init = {}) => {
   const ctrl = new AbortController();
