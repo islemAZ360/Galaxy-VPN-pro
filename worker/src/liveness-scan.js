@@ -179,21 +179,12 @@ async function loadKnownHostGeo() {
   const chunkTotal = Number(process.env.TEST_CHUNKS_TOTAL || 1);
   const chunkIndex = Number(process.env.TEST_CHUNK_INDEX || 0);
   if (chunkTotal > 1) {
-    if (configs.size > 20000) {
-      const entries = [...configs.entries()];
-      const chunkSize = Math.ceil(entries.length / chunkTotal);
-      const start = chunkIndex * chunkSize;
-      configs.clear();
-      for (const [k, v] of entries.slice(start, start + chunkSize)) configs.set(k, v);
-      log.info(`Chunk limit applied: testing chunk ${chunkIndex + 1}/${chunkTotal} (${configs.size} configs)`);
-    } else {
-      if (chunkIndex === 0) {
-        log.info(`Pool is small (${configs.size} <= 20000) — bypassing division, testing everything in Chunk 1.`);
-      } else {
-        configs.clear();
-        log.info(`Pool is small — skipping this chunk (all servers handled by Chunk 1).`);
-      }
-    }
+    const entries = [...configs.entries()];
+    const chunkSize = Math.ceil(entries.length / chunkTotal);
+    const start = chunkIndex * chunkSize;
+    configs.clear();
+    for (const [k, v] of entries.slice(start, start + chunkSize)) configs.set(k, v);
+    log.info(`Adaptive limit applied: testing chunk ${chunkIndex + 1}/${chunkTotal} (${configs.size} configs)`);
   }
 
   // 2. batched liveness + egress country

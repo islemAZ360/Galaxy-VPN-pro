@@ -24,10 +24,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      total: ${{ steps.set-matrix.outputs.total }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install worker deps
+        working-directory: worker
+        run: npm ci || npm install
+      - name: Calculate Dynamic Matrix
+        id: set-matrix
+        working-directory: worker
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node src/calculate-matrix.js
+
   scan:
+    needs: setup
     strategy:
+      fail-fast: false
       matrix:
-        chunk: [0, 1, 2, 3]
+        chunk: ${{ fromJSON(needs.setup.outputs.matrix) }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -62,9 +85,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           XRAY_KNIFE_CORE: auto
-          LIVENESS_THREADS: '100'
+          LIVENESS_THREADS: '50'
           LIVENESS_PERCENTAGE: ${{ github.event.inputs.percentage || '100' }}
-          TEST_CHUNKS_TOTAL: '4'
+          TEST_CHUNKS_TOTAL: ${{ needs.setup.outputs.total }}
           TEST_CHUNK_INDEX: ${{ matrix.chunk }}
         run: node src/liveness-scan.js
 
