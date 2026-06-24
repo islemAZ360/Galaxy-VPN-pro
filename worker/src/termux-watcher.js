@@ -126,16 +126,16 @@ let firstDetectionFinishedAt = null;
 
         if (allChunksDone) {
           log.step('🚀 All chunks confirmed! Starting LTE cascade...');
-          
-          // Mark as triggered BEFORE running (so a crash doesn't re-trigger)
-          lastTriggeredAt = wifiFinishedAt;
-          await recordLteTrigger(wifiFinishedAt);
 
           // Run the LTE cascade
           try {
             const result = await runLteCascade({ basePercentage: 100, detailsPercentage: 100 });
             log.done(`✅ LTE cascade completed! Result: ${JSON.stringify(result)}`);
             
+            // Mark as triggered AFTER running successfully so if it crashes or is killed, it will retry
+            lastTriggeredAt = wifiFinishedAt;
+            await recordLteTrigger(wifiFinishedAt);
+
             // Record final status
             try {
               const { data } = await supa
