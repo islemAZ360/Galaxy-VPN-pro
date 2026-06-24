@@ -99,56 +99,61 @@ let firstDetectionFinishedAt = null;
 
       if (wifiDone && !alreadyTriggered && !alreadyProcessed && counts.wifi > 0) {
         // WiFi scan finished and LTE not yet triggered for this run
-        const ageMs = now - new Date(wifiFinishedAt);
-        const ageMin = Math.round(ageMs / 60_000);
+        const expectedChunks = lr?.chunkTotal || 1;
+        let allChunksDone = false;
 
-        if (!firstDetectionAt || firstDetectionFinishedAt !== wifiFinishedAt) {
-          // First time we see this particular WiFi completion
-          firstDetectionAt = now;
-          firstDetectionFinishedAt = wifiFinishedAt;
-          log.step(`🔔 WiFi cascade detected! Finished ${ageMin} min ago.`);
-          log.info(`Waiting ${STABLE_MS / 60_000} min for all SourceCraft chunks to settle...`);
+        if (expectedChunks <= 1) {
+          // No chunks (e.g. manual run), just wait a little bit
+          const ageMs = now - new Date(wifiFinishedAt);
+          if (ageMs >= STABLE_MS) allChunksDone = true;
+          else log.info(`⏳ Single chunk: Waiting ${Math.round((STABLE_MS - ageMs) / 1000)}s more...`);
         } else {
-          // We've been waiting — check if stability period passed
-          const waitedMs = now - firstDetectionAt;
-          if (waitedMs >= STABLE_MS) {
-            log.step('🚀 Stability confirmed! Starting LTE cascade...');
-            
-            // Mark as triggered BEFORE running (so a crash doesn't re-trigger)
-            lastTriggeredAt = wifiFinishedAt;
-            await recordLteTrigger(wifiFinishedAt);
-
-            // Run the LTE cascade
-            try {
-              const result = await runLteCascade({ basePercentage: 100, detailsPercentage: 100 });
-              log.done(`✅ LTE cascade completed! Result: ${JSON.stringify(result)}`);
-              
-              // Record final status
-              try {
-                const { data } = await supa
-                  .from('worker_status')
-                  .select('last_result')
-                  .eq('id', 'worker')
-                  .maybeSingle();
-                const prev = data?.last_result || {};
-                await supa.from('worker_status').upsert({
-                  id: 'worker',
-                  state: 'idle',
-                  updated_at: new Date().toISOString(),
-                  last_sync_at: new Date().toISOString(),
-                  last_result: { ...prev, reason: 'termux-auto-lte', ...result },
-                }, { onConflict: 'id' });
-              } catch { /* best effort */ }
-            } catch (e) {
-              log.err(`LTE cascade failed: ${e.message}`);
-            }
-
-            // Reset detection
-            firstDetectionAt = null;
-            firstDetectionFinishedAt = null;
+          // CI chunks: Check if we have expected number of recent chunk completions
+          const twoHoursAgo = new Date(now.getTime() - 2 * 3600 * 1000).toISOString();
+          const { data: chunkRows } = await supa
+            .from('worker_status')
+            .select('id, updated_at, last_result')
+            .like('id', 'worker-chunk-%')
+            .gte('updated_at', twoHoursAgo);
+          
+          if (chunkRows && chunkRows.length >= expectedChunks) {
+            allChunksDone = true;
           } else {
-            const remainSec = Math.round((STABLE_MS - waitedMs) / 1000);
-            log.info(`⏳ Waiting ${remainSec}s more for stability...`);
+            const doneCount = chunkRows ? chunkRows.length : 0;
+            log.info(`⏳ Waiting for all SourceCraft tasks... (${doneCount}/${expectedChunks} chunks finished)`);
+          }
+        }
+
+        if (allChunksDone) {
+          log.step('🚀 All chunks confirmed! Starting LTE cascade...');
+          
+          // Mark as triggered BEFORE running (so a crash doesn't re-trigger)
+          lastTriggeredAt = wifiFinishedAt;
+          await recordLteTrigger(wifiFinishedAt);
+
+          // Run the LTE cascade
+          try {
+            const result = await runLteCascade({ basePercentage: 100, detailsPercentage: 100 });
+            log.done(`✅ LTE cascade completed! Result: ${JSON.stringify(result)}`);
+            
+            // Record final status
+            try {
+              const { data } = await supa
+                .from('worker_status')
+                .select('last_result')
+                .eq('id', 'worker')
+                .maybeSingle();
+              const prev = data?.last_result || {};
+              await supa.from('worker_status').upsert({
+                id: 'worker',
+                state: 'idle',
+                updated_at: new Date().toISOString(),
+                last_sync_at: new Date().toISOString(),
+                last_result: { ...prev, reason: 'termux-auto-lte', ...result },
+              }, { onConflict: 'id' });
+            } catch { /* best effort */ }
+          } catch (e) {
+            log.err(`LTE cascade failed: ${e.message}`);
           }
         }
       } else if (alreadyTriggered || alreadyProcessed) {

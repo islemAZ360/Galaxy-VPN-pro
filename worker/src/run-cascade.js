@@ -41,18 +41,32 @@ log.step(`One-shot ${mode.toUpperCase()} re-check (phone mode)`);
 // Persist the result so the admin dashboard reflects phone-triggered scans.
 async function recordStatus(result) {
   try {
+    const now = new Date().toISOString();
+    const chunkIndex = Number(process.env.TEST_CHUNK_INDEX) || 0;
+    const chunkTotal = Number(process.env.TEST_CHUNKS_TOTAL) || 1;
+
+    // Update main worker row (dashboard uses this)
     const { data } = await supa
       .from('worker_status').select('last_result').eq('id', 'worker').maybeSingle();
     const prev = data?.last_result || {};
-    const now = new Date().toISOString();
     await supa.from('worker_status').upsert({
       id: 'worker',
       state: 'idle',
       updated_at: now,
       last_sync_at: now,
       last_seen: now,
-      last_result: { ...prev, reason: chosen.reason, ...result },
+      last_result: { ...prev, reason: chosen.reason, chunkTotal, ...result },
     }, { onConflict: 'id' });
+
+    // Update chunk-specific row so the termux watcher knows when ALL chunks are done
+    if (chunkTotal > 1) {
+      await supa.from('worker_status').upsert({
+        id: `worker-chunk-${chunkIndex}`,
+        state: 'idle',
+        updated_at: now,
+        last_result: { chunkIndex, chunkTotal, ...result }
+      }, { onConflict: 'id' });
+    }
   } catch {
     // best-effort: a phone link can drop right after the test finishes.
   }
