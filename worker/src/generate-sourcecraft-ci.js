@@ -62,6 +62,7 @@ tasks:
         env:
           SUPABASE_URL: \${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: \${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ENABLE_SPEED_TEST: \${{ secrets.ENABLE_SPEED_TEST }}
           XRAY_KNIFE_CORE: auto
           SUPA_PAGE_SIZE: "1000"
           SUPA_CONCURRENCY: "10"
