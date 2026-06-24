@@ -26,7 +26,7 @@ import { log } from './log.js';
   const CHUNKS_PER_TASK = 1500;
   let targetTasks = Math.ceil(aliveCount / CHUNKS_PER_TASK);
   if (targetTasks < 1) targetTasks = 1;
-  if (targetTasks > 20) targetTasks = 20;
+  if (targetTasks > 10) targetTasks = 10;
 
   log.ok(`Calculated ${targetTasks} concurrent tasks for SourceCraft.`);
 
