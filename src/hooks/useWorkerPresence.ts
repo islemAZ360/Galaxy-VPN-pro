@@ -3,24 +3,22 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-let globalOnline = false;
-let globalSyncing = false;
-let listeners = new Set<(online: boolean, syncing: boolean) => void>();
+let globalPcOnline = false;
+let globalPcSyncing = false;
+let globalPhoneOnline = false;
+let globalPhoneSyncing = false;
+let listeners = new Set<(pcOnline: boolean, pcSyncing: boolean, phoneOnline: boolean, phoneSyncing: boolean) => void>();
 let isSubscribed = false;
 
-// The realtime presence channel is the primary online signal, but on a flaky
-// VPN (LTE in Russia) the websocket drops every ~20-45s and presence clears,
-// making the dashboard flicker to "Offline" even though the worker is fine.
-// The worker writes a DB heartbeat (worker_status.last_seen) every 15s via the
-// resilient REST path, so we poll it as a fallback: if last_seen is fresher
-// than 40s we treat the worker as online regardless of the presence channel.
-const DB_ONLINE_MS = 40_000;
-const DB_POLL_MS = 10_000;
+const DB_ONLINE_MS = 25_000;
+const DB_POLL_MS = 5_000;
 
-function applyState(online: boolean, syncing: boolean) {
-  globalOnline = online;
-  globalSyncing = syncing;
-  listeners.forEach((l) => l(online, syncing));
+function applyState(pcO: boolean, pcS: boolean, phoneO: boolean, phoneS: boolean) {
+  globalPcOnline = pcO;
+  globalPcSyncing = pcS;
+  globalPhoneOnline = phoneO;
+  globalPhoneSyncing = phoneS;
+  listeners.forEach((l) => l(pcO, pcS, phoneO, phoneS));
 }
 
 function initPresence() {
@@ -29,8 +27,6 @@ function initPresence() {
 
   const supabase = createClient();
   
-  // Clean up any existing channel with this name to avoid "already subscribed" errors
-  // which happen when Next.js re-evaluates this module but the Supabase client is cached.
   const existing = supabase.getChannels().find(c => c.topic === 'realtime:worker_presence');
   if (existing) {
     supabase.removeChannel(existing);
@@ -41,60 +37,97 @@ function initPresence() {
   channel
     .on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
-      const workerData = state['worker']?.[0] as any;
       
-      const presenceOnline = !!workerData;
-      const presenceSyncing = workerData?.state === 'syncing';
-      // Merge: presence wins for the syncing flag (fresher than DB); DB fallback
-      // for online. Keep current DB-derived syncing if presence is empty.
-      applyState(presenceOnline || globalOnline, presenceOnline ? presenceSyncing : globalSyncing);
+      const workerData = state['worker']?.[0] as any;
+      const presencePcOnline = !!workerData;
+      const presencePcSyncing = workerData?.state === 'syncing';
+      
+      const phoneData = state['phone-worker']?.[0] as any;
+      const presencePhoneOnline = !!phoneData;
+      const presencePhoneSyncing = phoneData?.state === 'syncing';
+      
+      applyState(
+        presencePcOnline || globalPcOnline, 
+        presencePcOnline ? presencePcSyncing : globalPcSyncing,
+        presencePhoneOnline || globalPhoneOnline,
+        presencePhoneOnline ? presencePhoneSyncing : globalPhoneSyncing
+      );
     })
     .subscribe();
 
-  // DB heartbeat fallback: poll worker_status.last_seen. If the realtime
-  // websocket is flaky, this keeps the dot green as long as the worker is
-  // actually heart-beating the DB (which it does every 15s via REST).
+  // DB heartbeat fallback
   const pollDb = async () => {
     try {
       const { data } = await supabase
         .from('worker_status')
-        .select('state, last_seen')
-        .eq('id', 'worker')
-        .maybeSingle();
-      if (data?.last_seen) {
-        const age = Date.now() - new Date(data.last_seen).getTime();
-        if (age < DB_ONLINE_MS) {
-          applyState(true, data.state === 'syncing' || globalSyncing);
-          return;
+        .select('id, state, last_seen')
+        .in('id', ['worker', 'phone-worker']);
+        
+      if (data) {
+        const now = Date.now();
+        let newPcOnline = globalPcOnline;
+        let newPcSyncing = globalPcSyncing;
+        let newPhoneOnline = globalPhoneOnline;
+        let newPhoneSyncing = globalPhoneSyncing;
+        
+        for (const row of data) {
+          if (!row.last_seen) continue;
+          const age = now - new Date(row.last_seen).getTime();
+          const isAliveDb = age < DB_ONLINE_MS;
+          
+          if (row.id === 'worker') {
+            if (isAliveDb) {
+              newPcOnline = true;
+              newPcSyncing = row.state === 'syncing' || globalPcSyncing;
+            } else {
+              // Only DB is dead; presence channel might still be alive
+            }
+          } else if (row.id === 'phone-worker') {
+            if (isAliveDb) {
+              newPhoneOnline = true;
+              newPhoneSyncing = row.state === 'syncing' || globalPhoneSyncing;
+            }
+          }
         }
+        
+        // Also if we have NO realtime data, we should allow DB to timeout
+        // But doing it here might conflict with the realtime websocket if it's connected but quiet.
+        // Usually, presence channel removes itself on disconnect. So we just update if DB says ALIVE.
+        
+        applyState(newPcOnline, newPcSyncing, newPhoneOnline, newPhoneSyncing);
       }
-      // Stale or missing — don't force offline here; presence may still be live.
-    } catch { /* ignore — presence channel is the other source */ }
+    } catch { /* ignore */ }
   };
   pollDb();
   setInterval(pollDb, DB_POLL_MS);
 }
 
 export function useWorkerPresence() {
-  const [online, setOnline] = useState(globalOnline);
-  const [syncing, setSyncing] = useState(globalSyncing);
+  const [pcOnline, setPcOnline] = useState(globalPcOnline);
+  const [pcSyncing, setPcSyncing] = useState(globalPcSyncing);
+  const [phoneOnline, setPhoneOnline] = useState(globalPhoneOnline);
+  const [phoneSyncing, setPhoneSyncing] = useState(globalPhoneSyncing);
 
   useEffect(() => {
     initPresence();
 
-    const listener = (o: boolean, s: boolean) => {
-      setOnline(o);
-      setSyncing(s);
+    const listener = (pcO: boolean, pcS: boolean, phoneO: boolean, phoneS: boolean) => {
+      setPcOnline(pcO);
+      setPcSyncing(pcS);
+      setPhoneOnline(phoneO);
+      setPhoneSyncing(phoneS);
     };
 
     listeners.add(listener);
-    setOnline(globalOnline);
-    setSyncing(globalSyncing);
+    setPcOnline(globalPcOnline);
+    setPcSyncing(globalPcSyncing);
+    setPhoneOnline(globalPhoneOnline);
+    setPhoneSyncing(globalPhoneSyncing);
 
     return () => {
       listeners.delete(listener);
     };
   }, []);
 
-  return { online, syncing };
+  return { pcOnline, pcSyncing, phoneOnline, phoneSyncing };
 }

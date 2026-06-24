@@ -80,6 +80,28 @@ if (process.env.AUTO_MODE !== 'true' && process.env.AUTO_MODE !== '1') {
 let firstDetectionAt = null;
 let firstDetectionFinishedAt = null;
 
+let currentState = 'idle';
+const presenceChannel = supa.channel('worker_presence', {
+  config: { presence: { key: 'phone-worker' } }
+});
+presenceChannel.subscribe(async (status) => {
+  if (status === 'SUBSCRIBED') {
+    log.ok('Presence connected — phone worker is online in realtime!');
+    try {
+      await presenceChannel.track({ state: currentState, online_at: new Date().toISOString() });
+    } catch { /* best-effort */ }
+  }
+});
+
+async function trackPresence(state) {
+  currentState = state;
+  if (presenceChannel?.state === 'joined') {
+    try {
+      await presenceChannel.track({ state, online_at: new Date().toISOString() });
+    } catch { /* best-effort */ }
+  }
+}
+
 (async () => {
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -112,7 +134,9 @@ let firstDetectionFinishedAt = null;
         try {
           const bp = manualReqs[0]?.percentage ?? 100;
           const dp = manualReqs[0]?.details_percentage ?? 100;
+          await trackPresence('syncing');
           const result = await runLteCascade({ basePercentage: bp, detailsPercentage: dp });
+          await trackPresence('idle');
           log.done(`✅ Manual LTE cascade completed! Result: ${JSON.stringify(result)}`);
           
           await supa.from('sync_requests').update({ result }).in('id', reqIds);
@@ -178,8 +202,10 @@ let firstDetectionFinishedAt = null;
 
           // Run the LTE cascade
           try {
+            await trackPresence('syncing');
             const result = await runLteCascade({ basePercentage: 100, detailsPercentage: 100 });
-            log.done(`✅ LTE cascade completed! Result: ${JSON.stringify(result)}`);
+            await trackPresence('idle');
+            log.done(`✅ Auto LTE cascade completed! Result: ${JSON.stringify(result)}`);
             
             // Mark as triggered AFTER running successfully so if it crashes or is killed, it will retry
             lastTriggeredAt = wifiFinishedAt;

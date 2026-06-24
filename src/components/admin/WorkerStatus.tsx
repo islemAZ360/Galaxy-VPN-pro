@@ -16,18 +16,16 @@ type Status = {
 export function WorkerStatus({ initial }: { initial: Status | null }) {
   const t = useTranslations('admin.worker');
   const [pcStatus, setPcStatus] = useState<Status | null>(initial?.id === 'worker' ? initial : null);
-  const [phoneStatus, setPhoneStatus] = useState<Status | null>(null);
   
-  const { online: pcOnlineRealtime, syncing: pcSyncingRealtime } = useWorkerPresence();
+  const { pcOnline, pcSyncing, phoneOnline, phoneSyncing } = useWorkerPresence();
   
   useEffect(() => {
     const supabase = createClient();
     let active = true;
     (async () => {
-      const { data } = await supabase.from('worker_status').select('*').in('id', ['worker', 'phone-worker']);
+      const { data } = await supabase.from('worker_status').select('*').eq('id', 'worker').maybeSingle();
       if (active && data) {
-        setPcStatus(data.find(d => d.id === 'worker') as Status || null);
-        setPhoneStatus(data.find(d => d.id === 'phone-worker') as Status || null);
+        setPcStatus(data as Status || null);
       }
     })();
     
@@ -36,7 +34,6 @@ export function WorkerStatus({ initial }: { initial: Status | null }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'worker_status' }, (p) => {
         const newRecord = p.new as Status;
         if (newRecord.id === 'worker') setPcStatus(newRecord);
-        if (newRecord.id === 'phone-worker') setPhoneStatus(newRecord);
       })
       .subscribe();
       
@@ -46,23 +43,13 @@ export function WorkerStatus({ initial }: { initial: Status | null }) {
     };
   }, []);
 
-  // Force re-render every 5 seconds to accurately reflect timeouts
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 5000);
-    return () => clearInterval(timer);
-  }, []);
-
   const r = pcStatus?.last_result;
 
-  // Phone is considered online if last_seen is within the last 25 seconds (polls every 15 sec)
-  const phoneOnline = phoneStatus?.last_seen && (now - new Date(phoneStatus.last_seen).getTime() < 25 * 1000);
-  
-  const pcDot = pcSyncingRealtime ? 'bg-amber-400 animate-pulse' : pcOnlineRealtime ? 'bg-emerald-400' : 'bg-red-500';
-  const phoneDot = phoneOnline ? 'bg-emerald-400' : 'bg-red-500';
+  const pcDot = pcSyncing ? 'bg-amber-400 animate-pulse' : pcOnline ? 'bg-emerald-400' : 'bg-red-500';
+  const phoneDot = phoneSyncing ? 'bg-amber-400 animate-pulse' : phoneOnline ? 'bg-emerald-400' : 'bg-red-500';
 
-  const pcLabel = pcSyncingRealtime ? t('syncing') : pcOnlineRealtime ? t('online') : t('offline');
-  const phoneLabel = phoneOnline ? t('online') : t('offline');
+  const pcLabel = pcSyncing ? t('syncing') : pcOnline ? t('online') : t('offline');
+  const phoneLabel = phoneSyncing ? t('syncing') : phoneOnline ? t('online') : t('offline');
 
   return (
     <div className="glass flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm">
@@ -77,7 +64,7 @@ export function WorkerStatus({ initial }: { initial: Status | null }) {
         </span>
       </div>
       
-      {!pcOnlineRealtime && (
+      {!pcOnline && (
         <span className="text-white/50 text-xs max-w-xs">
           {t('startHint')}
         </span>

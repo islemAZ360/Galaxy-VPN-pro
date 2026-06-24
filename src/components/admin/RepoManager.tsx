@@ -52,7 +52,7 @@ export function RepoManager({
   const [showInstructions, setShowInstructions] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const { online: isLive, syncing: isBusy } = useWorkerPresence();
+  const { pcOnline: isLive, pcSyncing: isBusy } = useWorkerPresence();
 
   // GitHub Action Status
   const [ghRunning, setGhRunning] = useState(false);
