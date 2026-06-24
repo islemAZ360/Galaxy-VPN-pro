@@ -51,15 +51,21 @@ function infoConfig(text: string) {
 
 function toSubscription(lines: string[], expireUnix?: number, shortId?: string) {
   const body = Buffer.from(lines.join('\n'), 'utf8').toString('base64');
-  const profileTitle = shortId ? `GalaxyVPN | ${shortId}` : 'GalaxyVPN';
+  
   const headers: Record<string, string> = {
     'Content-Type': 'text/plain; charset=utf-8',
     'Cache-Control': 'no-store',
-    'Profile-Title': profileTitle,
-    // Auto-update: Happ/v2ray clients re-fetch the sub every N hours, so a server
-    // we remove (dead, too slow, Russia-hosted) leaves the user's app on its own.
+    // profile-title as base64 prevents encoding issues
+    'Profile-Title': `base64:${Buffer.from('GalaxyVPN', 'utf8').toString('base64')}`,
     'Profile-Update-Interval': String(UPDATE_INTERVAL_HOURS),
   };
+  
+  if (shortId) {
+    const announceText = `ID: ${shortId}\nНажмите кнопку 🔄, если у Вас не работает VPN`;
+    headers['announce'] = `base64:${Buffer.from(announceText, 'utf8').toString('base64')}`;
+    headers['Content-Disposition'] = `attachment; filename="${shortId}"`;
+  }
+
   if (expireUnix) {
     // standard header read by Hiddify / v2ray clients to show expiry
     headers['Subscription-Userinfo'] = `upload=0; download=0; total=0; expire=${expireUnix}`;
