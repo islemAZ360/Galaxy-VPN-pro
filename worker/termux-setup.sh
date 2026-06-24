@@ -44,12 +44,12 @@ if [ -f "$XRAY_DIR/xray-knife" ]; then
   echo "  ✅ xray-knife already exists"
 else
   # Download latest xray-knife ARM64 release
-  XRAY_URL="https://github.com/lilknighthood/xray-knife/releases/latest/download/xray-knife-linux-arm64.zip"
+  XRAY_URL="https://github.com/lilendian0x00/xray-knife/releases/download/v10.0.0/Xray-knife-linux-arm64-v8a.zip"
   echo "  Downloading from: $XRAY_URL"
   curl -L -o /tmp/xray-knife.zip "$XRAY_URL" 2>/dev/null || {
     echo "  ⚠️  Could not download xray-knife automatically."
     echo "  Please download the ARM64 version manually and place it at: $XRAY_DIR/xray-knife"
-    echo "  Download from: https://github.com/lilknighthood/xray-knife/releases"
+    echo "  Download from: https://github.com/lilendian0x00/xray-knife/releases"
   }
   if [ -f /tmp/xray-knife.zip ]; then
     unzip -o /tmp/xray-knife.zip -d "$XRAY_DIR"
