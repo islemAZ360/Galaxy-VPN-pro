@@ -49,12 +49,13 @@ function infoConfig(text: string) {
   return `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:1?type=tcp&security=none#${remark}`;
 }
 
-function toSubscription(lines: string[], expireUnix?: number) {
+function toSubscription(lines: string[], expireUnix?: number, shortId?: string) {
   const body = Buffer.from(lines.join('\n'), 'utf8').toString('base64');
+  const profileTitle = shortId ? `GalaxyVPN | ${shortId}` : 'GalaxyVPN';
   const headers: Record<string, string> = {
     'Content-Type': 'text/plain; charset=utf-8',
     'Cache-Control': 'no-store',
-    'Profile-Title': 'GalaxyVPN',
+    'Profile-Title': profileTitle,
     // Auto-update: Happ/v2ray clients re-fetch the sub every N hours, so a server
     // we remove (dead, too slow, Russia-hosted) leaves the user's app on its own.
     'Profile-Update-Interval': String(UPDATE_INTERVAL_HOURS),
@@ -171,13 +172,20 @@ export async function GET(
     fetchPools = Array.from(new Set(fetchPools));
   }
 
-  const { data: rawServers } = await supa
-    .from('servers')
-    .select('id, name, config_uri, network_type, country, latency_ms')
-    .eq('is_working', true)
-    .eq('is_deleted', false)
-    .in('network_type', fetchPools)
-    .limit(3000); // Fetch a large pool to ensure we can balance by country
+  // Fetch up to 4000 servers in parallel to bypass Supabase's 1000 row limit
+  const fetchPromises = [];
+  for (let i = 0; i < 4; i++) {
+    fetchPromises.push(
+      supa.from('servers')
+        .select('id, name, config_uri, network_type, country, latency_ms')
+        .eq('is_working', true)
+        .eq('is_deleted', false)
+        .in('network_type', fetchPools)
+        .range(i * 1000, i * 1000 + 999)
+    );
+  }
+  const results = await Promise.all(fetchPromises);
+  const rawServers = results.flatMap(r => r.data || []);
 
   let servers = rawServers || [];
 
@@ -247,12 +255,9 @@ export async function GET(
     return toSubscription([noticeConfig('No servers available right now')]);
   }
 
-  // Inject informational headers at the top of the list
-  const shortId = sub.id.split('-')[0].toUpperCase();
-  configs.unshift(infoConfig(`Нажмите кнопку 🔄, если у Вас не работает VPN`));
-  configs.unshift(infoConfig(`ID: usr-${shortId}`));
+  const shortId = `usr-${sub.id.split('-')[0].toUpperCase()}`;
 
   const expireUnix = Math.floor(new Date(sub.end_at as string).getTime() / 1000);
 
-  return toSubscription(configs, expireUnix);
+  return toSubscription(configs, expireUnix, shortId);
 }
