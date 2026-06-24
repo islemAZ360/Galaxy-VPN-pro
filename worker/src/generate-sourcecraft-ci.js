@@ -22,7 +22,8 @@ import { log } from './log.js';
   log.info(`Total alive servers ready for Russia DPI scan: ${aliveCount}`);
 
   // 2. Calculate dynamic chunks for SourceCraft
-  const CHUNKS_PER_TASK = 1000;
+  // Using 1500 per task as a safe default for DPI testing
+  const CHUNKS_PER_TASK = 1500;
   let targetTasks = Math.ceil(aliveCount / CHUNKS_PER_TASK);
   if (targetTasks < 1) targetTasks = 1;
   if (targetTasks > 20) targetTasks = 20;
@@ -61,7 +62,6 @@ tasks:
         env:
           SUPABASE_URL: \${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: \${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          ENABLE_SPEED_TEST: \${{ secrets.ENABLE_SPEED_TEST }}
           XRAY_KNIFE_CORE: auto
           SUPA_PAGE_SIZE: "1000"
           SUPA_CONCURRENCY: "10"
@@ -97,7 +97,6 @@ tasks:
     log.ok(`Successfully wrote dynamic ci.yaml with ${targetTasks} tasks to ${ciYamlPath}`);
   } catch (writeErr) {
     log.err(`Failed to write ci.yaml: ${writeErr.message}`);
-    // Fallback logic inside GitHub actions (don't fail completely if directory doesn't exist locally during test)
     log.warn('If running locally, this is expected since ../sc might not exist.');
   }
 
