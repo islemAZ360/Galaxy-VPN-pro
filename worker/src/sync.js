@@ -558,7 +558,7 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
         const cc = g.country_code ?? null;
         counters[country] = (counters[country] || 0) + 1;
         const rocket = fastKeys.has(k) ? '🚀' : '';
-        const base = `${flagEmoji(cc)} ${country} ${rocket} #${counters[country]}`.replace('  ', ' ');
+        const base = `${country} ${rocket} #${counters[country]}`.replace('  ', ' ');
         // dimensional tier: keep LTE dimension from before
         const prev = existingTiers.get(hash);
         const lteDim = prev === 'lte' || prev === 'gemini_lte';
@@ -860,7 +860,7 @@ export async function runWhitelistCascade({ basePercentage = 100, detailsPercent
         const country = g.country || 'Server';
         const cc = g.country_code ?? null;
         counters[country] = (counters[country] || 0) + 1;
-        const base = `${flagEmoji(cc)} ${country} #${counters[country]}`;
+        const base = `${country} #${counters[country]}`;
 
         let gem;
         const k = keyOf(w.uri);
