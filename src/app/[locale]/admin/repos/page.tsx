@@ -25,7 +25,7 @@ export default async function AdminReposPage({
 
   const { data: status } = await admin
     .from('worker_status')
-    .select('state, last_seen, last_sync_at, last_result')
+    .select('id, state, last_seen, last_sync_at, last_result')
     .eq('id', 'worker')
     .maybeSingle();
 
