@@ -49,19 +49,23 @@ function infoConfig(text: string) {
   return `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:1?type=tcp&security=none#${remark}`;
 }
 
-function toSubscription(lines: string[], expireUnix?: number, shortId?: string) {
+function toSubscription(lines: string[], expireUnix?: number, shortId?: string, email?: string) {
   const body = Buffer.from(lines.join('\n'), 'utf8').toString('base64');
   
   const headers: Record<string, string> = {
     'Content-Type': 'text/plain; charset=utf-8',
     'Cache-Control': 'no-store',
     // profile-title as base64 prevents encoding issues
-    'Profile-Title': `base64:${Buffer.from('GalaxyVPN', 'utf8').toString('base64')}`,
+    'Profile-Title': `base64:${Buffer.from('GalaxyVPN Pro', 'utf8').toString('base64')}`,
     'Profile-Update-Interval': String(UPDATE_INTERVAL_HOURS),
   };
   
   if (shortId) {
-    const announceText = `ID: ${shortId}\nНажмите кнопку 🔄, если у Вас не работает VPN`;
+    let announceText = `👤 ID: ${shortId}`;
+    if (email) announceText += `\n📧 Account: ${email}`;
+    announceText += `\n\n💡 Нажмите кнопку 🔄, если у Вас не работает VPN`;
+    announceText += `\n🚀 GalaxyVPN Pro - Premium Network`;
+    
     headers['announce'] = `base64:${Buffer.from(announceText, 'utf8').toString('base64')}`;
     headers['Content-Disposition'] = `attachment; filename="${shortId}"`;
   }
@@ -111,7 +115,7 @@ export async function GET(
   // banned user?
   const { data: owner } = await supa
     .from('users')
-    .select('banned_until')
+    .select('email, banned_until')
     .eq('id', sub.user_id)
     .maybeSingle();
   const banned = owner?.banned_until ? new Date(owner.banned_until).getTime() > now : false;
@@ -302,5 +306,5 @@ export async function GET(
 
   const expireUnix = Math.floor(new Date(sub.end_at as string).getTime() / 1000);
 
-  return toSubscription(configs, expireUnix, shortId);
+  return toSubscription(configs, expireUnix, shortId, owner?.email);
 }
