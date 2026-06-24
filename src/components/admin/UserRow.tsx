@@ -170,7 +170,7 @@ export function UserRow({
             <div key={sub.id} className="rounded-xl bg-white/[0.03] border border-white/[0.08] p-3.5 transition-colors hover:border-white/15">
               <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
                 <span className={`px-1.5 py-0.5 rounded ${isExpired || sub.status === 'rejected' ? 'bg-red-400/20 text-red-300' : 'bg-emerald-400/20 text-emerald-300'}`}>
-                  {sub.status.toUpperCase()}
+                  {isExpired ? 'EXPIRED' : sub.status.toUpperCase()}
                 </span>
                 {p && <span className="text-white/80">· {tp(`duration.${p.durationKey}`)}</span>}
                 {network && (
