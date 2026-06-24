@@ -84,6 +84,56 @@ let firstDetectionFinishedAt = null;
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
+      // Send heartbeat so the dashboard knows the phone is online
+      try {
+        const { data: st } = await supa.from('worker_status').select('last_result').eq('id', 'worker').maybeSingle();
+        await supa.from('worker_status').upsert({
+          id: 'worker',
+          last_seen: new Date().toISOString(),
+          last_result: st?.last_result || {}
+        }, { onConflict: 'id' });
+      } catch (e) {
+        log.err(`Heartbeat failed: ${e.message}`);
+      }
+
+      // Check for manual UI triggers
+      const { data: manualReqs } = await supa
+        .from('sync_requests')
+        .select('id, kind, percentage, details_percentage')
+        .is('processed_at', null)
+        .eq('kind', 'lte');
+      
+      if (manualReqs && manualReqs.length > 0) {
+        log.step(`🔔 Manual LTE trigger detected from dashboard!`);
+        
+        // Mark it as processed immediately so others don't pick it up
+        const reqIds = manualReqs.map(r => r.id);
+        await supa.from('sync_requests').update({ processed_at: new Date().toISOString(), result: { status: 'running on phone' } }).in('id', reqIds);
+        
+        try {
+          const bp = manualReqs[0]?.percentage ?? 100;
+          const dp = manualReqs[0]?.details_percentage ?? 100;
+          const result = await runLteCascade({ basePercentage: bp, detailsPercentage: dp });
+          log.done(`✅ Manual LTE cascade completed! Result: ${JSON.stringify(result)}`);
+          
+          await supa.from('sync_requests').update({ result }).in('id', reqIds);
+          
+          const { data } = await supa.from('worker_status').select('last_result').eq('id', 'worker').maybeSingle();
+          const prev = data?.last_result || {};
+          await supa.from('worker_status').upsert({
+            id: 'worker',
+            state: 'idle',
+            updated_at: new Date().toISOString(),
+            last_sync_at: new Date().toISOString(),
+            last_result: { ...prev, reason: 'manual-ui-lte', ...result },
+          }, { onConflict: 'id' });
+        } catch (e) {
+          log.err(`Manual LTE cascade failed: ${e.message}`);
+        }
+        
+        continue; // skip the rest of the loop for this tick
+      }
+
       const status = await getWorkerStatus();
       const counts = await getServerCounts();
       const lr = status?.last_result;
