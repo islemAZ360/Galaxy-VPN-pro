@@ -1,26 +1,10 @@
 import { createHash } from 'node:crypto';
 
-const SCHEMES = ['vless://'];
+const SCHEMES = ['vless://', 'vmess://', 'trojan://', 'ss://'];
 
 export function looksLikeConfig(line) {
-  if (!line.startsWith('vless://')) return false;
-  try {
-    const qIdx = line.indexOf('?');
-    if (qIdx < 0) return false; // Missing query params
-    const hIdx = line.indexOf('#');
-    const queryStr = line.slice(qIdx + 1, hIdx >= 0 ? hIdx : undefined);
-    const params = new URLSearchParams(queryStr);
-    
-    const type = (params.get('type') || 'tcp').toLowerCase();
-    const security = (params.get('security') || '').toLowerCase();
-    
-    if (type !== 'tcp' && type !== 'grpc' && type !== 'ws') return false;
-    if (security !== 'reality') return false;
-    
-    return true;
-  } catch {
-    return false;
-  }
+  const lower = line.toLowerCase();
+  return SCHEMES.some(s => lower.startsWith(s));
 }
 
 // A subscription file may be plain text OR base64 of the whole list. Handle both.
