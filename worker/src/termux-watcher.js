@@ -84,13 +84,12 @@ let firstDetectionFinishedAt = null;
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      // Send heartbeat so the dashboard knows the phone is online
+      // Send heartbeat so the dashboard knows the phone is online (separated from PC worker)
       try {
-        const { data: st } = await supa.from('worker_status').select('last_result').eq('id', 'worker').maybeSingle();
         await supa.from('worker_status').upsert({
-          id: 'worker',
+          id: 'phone-worker',
           last_seen: new Date().toISOString(),
-          last_result: st?.last_result || {}
+          state: 'idle'
         }, { onConflict: 'id' });
       } catch (e) {
         log.err(`Heartbeat failed: ${e.message}`);
