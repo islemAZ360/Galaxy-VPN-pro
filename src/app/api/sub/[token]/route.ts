@@ -227,7 +227,7 @@ export async function GET(
     const filtered: typeof servers = [];
     for (const s of servers) {
       const balancedType = getBalancedType(s.id, s.network_type);
-      if (s.name?.includes('🚀')) {
+      if (pools.includes(balancedType)) {
         // If type changed, dynamically rewrite the config_uri to match the new type's tag
         if (balancedType !== s.network_type) {
           const newName = retag(s.name || s.country || 'Unknown', balancedType);
