@@ -173,8 +173,8 @@ export function RepoManager({
 
   const [syncMsg, setSyncMsg] = useState<{ type: 'error' | 'success' | 'warning', text: string } | null>(null);
   const requestKind = (kind: 'wifi' | 'lte' | 'whitelist') => {
-    if (!isLive) {
-      setSyncMsg({ type: 'error', text: 'Worker is offline! Please start the Tester Worker first.' });
+    if (!isLive && kind !== 'lte') {
+      setSyncMsg({ type: 'error', text: 'PC Worker is offline! Please start the Tester Worker on your PC first.' });
       return;
     }
     if (isBusy) {
