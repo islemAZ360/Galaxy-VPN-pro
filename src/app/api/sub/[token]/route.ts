@@ -49,7 +49,7 @@ function infoConfig(text: string) {
   return `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:1?type=tcp&security=none#${remark}`;
 }
 
-function toSubscription(lines: string[], expireUnix?: number, shortId?: string, email?: string) {
+function toSubscription(lines: string[], expireUnix?: number, shortId?: string, email?: string, networkType?: string, serverCount?: number) {
   const body = Buffer.from(lines.join('\n'), 'utf8').toString('base64');
   
   const headers: Record<string, string> = {
@@ -61,10 +61,19 @@ function toSubscription(lines: string[], expireUnix?: number, shortId?: string, 
   };
   
   if (shortId) {
-    let announceText = `👤 ID: ${shortId}`;
-    if (email) announceText += `\n📧 Account: ${email}`;
-    announceText += `\n\n💡 Нажмите кнопку 🔄, если у Вас не работает VPN`;
-    announceText += `\n🚀 GalaxyVPN Pro - Premium Network`;
+    let netName = 'Wi-Fi';
+    if (networkType === 'lte') netName = 'LTE / Wi-Fi';
+    if (networkType === 'gemini') netName = 'Gemini (LTE & Wi-Fi)';
+
+    let announceText = `✨ GalaxyVPN Pro ✨\n━━━━━━━━━━━━━━━━━━━━\n`;
+    announceText += `👤 ID: ${shortId}\n`;
+    if (email) announceText += `📧 Email: ${email}\n`;
+    if (networkType) {
+      announceText += `📶 Network: ${netName}\n`;
+      announceText += `🚀 Servers: ${serverCount || 'Unlimited'}\n`;
+    }
+    announceText += `━━━━━━━━━━━━━━━━━━━━\n`;
+    announceText += `💡 Нажмите кнопку 🔄, если у Вас не работает VPN`;
     
     headers['announce'] = `base64:${Buffer.from(announceText, 'utf8').toString('base64')}`;
     headers['Content-Disposition'] = `attachment; filename="${shortId}"`;
@@ -306,5 +315,5 @@ export async function GET(
 
   const expireUnix = Math.floor(new Date(sub.end_at as string).getTime() / 1000);
 
-  return toSubscription(configs, expireUnix, shortId, owner?.email);
+  return toSubscription(configs, expireUnix, shortId, owner?.email, sub.network_type, sub.server_count);
 }
