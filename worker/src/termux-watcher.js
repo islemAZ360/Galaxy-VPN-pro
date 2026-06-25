@@ -16,7 +16,7 @@
 
 import { runLteCascade } from './sync.js';
 import { supa, closeSupa } from './supa.js';
-import { log, banner } from './log.js';
+import { log, banner, C } from './log.js';
 
 const POLL_MS   = 15_000; // Poll every 15s for fast UI updates
 const STABLE_MS = (Number(process.env.STABILITY_WAIT_MIN) || 5) * 60_000;
