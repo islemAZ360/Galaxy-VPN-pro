@@ -6,20 +6,29 @@ import { log } from './log.js';
 (async () => {
   log.step('Generating dynamic SourceCraft ci.yaml based on alive candidates...');
 
-  // 1. Get the number of alive servers
-  const { count, error } = await supa
-    .from('candidates')
-    .select('*', { count: 'exact', head: true })
-    .eq('alive', true);
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  let aliveCount = 1;
+  
+  for (let i = 0; i < 3; i++) {
+    const { count, error } = await supa
+      .from('candidates')
+      .select('*', { count: 'exact', head: true })
+      .eq('alive', true);
 
-  if (error) {
-    log.err(`Failed to count alive servers: ${error.message}`);
-    await closeSupa();
-    process.exit(1);
+    if (!error) {
+      aliveCount = count || 1;
+      log.info(`Total alive servers ready for Russia DPI scan: ${aliveCount}`);
+      break;
+    }
+
+    log.warn(`Attempt ${i + 1}/3 failed to count alive servers: ${error.message || error.code || JSON.stringify(error)}`);
+    if (i === 2) {
+      log.err('All 3 attempts to count alive servers failed. Aborting.');
+      await closeSupa();
+      process.exit(1);
+    }
+    await sleep(2000);
   }
-
-  const aliveCount = count || 1;
-  log.info(`Total alive servers ready for Russia DPI scan: ${aliveCount}`);
 
   // 2. Calculate dynamic chunks for SourceCraft
   // Using 1500 per task as a safe default for DPI testing
