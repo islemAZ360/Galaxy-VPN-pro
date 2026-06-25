@@ -125,12 +125,16 @@ let firstDetectionAt = null;
 let firstDetectionFinishedAt = null;
 
 let currentState = 'idle';
+let presenceLogged = false;
 const presenceChannel = supa.channel('worker_presence', {
   config: { presence: { key: 'phone-worker' } }
 });
 presenceChannel.subscribe(async (status) => {
   if (status === 'SUBSCRIBED') {
-    log.ok('Presence connected — phone worker is online in realtime!');
+    if (!presenceLogged) {
+      log.ok('Presence connected — phone worker is online in realtime!');
+      presenceLogged = true;
+    }
     try {
       await presenceChannel.track({ state: currentState, online_at: new Date().toISOString() });
     } catch { /* best-effort */ }

@@ -214,9 +214,6 @@ async function tcpPrefilter(uris) {
     })
   );
   const kept = reachable.length + bypass.length;
-  if (kept === 0) {
-    log.warn(`tcpPrefilter dropped ALL ${uris.length} servers! This indicates the Termux network is blocking outgoing raw TCP connections.`);
-  }
   return [...reachable, ...bypass];
 }
 

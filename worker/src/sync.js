@@ -32,14 +32,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // backoff between retries gives the DPI state time to reset — short retries
 // just hammer the same blocked path and fail again. Jitter ±25% so a burst of
 // parallel retries from different calls can't synchronize into a pattern.
-async function withRetry(fn, { attempts = 4, baseMs = 1000, maxMs = 30000, label = 'op' } = {}) {
+async function withRetry(fn, { attempts = 4, baseMs = 1000, maxMs = 30000, label = 'op', silent = false } = {}) {
   let lastErr;
   for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
     } catch (e) {
       lastErr = e;
-      log.warn(`${label} attempt ${i + 1}/${attempts} failed: ${e.message}`);
+      if (!silent) log.warn(`${label} attempt ${i + 1}/${attempts} failed: ${e.message}`);
       if (i < attempts - 1) {
         const raw = Math.min(baseMs * Math.pow(2, i), maxMs);
         const jittered = raw * (0.75 + Math.random() * 0.5);
@@ -97,7 +97,7 @@ async function withVpnRetry(fn, { label = 'upload', intervalMs = 5000, maxAttemp
         log.warn(`║  🔄 Auto-retrying every 5s until connection is restored  ║`);
         log.warn(`╚══════════════════════════════════════════════════════════╝`);
       }
-      if (i % 3 === 0) log.warn(`⏳ Still waiting for Supabase (${label})… attempt ${i}/${maxAttempts}. Error: ${e.message}`);
+      if (i % 3 === 0) log.ticker(`⏳ Still waiting for Supabase (${label})… attempt ${i}/${maxAttempts}. Error: ${e.message}`, C.amber);
       await sleep(intervalMs);
     }
   }
@@ -229,7 +229,7 @@ async function fetchAllPaginated(table, select, filters = {}) {
         const r = await q;
         if (r.error) throw new Error(r.error.message);
         return r;
-      }, { attempts: 2, baseMs: 800, maxMs: 4000, label });
+      }, { attempts: 2, baseMs: 800, maxMs: 4000, label, silent: true });
       return data ?? [];
     } catch {
       return null;
