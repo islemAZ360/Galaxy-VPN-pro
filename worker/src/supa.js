@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Agent } from 'undici';
+import { Agent, ProxyAgent } from 'undici';
 
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -8,43 +8,12 @@ if (!url || !serviceKey) {
   console.warn('[supa] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars.');
 }
 
-// ---------------------------------------------------------------------------
-// Why this isn't a plain createClient(url, key):
-//
-// On a phone LTE hotspot (carrier NAT, lower MTU, mobile DPI) a Supabase REST
-// connection can stall while establishing — yet Node's default fetch waits on
-// undici's 300s headers/body timeouts and finally throws a bare, useless
-// "TypeError: terminated" with the real reason buried in err.cause. The worker
-// then looks like it "hangs ~1 min then dies", and sync.js's withRetry() can't
-// retry because nothing failed fast.
-//
-// This dispatcher + wrapper does three things, and NOTHING ELSE:
-//   1. FAIL FAST on a stalled *connect* (8s) so withRetry() can open a fresh
-//      connection instead of the run hanging. Connect on a healthy link is sub-
-//      second, so 8s never trips a working request — but headers/body timeouts
-//      are kept GENEROUS so a slow-but-working large upsert is never aborted.
-//   2. Surface err.cause in the message — the terminal shows the REAL reason
-//      (e.g. "(cause: UND_ERR_SOCKET)" / "ECONNRESET" / "UND_ERR_CONNECT_TIMEOUT")
-//      instead of just "terminated". This is the whole point: it makes the
-//      failure diagnosable instead of a guessing game.
-//   3. Drop idle sockets quickly (short keep-alive) so a socket that went stale
-//      between calls is never reused — without forcing Connection: close, which
-//      on Windows parks every socket in TIME_WAIT and *adds* socket churn.
-//
-// It deliberately does NOT touch the request headers: supabase-js passes a
-// Headers instance, and the previous `{...headers}` spread silently produced {}
-// and DROPPED apikey/Authorization — i.e. every call went out unauthenticated.
-// Leaving init untouched keeps the service-role key intact.
-//
-// All timeouts are env-tunable so a genuinely weak link can be accommodated
-// without editing code.
-// ---------------------------------------------------------------------------
 const num = (v, d) => {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : d;
 };
 
-const dispatcher = new Agent({
+const agentOpts = {
   connect: {
     timeout: num(process.env.SUPA_CONNECT_TIMEOUT_MS, 8000), // fail fast on a stalled connect/TLS
     // Some phone hotspots advertise broken/blocked IPv6. Set SUPA_FORCE_IPV4=1
@@ -55,7 +24,11 @@ const dispatcher = new Agent({
   bodyTimeout: num(process.env.SUPA_BODY_TIMEOUT_MS, 45000),
   keepAliveTimeout: 2000, // release idle sockets fast; never reuse a stale one
   pipelining: 0,
-});
+};
+
+const dispatcher = process.env.SUPABASE_PROXY
+  ? new ProxyAgent({ uri: process.env.SUPABASE_PROXY, ...agentOpts })
+  : new Agent(agentOpts);
 
 // Short: on a flaky Russian LTE+VPN link the DPI stalls requests inconsistently
 // (even small ones), so we want a hung request detected FAST and retried rather
