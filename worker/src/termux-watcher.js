@@ -34,20 +34,29 @@ async function getWorkerStatus() {
 }
 
 async function getServerCounts() {
-  const { data } = await supa
-    .from('servers')
-    .select('network_type')
-    .eq('is_working', true)
-    .eq('is_deleted', false);
-  
-  if (!data) return { total: 0, wifi: 0, lte: 0 };
-  
-  const counts = { total: data.length, wifi: 0, lte: 0 };
-  for (const s of data) {
-    if (s.network_type === 'wifi' || s.network_type === 'gemini_wifi') counts.wifi++;
-    if (s.network_type === 'lte' || s.network_type === 'gemini_lte') counts.lte++;
+  try {
+    // Use HEAD count queries — no row limit, instant, accurate.
+    const base = supa.from('servers').select('*', { count: 'exact', head: true })
+      .eq('is_working', true).eq('is_deleted', false);
+
+    const [totalR, wifiR, lteR] = await Promise.all([
+      base,
+      supa.from('servers').select('*', { count: 'exact', head: true })
+        .eq('is_working', true).eq('is_deleted', false)
+        .in('network_type', ['wifi', 'gemini_wifi']),
+      supa.from('servers').select('*', { count: 'exact', head: true })
+        .eq('is_working', true).eq('is_deleted', false)
+        .in('network_type', ['lte', 'gemini_lte']),
+    ]);
+
+    return {
+      total: totalR.count ?? 0,
+      wifi:  wifiR.count ?? 0,
+      lte:   lteR.count ?? 0,
+    };
+  } catch {
+    return { total: 0, wifi: 0, lte: 0 };
   }
-  return counts;
 }
 
 async function recordLteTrigger(wifiFinishedAt) {
