@@ -469,3 +469,9 @@ export async function updateGlobalLimits(limits: { base?: number, gemini_scan?: 
     await admin.from('worker_settings').update(updatePayload).eq('id', 'global');
   }
 }
+
+export async function clearScanHistory() {
+  await assertAdmin();
+  const admin = createAdminClient();
+  await admin.from('sync_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+}

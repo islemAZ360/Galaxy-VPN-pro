@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/routing';
-import { addRepo, deleteRepo, toggleRepoStatus, unbanRepo, requestSync, triggerGithubScan, triggerSourcecraftOnly, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
+import { addRepo, deleteRepo, toggleRepoStatus, unbanRepo, requestSync, triggerGithubScan, triggerSourcecraftOnly, checkGithubScanStatus, getGlobalLimits, updateGlobalLimits, clearScanHistory } from '@/lib/admin-actions';
 import { useWorkerPresence } from '@/hooks/useWorkerPresence';
 
 type Repo = { id: string; repo_url: string; enabled: boolean; is_banned: boolean };
@@ -195,6 +195,13 @@ export function RepoManager({
   const wifiRecheck = () => requestKind('wifi');
   const lteRecheck = () => requestKind('lte');
   const whitelistRecheck = () => requestKind('whitelist');
+
+  const handleClearHistory = () => {
+    startTransition(async () => {
+      await clearScanHistory();
+      router.refresh();
+    });
+  };
 
   const runFullAutoPipeline = () => {
     startTransition(async () => {
@@ -396,7 +403,17 @@ export function RepoManager({
         <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm leading-relaxed">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-emerald-300 text-base">📋 {t('scanHistoryTitle')}</h3>
-            <button onClick={() => setShowHistory(false)} className="opacity-50 hover:opacity-100 text-lg">✕</button>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={handleClearHistory} 
+                disabled={isPending}
+                className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors"
+                title="Clear all scan history"
+              >
+                🗑️ Clear History
+              </button>
+              <button onClick={() => setShowHistory(false)} className="opacity-50 hover:opacity-100 text-lg">✕</button>
+            </div>
           </div>
           {scanHistory.length === 0 ? (
             <p className="text-white/40 text-center py-4">{t('scanHistoryEmpty')}</p>
