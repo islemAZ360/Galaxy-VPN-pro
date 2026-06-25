@@ -640,12 +640,15 @@ export async function runLteCascade({ basePercentage = 100, detailsPercentage = 
   log.step('LTE re-check  ·  Phase 1: LTE DPI  →  Phase 2: Gemini');
   try {
     log.info('Loading the Wi-Fi pool (keep VPN ON)…');
-    const existing = await withVpnRetry(async () => {
-      return await fetchAllPaginated('servers', 'id, config_uri, network_type');
+    const raw = await withVpnRetry(async () => {
+      return await fetchAllPaginated('servers', 'id, config_uri, network_type', { is_working: true, is_deleted: false });
     }, { label: 'select-pool' });
+    // Only re-test WiFi-tier servers (the point of the LTE cascade is to promote
+    // Wi-Fi survivors to the LTE dimension).
+    const existing = raw.filter(s => s.network_type === 'wifi' || s.network_type === 'gemini_wifi');
     stats.total = existing.length;
     if (!stats.total) {
-      log.warn('No servers in the pool — run the Wi-Fi re-check first.');
+      log.warn('No working Wi-Fi servers in the pool — run the Wi-Fi re-check first.');
       stats.finishedAt = new Date().toISOString();
       return stats;
     }
