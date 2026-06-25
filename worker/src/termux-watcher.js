@@ -50,6 +50,24 @@ async function getWorkerStatus() {
   return data;
 }
 
+// Read the admin's global limits (Base% & Gemini Scan%) from the DB
+// so automatic triggers respect the dashboard slider settings.
+async function getGlobalLimits() {
+  try {
+    const { data } = await supa
+      .from('worker_settings')
+      .select('base_pct, wifi_deep_pct')
+      .eq('id', 'global')
+      .maybeSingle();
+    return {
+      base: data?.base_pct ?? 100,
+      geminiScan: data?.wifi_deep_pct ?? 100,
+    };
+  } catch {
+    return { base: 100, geminiScan: 100 };
+  }
+}
+
 async function getServerCounts() {
   try {
     // Use HEAD count queries — no row limit, instant, accurate.
@@ -236,12 +254,16 @@ async function trackPresence(state) {
           log.clearProgress();
           log.step('🚀 All chunks confirmed! Starting LTE cascade...');
 
+          // Read the admin's global limits so auto-triggers respect the sliders
+          const limits = await getGlobalLimits();
+          log.info(`Using limits: Base=${limits.base}%, Gemini=${limits.geminiScan}%`);
+
           // Run the LTE cascade
           try {
             await trackPresence('syncing');
             currentTickerMsg = 'Running LTE cascade...';
             tickerColor = C.amber;
-            const result = await runLteCascade({ basePercentage: 100, detailsPercentage: 100 });
+            const result = await runLteCascade({ basePercentage: limits.base, detailsPercentage: limits.geminiScan });
             await trackPresence('idle');
             log.clearProgress();
             log.done(`✅ Auto LTE cascade completed! Result: ${JSON.stringify(result)}`);
