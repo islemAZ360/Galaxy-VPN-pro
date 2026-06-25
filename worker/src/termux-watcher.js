@@ -188,7 +188,7 @@ async function trackPresence(state) {
       const lr = status?.last_result;
 
       const now = new Date();
-      const countStr = `${counts.total} total (${counts.wifi} wifi, ${counts.lte} lte)`;
+      const countStr = `Wifi:${counts.wifi} LTE:${counts.lte}`;
 
       // If counts change, print a permanent log line to keep history
       if (countStr !== lastCountStr && lastCountStr !== '') {
@@ -269,11 +269,11 @@ async function trackPresence(state) {
           }
         }
       } else if (alreadyTriggered || alreadyProcessed) {
-        currentTickerMsg = `LTE already triggered. Servers: ${countStr}`;
+        currentTickerMsg = `LTE tested | ${countStr}`;
         tickerColor = C.gray;
         firstDetectionAt = null;
       } else {
-        currentTickerMsg = `No new WiFi scan. Servers: ${countStr} | Sleeping...`;
+        currentTickerMsg = `Idle | ${countStr}`;
         tickerColor = C.cyan;
         firstDetectionAt = null;
       }
