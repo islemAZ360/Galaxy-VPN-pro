@@ -12,7 +12,7 @@ import { log } from './log.js';
   for (let i = 0; i < 3; i++) {
     const { count, error, status, statusText } = await supa
       .from('candidates')
-      .select('*', { count: 'exact' })
+      .select('*', { count: 'planned' })
       .eq('alive', true)
       .limit(1);
 
