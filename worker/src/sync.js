@@ -672,12 +672,13 @@ export async function runLteCascade({ basePercentage = 100, detailsPercentage = 
     // Phones have fewer resources and network sockets. 50 parallel xray-knife processes
     // will often overwhelm Termux/Android, causing all of them to fail instantly (0 pass LTE)
     // or triggering the Phantom Process Killer (SIGKILL).
-    // We lower the default concurrency to 5 for LTE tests to ensure maximum stability on Android.
-    const CONC = Number(process.env.TEST_CONCURRENCY || 5);
+    // We lower the default concurrency to 3 for LTE tests to ensure maximum stability on Android,
+    // and process them in small batches of 50 to allow the network sockets to breathe.
+    const CONC = Number(process.env.TEST_CONCURRENCY || 3);
     log.step('Phase 1 — LTE reachability…');
-    const working = await deepTest(lteCandidates, { conc: CONC, batchSize: 500, phaseLabel: 'LTE' });
+    const working = await deepTest(lteCandidates, { conc: CONC, batchSize: 50, phaseLabel: 'LTE' });
     const lteKeys = new Set(working.map((w) => keyOf(w.uri)));
-    log.ok(`${working.length} / ${stats.total} pass LTE.`);
+    log.ok(`${working.length} / ${lteCandidates.length} pass LTE.`);
 
     // Reuse the egress country xray-knife reported this run for the Gemini split.
     for (const w of working) {
