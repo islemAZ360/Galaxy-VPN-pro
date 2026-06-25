@@ -87,6 +87,10 @@ function runXrayKnife(inFile, outFile, threads, url, timeoutMs) {
       if (err && err.code === 'ENOENT') {
         return reject(Object.assign(new Error('xray-knife not found'), { enoent: true }));
       }
+      if (err && err.code && err.code !== 1) {
+        // Log unexpected errors (e.g. EACCES, SIGKILL) that might indicate Termux issues
+        log.warn(`xray-knife execution issue: ${err.message} (code: ${err.code}, signal: ${err.signal})`);
+      }
       // xray-knife may exit non-zero when some configs fail — that's fine, the
       // valid ones are still written to outFile. Resolve regardless.
       resolve();

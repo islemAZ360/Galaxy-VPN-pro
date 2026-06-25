@@ -670,9 +670,10 @@ export async function runLteCascade({ basePercentage = 100, detailsPercentage = 
     }
 
     // Phones have fewer resources and network sockets. 50 parallel xray-knife processes
-    // will often overwhelm Termux/Android, causing all of them to fail instantly (0 pass LTE).
-    // We lower the default concurrency to 15 for LTE tests to ensure stability.
-    const CONC = Number(process.env.TEST_CONCURRENCY || 15);
+    // will often overwhelm Termux/Android, causing all of them to fail instantly (0 pass LTE)
+    // or triggering the Phantom Process Killer (SIGKILL).
+    // We lower the default concurrency to 5 for LTE tests to ensure maximum stability on Android.
+    const CONC = Number(process.env.TEST_CONCURRENCY || 5);
     log.step('Phase 1 — LTE reachability…');
     const working = await deepTest(lteCandidates, { conc: CONC, batchSize: 500, phaseLabel: 'LTE' });
     const lteKeys = new Set(working.map((w) => keyOf(w.uri)));
