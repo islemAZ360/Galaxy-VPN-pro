@@ -571,16 +571,22 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
         const cc = g.country_code ?? null;
         counters[country] = (counters[country] || 0) + 1;
         const rocket = fastKeys.has(k) ? '🚀' : '';
-        const base = `${country} ${rocket} #${counters[country]}`.replace('  ', ' ');
+        const flag = flagEmoji(cc);
+        const base = `${flag} ${country} ${rocket} #${counters[country]}`.replace('  ', ' ');
         // dimensional tier: keep LTE dimension from before
         const prev = existingTiers.get(hash);
         const lteDim = prev === 'lte' || prev === 'gemini_lte';
 
         let gemDim;
-        if (testedGeminiKeys.has(k)) {
-          gemDim = geminiKeys.has(k);
+        if (detailsPercentage < 100) {
+          // If a limit is applied, forcefully downgrade untested servers to respect the exact percentage
+          gemDim = testedGeminiKeys.has(k) ? geminiKeys.has(k) : false;
         } else {
-          gemDim = (prev === 'gemini_wifi' || prev === 'gemini_lte' || prev === 'gemini_whitelist');
+          if (testedGeminiKeys.has(k)) {
+            gemDim = geminiKeys.has(k);
+          } else {
+            gemDim = (prev === 'gemini_wifi' || prev === 'gemini_lte' || prev === 'gemini_whitelist');
+          }
         }
 
         const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
@@ -717,10 +723,14 @@ export async function runLteCascade({ basePercentage = 100, detailsPercentage = 
       const lteDim = lteKeys.has(k);
 
       let gemDim;
-      if (testedGeminiKeys.has(k)) {
-        gemDim = geminiKeys.has(k);
+      if (detailsPercentage < 100) {
+        gemDim = testedGeminiKeys.has(k) ? geminiKeys.has(k) : false;
       } else {
-        gemDim = (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
+        if (testedGeminiKeys.has(k)) {
+          gemDim = geminiKeys.has(k);
+        } else {
+          gemDim = (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
+        }
       }
 
       const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
@@ -881,14 +891,19 @@ export async function runWhitelistCascade({ basePercentage = 100, detailsPercent
         const country = g.country || 'Server';
         const cc = g.country_code ?? null;
         counters[country] = (counters[country] || 0) + 1;
-        const base = `${country} #${counters[country]}`;
+        const flag = flagEmoji(cc);
+        const base = `${flag} ${country} #${counters[country]}`;
 
         let gem;
         const k = keyOf(w.uri);
-        if (testedGeminiKeys.has(k)) {
-          gem = geminiKeys.has(k);
+        if (detailsPercentage < 100) {
+          gem = testedGeminiKeys.has(k) ? geminiKeys.has(k) : false;
         } else {
-          gem = (existingTiers.get(hash) === 'gemini_whitelist');
+          if (testedGeminiKeys.has(k)) {
+            gem = geminiKeys.has(k);
+          } else {
+            gem = (existingTiers.get(hash) === 'gemini_whitelist');
+          }
         }
 
         const tier = gem ? 'gemini_whitelist' : 'whitelist';
