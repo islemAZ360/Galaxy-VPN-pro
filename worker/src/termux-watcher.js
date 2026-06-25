@@ -210,7 +210,10 @@ async function trackPresence(state) {
           // No chunks (e.g. manual run), just wait a little bit
           const ageMs = now - new Date(wifiFinishedAt);
           if (ageMs >= STABLE_MS) allChunksDone = true;
-          else log.info(`⏳ Single chunk: Waiting ${Math.round((STABLE_MS - ageMs) / 1000)}s more...`);
+          else {
+            currentTickerMsg = `⏳ Wait ${Math.round((STABLE_MS - ageMs) / 1000)}s...`;
+            tickerColor = C.cyan;
+          }
         } else {
           // CI chunks: Check if we have expected number of recent chunk completions
           const twoHoursAgo = new Date(now.getTime() - 2 * 3600 * 1000).toISOString();
@@ -224,8 +227,8 @@ async function trackPresence(state) {
             allChunksDone = true;
           } else {
             const doneCount = chunkRows ? chunkRows.length : 0;
-            currentTickerMsg = `⏳ Waiting for all SourceCraft tasks... (${doneCount}/${expectedChunks} chunks finished)`;
-            tickerColor = C.cyan;
+            currentTickerMsg = `⏳ Waiting CI: ${doneCount}/${expectedChunks} chunks`;
+            tickerColor = C.amber;
           }
         }
 
