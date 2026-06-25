@@ -216,8 +216,6 @@ async function tcpPrefilter(uris) {
   const kept = reachable.length + bypass.length;
   if (kept === 0) {
     log.warn(`tcpPrefilter dropped ALL ${uris.length} servers! This indicates the Termux network is blocking outgoing raw TCP connections.`);
-  } else if (kept < uris.length) {
-    log.info(`tcpPrefilter kept ${kept}/${uris.length} servers.`);
   }
   return [...reachable, ...bypass];
 }
@@ -242,17 +240,6 @@ export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } 
     out = await runXrayKnife(inFile, outFile, concurrency, url, timeoutMs);
     const text = await readFile(outFile, 'utf8').catch(() => '');
     rows = parseXkCsv(text);
-    
-    // Debugging: If 0 servers passed on Termux, let's see why
-    let passedCount = 0;
-    for (const info of rows.values()) if (info.alive) passedCount++;
-    
-    if (passedCount === 0) {
-      log.warn(`xray-knife returned 0 passed servers! Raw CSV preview: ${text.slice(0, 150).replace(/\n/g, ' ')}...`);
-      if (out && (out.stdout || out.stderr)) {
-        log.warn(`xray-knife output:\nSTDOUT: ${out.stdout?.slice(0, 500)}\nSTDERR: ${out.stderr?.slice(0, 500)}`);
-      }
-    }
   } catch (e) {
     if (e.enoent) {
       log.warn(

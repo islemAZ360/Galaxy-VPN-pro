@@ -212,7 +212,7 @@ async function fetchAllPaginated(table, select, filters = {}) {
     let loaded = 0;
     for (const p of pages) if (p) loaded += p.length;
     if (loaded - lastLogged >= Math.max(size, 200)) {
-      log.info(`Loaded ${loaded}/${total} ${table} rows…`);
+      log.progress((loaded / Math.max(1, total)) * 100, `Loading ${table}: ${loaded}/${total}`);
       lastLogged = loaded;
     }
   };
@@ -273,8 +273,9 @@ async function fetchAllPaginated(table, select, filters = {}) {
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
   const allData = pages.filter(Boolean).flat().filter(row => !row.config_uri || looksLikeConfig(row.config_uri));
+  log.clearProgress();
   if (skipped > 0) log.warn(`Loaded ${allData.length}/${total} ${table} rows (${skipped} page(s) skipped — DPI-blocked).`);
-  else log.info(`Loaded ${allData.length}/${total} ${table} rows total.`);
+  else log.ok(`Loaded ${allData.length}/${total} ${table} rows.`);
   return allData;
 }
 
@@ -307,7 +308,7 @@ async function fetchAllPaginatedDiscovery(table, select, filters, size, concurre
       pages.push(r);
       lastLen = r.length;
     }
-    if (allLen(pages) % 200 < size) log.info(`Loaded ${allLen(pages)} ${table} rows…`);
+    log.progress(0, `Loading ${table}: ${allLen(pages)} rows…`);
     if (results.some((r) => r.length < size)) break;
   }
   return pages.flat();
