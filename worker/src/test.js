@@ -83,17 +83,14 @@ function runXrayKnife(inFile, outFile, threads, url, timeoutMs) {
       '-z', XK_CORE,
       '-u', url || XK_URL, // custom test target (e.g. a Gemini endpoint) or default
     ];
-    execFile(XK_PATH, args, { timeout: 30 * 60 * 1000, maxBuffer: 128 * 1024 * 1024 }, (err) => {
+    execFile(XK_PATH, args, { timeout: 30 * 60 * 1000, maxBuffer: 128 * 1024 * 1024 }, (err, stdout, stderr) => {
       if (err && err.code === 'ENOENT') {
         return reject(Object.assign(new Error('xray-knife not found'), { enoent: true }));
       }
       if (err && err.code && err.code !== 1) {
-        // Log unexpected errors (e.g. EACCES, SIGKILL) that might indicate Termux issues
         log.warn(`xray-knife execution issue: ${err.message} (code: ${err.code}, signal: ${err.signal})`);
       }
-      // xray-knife may exit non-zero when some configs fail — that's fine, the
-      // valid ones are still written to outFile. Resolve regardless.
-      resolve();
+      resolve({ stdout, stderr });
     });
   });
 }
@@ -239,9 +236,10 @@ export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } 
   const dir = await mkdtemp(path.join(os.tmpdir(), 'gv-xk-'));
   const inFile = path.join(dir, 'configs.txt');
   const outFile = path.join(dir, 'valid.csv');
+  let out = null;
   try {
     await writeFile(inFile, pool.join('\n'), 'utf8');
-    await runXrayKnife(inFile, outFile, concurrency, url, timeoutMs);
+    out = await runXrayKnife(inFile, outFile, concurrency, url, timeoutMs);
     const text = await readFile(outFile, 'utf8').catch(() => '');
     rows = parseXkCsv(text);
     
@@ -251,6 +249,9 @@ export async function testAll(uris, { concurrency = 50, timeoutMs = 4000, url } 
     
     if (passedCount === 0) {
       log.warn(`xray-knife returned 0 passed servers! Raw CSV preview: ${text.slice(0, 150).replace(/\n/g, ' ')}...`);
+      if (out && (out.stdout || out.stderr)) {
+        log.warn(`xray-knife output:\nSTDOUT: ${out.stdout?.slice(0, 500)}\nSTDERR: ${out.stderr?.slice(0, 500)}`);
+      }
     }
   } catch (e) {
     if (e.enoent) {
