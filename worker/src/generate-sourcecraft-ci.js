@@ -10,10 +10,11 @@ import { log } from './log.js';
   let aliveCount = 1;
   
   for (let i = 0; i < 3; i++) {
-    const { count, error } = await supa
+    const { count, error, status, statusText } = await supa
       .from('candidates')
-      .select('*', { count: 'exact', head: true })
-      .eq('alive', true);
+      .select('*', { count: 'exact' })
+      .eq('alive', true)
+      .limit(1);
 
     if (!error) {
       aliveCount = count || 1;
@@ -21,7 +22,7 @@ import { log } from './log.js';
       break;
     }
 
-    log.warn(`Attempt ${i + 1}/3 failed to count alive servers: ${error.message || error.code || JSON.stringify(error)}`);
+    log.warn(`Attempt ${i + 1}/3 failed to count alive servers. HTTP Status: ${status} ${statusText} | Error: ${error?.message || JSON.stringify(error)}`);
     if (i === 2) {
       log.err('All 3 attempts to count alive servers failed. Aborting.');
       await closeSupa();
