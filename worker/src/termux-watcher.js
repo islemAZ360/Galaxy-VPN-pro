@@ -24,6 +24,10 @@ const STABLE_MS = (Number(process.env.STABILITY_WAIT_MIN) || 5) * 60_000;
 // Track what we've already processed so we don't re-trigger
 let lastTriggeredAt = null;
 
+// Throttling for terminal spam
+let lastCountStr = '';
+let lastLogMin = -1;
+
 async function getWorkerStatus() {
   const { data } = await supa
     .from('worker_status')
@@ -171,8 +175,15 @@ async function trackPresence(state) {
       const lr = status?.last_result;
 
       const now = new Date();
-      log.info(`[${now.toLocaleTimeString()}] Servers: ${counts.total} total (${counts.wifi} wifi, ${counts.lte} lte)`);
+      const countStr = `${counts.total} total (${counts.wifi} wifi, ${counts.lte} lte)`;
+      const currentMin = now.getMinutes();
 
+      // Only log idle state if counts change or every 5 minutes to avoid spam
+      const shouldLogIdle = countStr !== lastCountStr || (currentMin % 5 === 0 && currentMin !== lastLogMin);
+      if (shouldLogIdle) {
+        lastCountStr = countStr;
+        lastLogMin = currentMin;
+      }
       // Check if WiFi cascade finished recently
       const wifiDone = lr?.finishedAt && lr?.mode === 'wifi';
       const wifiFinishedAt = wifiDone ? lr.finishedAt : null;
@@ -241,10 +252,14 @@ async function trackPresence(state) {
           }
         }
       } else if (alreadyTriggered || alreadyProcessed) {
-        log.info('💤 LTE already triggered for this WiFi run. Sleeping...');
+        if (shouldLogIdle) {
+          log.info(`[${now.toLocaleTimeString()}] 💤 LTE already triggered for this run. Servers: ${countStr}`);
+        }
         firstDetectionAt = null;
       } else {
-        log.info('💤 No new WiFi scan to process. Sleeping...');
+        if (shouldLogIdle) {
+          log.info(`[${now.toLocaleTimeString()}] 💤 No new WiFi scan. Servers: ${countStr} | Sleeping...`);
+        }
         firstDetectionAt = null;
       }
     } catch (e) {
