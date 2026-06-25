@@ -723,14 +723,19 @@ export async function runLteCascade({ basePercentage = 100, detailsPercentage = 
       const lteDim = lteKeys.has(k);
 
       let gemDim;
-      if (detailsPercentage < 100) {
-        gemDim = testedGeminiKeys.has(k) ? geminiKeys.has(k) : false;
-      } else {
-        if (testedGeminiKeys.has(k)) {
-          gemDim = geminiKeys.has(k);
+      if (lteDim) {
+        if (detailsPercentage < 100) {
+          gemDim = testedGeminiKeys.has(k) ? geminiKeys.has(k) : false;
         } else {
-          gemDim = (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
+          if (testedGeminiKeys.has(k)) {
+            gemDim = geminiKeys.has(k);
+          } else {
+            gemDim = (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
+          }
         }
+      } else {
+        // If it failed LTE, it drops to Wi-Fi tier. Preserve its previous Gemini status.
+        gemDim = (s.network_type === 'gemini_wifi' || s.network_type === 'gemini_lte');
       }
 
       const tier = lteDim ? (gemDim ? 'gemini_lte' : 'lte') : (gemDim ? 'gemini_wifi' : 'wifi');
