@@ -136,7 +136,14 @@ export const log = {
     process.stdout.write('\r\x1b[K');
   },
 
-  // Smooth gradient progress bar with an animated spinner; overwrites its line.
+  ticker: (msg, color = C.cyan) => {
+    const isCI = process.env.CI || !process.stdout.isTTY;
+    if (isCI) return;
+    const spin = SPIN[frame++ % SPIN.length];
+    process.stdout.write(
+      `\r${C.gray}${ts()}${C.reset} ${GUTTER} ${color}${spin}${C.reset}  ${C.gray}${highlight(msg)}${C.reset}\x1b[K`
+    );
+  },
   progress: (pct, msg) => {
     const p = Math.max(0, Math.min(100, pct));
     const isCI = process.env.CI || !process.stdout.isTTY;

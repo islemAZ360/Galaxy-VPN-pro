@@ -24,9 +24,22 @@ const STABLE_MS = (Number(process.env.STABILITY_WAIT_MIN) || 5) * 60_000;
 // Track what we've already processed so we don't re-trigger
 let lastTriggeredAt = null;
 
+// Hide cursor for clean animation, restore on exit
+process.stdout.write('\x1b[?25l');
+process.on('SIGINT', () => {
+  process.stdout.write('\x1b[?25h\n');
+  process.exit(0);
+});
+
 // Throttling for terminal spam
 let lastCountStr = '';
-let lastLogMin = -1;
+let currentTickerMsg = 'Initializing...';
+let tickerColor = C.cyan;
+
+// Start the high-fps UI animation loop (10 fps)
+setInterval(() => {
+  log.ticker(currentTickerMsg, tickerColor);
+}, 100);
 
 async function getWorkerStatus() {
   const { data } = await supa
@@ -176,14 +189,12 @@ async function trackPresence(state) {
 
       const now = new Date();
       const countStr = `${counts.total} total (${counts.wifi} wifi, ${counts.lte} lte)`;
-      const currentMin = now.getMinutes();
 
-      // Only log idle state if counts change or every 5 minutes to avoid spam
-      const shouldLogIdle = countStr !== lastCountStr || (currentMin % 5 === 0 && currentMin !== lastLogMin);
-      if (shouldLogIdle) {
-        lastCountStr = countStr;
-        lastLogMin = currentMin;
+      // If counts change, print a permanent log line to keep history
+      if (countStr !== lastCountStr && lastCountStr !== '') {
+        log.info(`Servers updated: ${countStr}`);
       }
+      lastCountStr = countStr;
       // Check if WiFi cascade finished recently
       const wifiDone = lr?.finishedAt && lr?.mode === 'wifi';
       const wifiFinishedAt = wifiDone ? lr.finishedAt : null;
@@ -213,18 +224,23 @@ async function trackPresence(state) {
             allChunksDone = true;
           } else {
             const doneCount = chunkRows ? chunkRows.length : 0;
-            log.info(`⏳ Waiting for all SourceCraft tasks... (${doneCount}/${expectedChunks} chunks finished)`);
+            currentTickerMsg = `⏳ Waiting for all SourceCraft tasks... (${doneCount}/${expectedChunks} chunks finished)`;
+            tickerColor = C.cyan;
           }
         }
 
         if (allChunksDone) {
+          log.clearProgress();
           log.step('🚀 All chunks confirmed! Starting LTE cascade...');
 
           // Run the LTE cascade
           try {
             await trackPresence('syncing');
+            currentTickerMsg = 'Running LTE cascade...';
+            tickerColor = C.amber;
             const result = await runLteCascade({ basePercentage: 100, detailsPercentage: 100 });
             await trackPresence('idle');
+            log.clearProgress();
             log.done(`✅ Auto LTE cascade completed! Result: ${JSON.stringify(result)}`);
             
             // Mark as triggered AFTER running successfully so if it crashes or is killed, it will retry
@@ -248,22 +264,22 @@ async function trackPresence(state) {
               }, { onConflict: 'id' });
             } catch { /* best effort */ }
           } catch (e) {
+            log.clearProgress();
             log.err(`LTE cascade failed: ${e.message}`);
           }
         }
       } else if (alreadyTriggered || alreadyProcessed) {
-        if (shouldLogIdle) {
-          log.info(`[${now.toLocaleTimeString()}] 💤 LTE already triggered for this run. Servers: ${countStr}`);
-        }
+        currentTickerMsg = `LTE already triggered. Servers: ${countStr}`;
+        tickerColor = C.gray;
         firstDetectionAt = null;
       } else {
-        if (shouldLogIdle) {
-          log.info(`[${now.toLocaleTimeString()}] 💤 No new WiFi scan. Servers: ${countStr} | Sleeping...`);
-        }
+        currentTickerMsg = `No new WiFi scan. Servers: ${countStr} | Sleeping...`;
+        tickerColor = C.cyan;
         firstDetectionAt = null;
       }
     } catch (e) {
-      log.warn(`Poll error: ${e.message}. Retrying next cycle...`);
+      log.clearProgress();
+      log.err(`Poll error: ${e.message}. Retrying next cycle...`);
     }
 
     await sleep(POLL_MS);
