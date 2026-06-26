@@ -86,7 +86,7 @@ async function runWithStatus(reason, fn) {
       last_seen: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       last_sync_at: new Date().toISOString(),
-      last_result: { reason, ...result },
+      last_result: { reason, isLocal: true, ...result },
     }, { onConflict: 'id' });
   } catch { /* best-effort */ }
   

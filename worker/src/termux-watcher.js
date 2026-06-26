@@ -228,8 +228,12 @@ async function trackPresence(state) {
         const expectedChunks = lr?.chunkTotal || 1;
         let allChunksDone = false;
 
-        if (expectedChunks <= 1) {
-          // No chunks (e.g. manual run), just wait a little bit
+        if (lr?.isLocal) {
+          // It's a direct local PC run. It tests everything synchronously.
+          // No need to wait for chunks or stability.
+          allChunksDone = true;
+        } else if (expectedChunks <= 1) {
+          // No chunks (e.g. legacy manual run), just wait a little bit
           const ageMs = now - new Date(wifiFinishedAt);
           if (ageMs >= STABLE_MS) allChunksDone = true;
           else {
