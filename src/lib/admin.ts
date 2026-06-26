@@ -15,11 +15,11 @@ export const requireAdmin = cache(async (locale: string) => {
   const user = session?.user;
   if (!user) redirect({ href: '/login', locale });
   
-  if (user.email === ADMIN_EMAIL) {
-    return { admin: createAdminClient(), adminId: user.id };
+  if (user!.email === ADMIN_EMAIL) {
+    return { admin: createAdminClient(), adminId: user!.id };
   }
   
-  const { data: me } = await supabase.from('users').select('role').eq('id', user.id).maybeSingle();
+  const { data: me } = await supabase.from('users').select('role').eq('id', user!.id).maybeSingle();
   if (me?.role !== 'admin') redirect({ href: '/', locale });
-  return { admin: createAdminClient(), adminId: user.id };
+  return { admin: createAdminClient(), adminId: user!.id };
 });
