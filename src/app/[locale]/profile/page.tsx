@@ -38,7 +38,12 @@ export default async function ProfilePage({
   if (!user) redirect({ href: '/login', locale });
 
   const ADMIN_EMAIL = 'islamazaizia360@gmail.com';
-  if (user!.email === ADMIN_EMAIL) redirect({ href: '/admin', locale });
+  let isAdmin = user!.email === ADMIN_EMAIL;
+  if (!isAdmin) {
+    const { data: me } = await supabase.from('users').select('role').eq('id', user!.id).maybeSingle();
+    isAdmin = me?.role === 'admin';
+  }
+  if (isAdmin) redirect({ href: '/admin', locale });
 
   const t = await getTranslations('profile');
 

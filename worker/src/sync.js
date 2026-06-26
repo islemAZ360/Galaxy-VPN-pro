@@ -548,13 +548,15 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
     let finalWorking = aiSelected;
     const fastKeys = new Set();
     
-    // We will collect speed test targets to log later
-    let mlLogTargets = [];
-
+    // We already declared mlLogTargets on line 481, so we just use it here.
     if (process.env.ENABLE_SPEED_TEST === 'true') {
       log.step('Phase 2 — Download Speed Test (Cloudflare 5MB)…');
       const speedUris = finalWorking.map((w) => w.uri);
-      mlLogTargets = [...finalWorking];
+      
+      // Fallback: if AI step didn't populate it (or failed), use finalWorking
+      if (mlLogTargets.length === 0) {
+        mlLogTargets = [...finalWorking];
+      }
       
       // Run deepTest with 5MB file and generous timeout
       const speedResults = await deepTest(speedUris, {

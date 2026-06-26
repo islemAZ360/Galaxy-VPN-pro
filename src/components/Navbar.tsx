@@ -14,7 +14,12 @@ export async function Navbar() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  
+  let isAdmin = user?.email === ADMIN_EMAIL;
+  if (user && !isAdmin) {
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).maybeSingle();
+    isAdmin = me?.role === 'admin';
+  }
 
   const navItems = [
     { href: '/', label: t('home') },
