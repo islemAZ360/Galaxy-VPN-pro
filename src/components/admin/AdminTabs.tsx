@@ -2,10 +2,11 @@
 
 import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
-import { BarChart3, Server, Trash2, FolderGit2, Users, MessageCircle, Ticket } from 'lucide-react';
+import { BarChart3, Server, Trash2, FolderGit2, Users, MessageCircle, Ticket, Zap } from 'lucide-react';
 
 const TABS = [
   { href: '/admin', key: 'tabStats', Icon: BarChart3 },
+  { href: '/admin/ai', key: 'tabAIEngine', Icon: Zap, label: 'AI Engine' },
   { href: '/admin/servers', key: 'tabServers', Icon: Server },
   { href: '/admin/servers/deleted', key: 'tabServersDeleted', Icon: Trash2 },
   { href: '/admin/repos', key: 'tabRepos', Icon: FolderGit2 },
