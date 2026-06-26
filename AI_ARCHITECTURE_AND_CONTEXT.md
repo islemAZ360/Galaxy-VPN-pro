@@ -112,21 +112,20 @@ The `looksLikeConfig()` function in `parse.js` enforces this gate. It's applied:
 
 ### 4.2 GitHub Liveness Scan (`liveness-scan.js`)
 Runs as a GitHub Action.
-1. Scrapes enabled `.txt`/`.md` files up to a **2MB file size limit** (prevents memory OOM crashes).
-2. Extracts configs via `parse.js` strict rules.
-3. Tests **ALL** extracted configs (no sampling limit) using `xray-knife http` with 100 concurrency and an 8000ms delay.
-4. Writes survivors to the `candidates` table.
+1. **Concurrent Scraping:** Scrapes enabled `.txt`/`.md` files using the GitHub API (`worker/src/github.js`, line 58). To prevent bottlenecks and rate limits, it pulls **20 files concurrently** per repository, and processes up to **4 repositories concurrently** (`worker/src/calculate-matrix.js`, line 21).
+2. **Extraction:** Extracts configs via `parse.js` strict rules.
+3. **Liveness Test:** Tests **ALL** extracted configs using `xray-knife http` with 100 concurrency and an 8000ms delay (`worker/src/liveness-scan.js`, line 194).
+4. **The Waiting Room:** Upserts survivors (and dead configs) to the `candidates` table (`worker/src/liveness-scan.js`, line 253). **Important:** At this stage, the dashboard shows `Working: 0` because they are only candidates. They wait here until a local PC/Phone worker deeply tests them and moves them to the final `servers` table.
 
 ### 4.3 Deep Local Sync (`sync.js` / `test.js`)
 Runs inside Russia (Termux or SourceCraft Runner).
 
-#### Testing Pipeline (`test.js`)
-1. **TCP Prefilter:** Fast TCP connect to check if the port is reachable before
-   wasting time on the full DPI test. Servers that fail TCP are dropped early.
-2. **xray-knife Deep Test:** Real VLESS+Reality handshake via `xray-knife http`
-   using the `xray` core (`-z xray`). Outputs CSV with pass/fail, latency
-   (`delayMs`), and egress country code (`location`).
-3. **Fallback:** If `xray-knife` is unavailable, falls back to TCP-only testing.
+#### Testing Pipeline (`test.js` & `sync.js`)
+1. **TCP Prefilter:** Fast TCP connect to check if the port is reachable before wasting time on the full DPI test.
+2. **xray-knife Deep Test:** Real VLESS+Reality handshake via `xray-knife http` using the `xray` core.
+3. **5MB Speed Test (The Crucible):** All surviving servers undergo a brutal speed test downloading a **5MB Cloudflare payload** within a strict **10-second timeout** (`worker/src/sync.js`, line 561). This ensures minimum streaming capability (~4 Mbps).
+4. **Rocket Badge 🚀 VIPs:** Servers that pass the speed test are sorted by latency. Exactly the **top 50%** fastest servers are awarded the `🚀` badge to highlight them as elite premium nodes in the UI (`worker/src/sync.js`, line 573).
+5. **Fallback:** If `xray-knife` is unavailable, falls back to TCP-only testing.
 
 #### xray-knife on Android/Termux
 The `xray-knife` binary **must be built from source** on the Android device:

@@ -15,8 +15,21 @@ export function parseRepoUrl(url) {
   return { owner: m[1], repo: m[2] };
 }
 
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok || res.status === 404) return res;
+      if (attempt === maxRetries) return res;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+    }
+    await new Promise((r) => setTimeout(r, 1000 * attempt));
+  }
+}
+
 async function getDefaultBranch(owner, repo) {
-  const res = await fetch(`${GH_API}/repos/${owner}/${repo}`, { headers: ghHeaders() });
+  const res = await fetchWithRetry(`${GH_API}/repos/${owner}/${repo}`, { headers: ghHeaders() });
   if (!res.ok) throw new Error(`repo meta ${owner}/${repo}: ${res.status}`);
   const j = await res.json();
   return j.default_branch || 'main';
@@ -24,7 +37,7 @@ async function getDefaultBranch(owner, repo) {
 
 // Recursively list all .txt file paths in the repo tree.
 async function listTxtFiles(owner, repo, branch) {
-  const res = await fetch(`${GH_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, {
+  const res = await fetchWithRetry(`${GH_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, {
     headers: ghHeaders(),
   });
   if (!res.ok) throw new Error(`tree ${owner}/${repo}@${branch}: ${res.status}`);
@@ -42,7 +55,7 @@ async function listTxtFiles(owner, repo, branch) {
 
 async function fetchRaw(owner, repo, branch, path) {
   const url = `${RAW}/${owner}/${repo}/${branch}/${path}`;
-  const res = await fetch(url, { headers: { 'User-Agent': 'galaxyvpn-worker' } });
+  const res = await fetchWithRetry(url, { headers: { 'User-Agent': 'galaxyvpn-worker' } });
   if (!res.ok) return '';
   return await res.text();
 }
