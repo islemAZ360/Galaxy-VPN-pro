@@ -197,7 +197,8 @@ function isTcpPrefilterable(uri) {
 // so slow-but-alive hosts survive. Disable with TCP_PREFILTER=0.
 async function tcpPrefilter(uris) {
   if (process.env.TCP_PREFILTER === '0') return uris;
-  const conc = Number(process.env.TCP_PREFILTER_CONC) || Math.min(150, (Number(process.env.TEST_CONCURRENCY) || 50) * 2);
+  // Use a much higher cap (1500) so powerful PCs can sweep TCP connections blazingly fast
+  const conc = Number(process.env.TCP_PREFILTER_CONC) || Math.min(1500, (Number(process.env.TEST_CONCURRENCY) || 50) * 5);
   const timeoutMs = Number(process.env.TCP_PREFILTER_TIMEOUT_MS) || 2500;
 
   const eligible = [];

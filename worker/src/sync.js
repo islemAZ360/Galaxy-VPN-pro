@@ -405,14 +405,7 @@ async function vpnOffGate(connectionMsg) {
   log.ok('Testing now!');
 }
 function vpnOnPrompt() {
-  if (AUTO_MODE) {
-    log.ok('AUTO_MODE: skipping VPN-on prompt.');
-    return;
-  }
-  log.panel('✅  TESTING FINISHED', [
-    'TURN YOUR VPN BACK ON NOW.',
-    'We need a secure connection to upload results to Supabase.'
-  ], C.emerald);
+  // DB uploads now use the https proxy, so we no longer need the user to turn the VPN back on.
 }
 
 const elapsed = (stats) => Math.round((Date.parse(stats.finishedAt) - Date.parse(stats.startedAt)) / 1000);
@@ -427,7 +420,7 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
   console.log('');
   log.step('Wi-Fi re-check  ·  Phase 1: Wi-Fi DPI  →  Phase 2: Gemini');
   try {
-    log.info('Loading GitHub-verified candidates (keep VPN ON)…');
+    log.info('Loading GitHub-verified candidates…');
     const { uris, meta, source } = await withVpnRetry(loadAliveCandidates, { label: 'load-candidates' });
     stats.total = uris.length;
     if (!stats.total) {
