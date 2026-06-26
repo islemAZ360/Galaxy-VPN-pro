@@ -515,11 +515,12 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
         
         // Call AI Engine: limit to subset % of total or max 1000
         const limitCount = Math.floor(working.length * (detailsPercentage / 100));
-        const aiEnginePath = path.resolve('../galaxy-ai-engine/predict.js');
-        if (fs.existsSync(aiEnginePath)) {
+        const aiEnginePath = path.resolve('../galaxy-ai-engine/predict.py');
+        const pythonExe = path.resolve('../galaxy-ai-engine/venv/Scripts/python.exe');
+        if (fs.existsSync(aiEnginePath) && fs.existsSync(pythonExe)) {
           if (aiFilteringEnabled) {
-            // Run Node script
-            await execFileAsync('node', [aiEnginePath, poolFile, limitCount.toString(), '0.1', outputFile]);
+            // Run Python script
+            await execFileAsync(pythonExe, [aiEnginePath, poolFile, limitCount.toString(), '0.1', outputFile]);
             const predictions = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
             
             // Map the selected hashes back to full server objects
