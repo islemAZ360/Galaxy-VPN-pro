@@ -56,28 +56,7 @@ function chunk(arr, n) {
   return out;
 }
 
-// GitHub liveness pre-filter (SAFE + REVERSIBLE). Skips configs that the GitHub
-// Action (worker/src/liveness-scan.js) positively confirmed DEAD, so the local
-// deep-test only runs on known/likely-alive servers. Russia-hosted servers are
-// force-kept by the scan, so they're never skipped here. No-op when the
-// `candidates` table is empty/missing/unreachable; never reduces to empty.
-async function skipKnownDead(uris) {
-  try {
-    const data = await fetchAllPaginated('candidates', 'config_hash', { alive: false });
-    if (!data || data.length === 0) return uris;
-    const dead = new Set(data.map((d) => d.config_hash));
-    const kept = uris.filter((u) => !dead.has(hashConfig(u)));
-    const skipped = uris.length - kept.length;
-    if (skipped > 0 && kept.length > 0) {
-      log.info(`GitHub liveness: skipping ${skipped} server(s) confirmed dead — deep-testing ${kept.length} alive/unknown.`);
-      return kept;
-    }
-    return uris;
-  } catch (e) {
-    log.warn(`Liveness pre-filter unavailable (${e.message}) — testing all candidates.`);
-    return uris;
-  }
-}
+
 
 // Two-phase VPN retry: after heavy xray-knife testing, the VPN/TUN adapter may
 // have dropped. This retries the Supabase upload indefinitely (every 5s) until
@@ -315,16 +294,43 @@ async function fetchAllPaginatedDiscovery(table, select, filters, size, concurre
 }
 function allLen(pages) { return pages.reduce((n, p) => n + p.length, 0); }
 
+async function fetchCandidatesKeyset(select) {
+  const data = [];
+  let lastHash = '';
+  let fetched = 0;
+  while (true) {
+    const r = await withRetry(async () => {
+      const q = supa.from('candidates')
+        .select(select)
+        .eq('alive', true)
+        .gt('config_hash', lastHash)
+        .order('config_hash', { ascending: true })
+        .limit(2000);
+      const res = await q;
+      if (res.error) throw new Error(res.error.message);
+      return res;
+    }, { attempts: 5, baseMs: 1000, label: `keyset candidates@${fetched}` });
+    
+    if (!r.data || r.data.length === 0) break;
+    data.push(...r.data);
+    fetched += r.data.length;
+    lastHash = r.data[r.data.length - 1].config_hash;
+    log.progress(0, `Loaded ${fetched} candidates...`);
+  }
+  return data;
+}
+
 // Source the Wi-Fi test pool from the GitHub-maintained `candidates` (alive).
 // Returns { uris, meta } where meta maps keyOf(uri) → { exit_cc, source_repo }.
 async function loadAliveCandidates() {
   let data;
   try {
     // host_cc/host_country are precomputed by the GitHub scan so we skip ip-api here.
-    data = await fetchAllPaginated('candidates', 'config_uri, exit_cc, source_repo, host_cc, host_country', { alive: true });
-  } catch {
+    data = await fetchCandidatesKeyset('config_hash, config_uri, exit_cc, source_repo, host_cc, host_country');
+  } catch (e) {
     // Columns not migrated yet → fall back; ip-api fills the country gap locally.
-    data = await fetchAllPaginated('candidates', 'config_uri, exit_cc, source_repo', { alive: true });
+    log.warn(`Falling back to legacy schema: ${e.message}`);
+    data = await fetchCandidatesKeyset('config_hash, config_uri, exit_cc, source_repo');
   }
   if (!data || data.length === 0) {
     return { uris: [], meta: new Map(), source: 'GitHub candidates (empty)' };
