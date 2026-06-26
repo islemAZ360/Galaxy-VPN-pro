@@ -91,10 +91,12 @@ async function heartbeat() {
     heartbeatTimer = setInterval(heartbeat, 15000);
     let basePercentage = 100;
     let detailsPercentage = 100;
+    let aiFilteringEnabled = false;
     try {
       const { data: limits } = await supa.from('worker_settings').select('*').eq('id', 'global').maybeSingle();
       if (limits) {
         basePercentage = limits.base_pct ?? 100;
+        aiFilteringEnabled = limits.ai_filtering ?? false;
         if (mode === 'wifi') detailsPercentage = limits.wifi_deep_pct ?? 100;
         else if (mode === 'lte') detailsPercentage = limits.lte_deep_pct ?? 100;
         else if (mode === 'whitelist') detailsPercentage = limits.wl_deep_pct ?? 100;
@@ -105,7 +107,8 @@ async function heartbeat() {
       chunkIndex: Number(process.env.TEST_CHUNK_INDEX) || 0,
       chunkTotal: Number(process.env.TEST_CHUNKS_TOTAL) || 1,
       basePercentage,
-      detailsPercentage
+      detailsPercentage,
+      aiFilteringEnabled
     });
     await recordStatus(result);
   } catch (e) {

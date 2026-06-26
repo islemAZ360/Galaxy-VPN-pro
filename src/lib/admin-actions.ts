@@ -455,15 +455,17 @@ export async function getGlobalLimits() {
   return {
     base: data?.base_pct ?? 100,
     gemini_scan: data?.wifi_deep_pct ?? 100,
+    ai_filtering: data?.ai_filtering ?? false,
   };
 }
 
-export async function updateGlobalLimits(limits: { base?: number, gemini_scan?: number }) {
+export async function updateGlobalLimits(limits: { base?: number, gemini_scan?: number, ai_filtering?: boolean }) {
   await assertAdmin();
   const admin = createAdminClient();
-  const updatePayload: Record<string, number> = {};
+  const updatePayload: Record<string, any> = {};
   if (limits.base !== undefined) updatePayload.base_pct = limits.base;
   if (limits.gemini_scan !== undefined) updatePayload.wifi_deep_pct = limits.gemini_scan;
+  if (limits.ai_filtering !== undefined) updatePayload.ai_filtering = limits.ai_filtering;
   
   if (Object.keys(updatePayload).length > 0) {
     await admin.from('worker_settings').update(updatePayload).eq('id', 'global');

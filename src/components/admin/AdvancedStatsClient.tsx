@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { deleteSales } from '@/lib/admin-actions';
+import { useState, useEffect, useTransition } from 'react';
+import { deleteSales, getGlobalLimits, updateGlobalLimits } from '@/lib/admin-actions';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
   PieChart, Pie, Sector, AreaChart, Area, CartesianGrid 
@@ -41,6 +41,20 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv, salesRecord
   const [resetting, setResetting] = useState(false);
   const [selectedSales, setSelectedSales] = useState<string[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [aiEnabled, setAiEnabled] = useState(false);
+
+  useEffect(() => {
+    getGlobalLimits().then(res => setAiEnabled(res.ai_filtering));
+  }, []);
+
+  const toggleAi = () => {
+    const newVal = !aiEnabled;
+    setAiEnabled(newVal); // Optimistic
+    startTransition(async () => {
+      await updateGlobalLimits({ ai_filtering: newVal });
+    });
+  };
 
   const handleSelectAll = () => {
     if (selectedSales.length === salesRecord.length && salesRecord.length > 0) {
@@ -226,7 +240,15 @@ export default function AdvancedStatsClient({ t, stats, byPlan, adv, salesRecord
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Zap className="h-5 w-5 text-yellow-400" /> {t.aiEngineStats || 'AI Engine Analytics'}
               </h3>
-              <p className="text-sm text-white/40 mt-1">{t.aiDesc || 'Continuous learning performance tracking for predictive filtering.'}</p>
+              <p className="text-sm text-white/40 mt-1 mb-4">{t.aiDesc || 'Continuous learning performance tracking for predictive filtering.'}</p>
+              <button 
+                onClick={toggleAi}
+                disabled={isPending}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${aiEnabled ? 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30' : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'}`}
+              >
+                <div className={`h-2 w-2 rounded-full ${aiEnabled ? 'bg-yellow-400 animate-pulse' : 'bg-white/40'}`} />
+                {aiEnabled ? (t.aiActive || 'AI Filtering is ACTIVE') : (t.aiInactive || 'Enable AI Filtering')}
+              </button>
             </div>
             <div className="flex gap-4">
               <div className="text-right">

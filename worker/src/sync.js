@@ -413,7 +413,7 @@ const elapsed = (stats) => Math.round((Date.parse(stats.finishedAt) - Date.parse
 // ───────────────────────── Wi-Fi button cascade ───────────────────────────
 // Pool = GitHub-verified candidates → Phase 1 Wi-Fi DPI → Phase 2 Gemini.
 // Sets the base tier (wifi/gemini_wifi) and PRESERVES the LTE dimension.
-export async function runWifiCascade({ basePercentage = 100, detailsPercentage = 100, chunkIndex, chunkTotal } = {}) {
+export async function runWifiCascade({ basePercentage = 100, detailsPercentage = 100, chunkIndex, chunkTotal, aiFilteringEnabled = false } = {}) {
   if (running) return { skipped: true, reason: 'already running' };
   running = true;
   const stats = { startedAt: new Date().toISOString(), mode: 'wifi' };
@@ -478,8 +478,9 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
     // 🧠 AI PREDICTIVE FILTERING STEP
     // ==============================================================
     let aiSelected = working;
+    let mlLogTargets = [];
     if (working.length > 0) {
-      log.step('🧠 AI Engine — Predictive Filtering & Exploration...');
+      log.step(`🧠 AI Engine — Predictive Filtering & Exploration (Enabled: ${aiFilteringEnabled})...`);
       try {
         const fs = await import('fs');
         const { execFile } = await import('child_process');
@@ -516,13 +517,24 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
         const limitCount = Math.floor(working.length * (detailsPercentage / 100));
         const aiEnginePath = path.resolve('../galaxy-ai-engine/predict.js');
         if (fs.existsSync(aiEnginePath)) {
-          // Node exec
-          await execFileAsync('node', [aiEnginePath, poolFile, limitCount.toString(), '0.1', outputFile]);
-          const predictions = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
-          aiSelected = predictions; // Only testing these
-          log.ok(`AI filtered down to ${predictions.length} high-potential servers.`);
+          if (aiFilteringEnabled) {
+            // Run Node script
+            await execFileAsync('node', [aiEnginePath, poolFile, limitCount.toString(), '0.1', outputFile]);
+            const predictions = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+            
+            // Map the selected hashes back to full server objects
+            aiSelected = predictions.selected.map(hash => working.find(r => (r.hash || keyOf(r.uri)) === hash)).filter(Boolean);
+            mlLogTargets = poolData; // Log everyone
+            
+            log.ok(`AI selected ${aiSelected.length} highly-probable servers. Dropped ${working.length - aiSelected.length}.`);
+          } else {
+            log.info('AI Predictive Filtering disabled via Admin. Passing all servers to Phase 2 (Logging only).');
+            aiSelected = working;
+            mlLogTargets = poolData; // We still want to log them for training!
+          }
         } else {
           log.warn('AI engine not found. Skipping prediction step.');
+          aiSelected = working;
         }
 
         if (fs.existsSync(poolFile)) fs.unlinkSync(poolFile);
