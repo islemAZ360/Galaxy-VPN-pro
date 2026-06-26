@@ -85,6 +85,25 @@ const SPIN = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '�
 let frame = 0;
 let lastProgress = -1;
 
+let progressInterval = null;
+let currentPct = 0;
+let currentMsg = '';
+let isProgressing = false;
+
+function renderProgress() {
+  const p = Math.max(0, Math.min(100, currentPct));
+  const w = 28;
+  const filled = Math.round((p / 100) * w);
+  const bar = gradient(filled, '━') + `${C.gray}${'━'.repeat(w - filled)}${C.reset}`;
+  const spin = SPIN[frame++ % SPIN.length];
+  const hlMsg = highlight(currentMsg);
+
+  process.stdout.write(
+    `\r${C.gray}${ts()}${C.reset} ${GUTTER} ${C.cyan}${spin}${C.reset} ${bar} ` +
+      `${C.white}${C.bold}${p.toFixed(0).padStart(3)}%${C.reset}  ${C.gray}${hlMsg}${C.reset}\x1b[K`
+  );
+}
+
 export const log = {
   info: (m) => out('•', C.cyan, C.gray, m), // Dim grey for text, cyan for icon/keywords
   ok: (m) => out('✓', C.emerald, C.green, m), // Bright green
@@ -158,20 +177,23 @@ export const log = {
       return;
     }
 
-    const w = 28;
-    const filled = Math.round((p / 100) * w);
-    const bar = gradient(filled, '━') + `${C.gray}${'━'.repeat(w - filled)}${C.reset}`;
-    const spin = SPIN[frame++ % SPIN.length];
+    currentPct = pct;
+    currentMsg = msg;
+    isProgressing = true;
     
-    // Highlight message
-    const hlMsg = highlight(msg);
-
-    process.stdout.write(
-      `\r${C.gray}${ts()}${C.reset} ${GUTTER} ${C.cyan}${spin}${C.reset} ${bar} ` +
-        `${C.white}${C.bold}${p.toFixed(0).padStart(3)}%${C.reset}  ${C.gray}${hlMsg}${C.reset}\x1b[K`
-    );
+    if (!progressInterval) {
+      progressInterval = setInterval(() => {
+        if (isProgressing) renderProgress();
+      }, 100);
+    }
+    renderProgress();
   },
   clearProgress: () => {
+    isProgressing = false;
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
     const isCI = process.env.CI || !process.stdout.isTTY;
     if (!isCI) process.stdout.write('\r\x1b[K');
   },
