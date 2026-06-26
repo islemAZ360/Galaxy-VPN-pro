@@ -182,6 +182,13 @@
       "startHint": "شغّل start-worker.bat على جهازك"
     },
     "tabStats": "الإحصائيات",
+    "tabAIEngine": "الذكاء الاصطناعي",
+    "aiEngineStats": "إحصائيات الذكاء الاصطناعي",
+    "aiDesc": "التتبع المستمر لأداء تعلم الآلة لتصفية السيرفرات.",
+    "aiActive": "الذكاء الاصطناعي مفعّل",
+    "aiInactive": "تفعيل الذكاء الاصطناعي",
+    "accuracy": "دقة النموذج",
+    "datasetSize": "حجم بيانات التدريب",
     "tabServers": "السيرفرات",
     "tabServersDeleted": "السيرفرات المحذوفة",
     "tabRepos": "المستودعات",

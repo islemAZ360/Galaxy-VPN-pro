@@ -182,6 +182,13 @@
       "startHint": "start start-worker.bat on your machine"
     },
     "tabStats": "Statistics",
+    "tabAIEngine": "AI Engine",
+    "aiEngineStats": "AI Engine Analytics",
+    "aiDesc": "Continuous learning performance tracking for predictive filtering.",
+    "aiActive": "AI Filtering is ACTIVE",
+    "aiInactive": "Enable AI Filtering",
+    "accuracy": "Model Accuracy",
+    "datasetSize": "Training Dataset",
     "tabServers": "Servers",
     "tabServersDeleted": "Deleted servers",
     "tabRepos": "Repos",
