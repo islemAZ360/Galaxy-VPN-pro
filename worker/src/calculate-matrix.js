@@ -17,15 +17,21 @@ import { log } from './log.js';
   log.info(`Reading ${repos?.length ?? 0} enabled repo(s)...`);
 
   const configs = new Set();
-  for (const r of repos ?? []) {
-    try {
-      const { text, fileCount } = await fetchRepoTexts(r.repo_url);
-      const found = extractConfigs(text);
-      for (const uri of found) configs.add(hashConfig(uri));
-      log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${found.length} configs`);
-    } catch (e) {
-      log.err(`repo ${r.repo_url}: ${e.message}`);
-    }
+  const REPO_CHUNK_SIZE = 4;
+  const reposArray = repos ?? [];
+  
+  for (let i = 0; i < reposArray.length; i += REPO_CHUNK_SIZE) {
+    const batch = reposArray.slice(i, i + REPO_CHUNK_SIZE);
+    await Promise.all(batch.map(async (r) => {
+      try {
+        const { text, fileCount } = await fetchRepoTexts(r.repo_url);
+        const found = extractConfigs(text);
+        for (const uri of found) configs.add(hashConfig(uri));
+        log.info(`  · ${r.repo_url}  →  ${fileCount} files  →  ${found.length} configs`);
+      } catch (e) {
+        log.err(`repo ${r.repo_url}: ${e.message}`);
+      }
+    }));
   }
 
   let totalConfigs = configs.size;

@@ -55,9 +55,18 @@ export async function fetchRepoTexts(repoUrl) {
   const branch = await getDefaultBranch(owner, repo);
   const files = await listTxtFiles(owner, repo, branch);
   const texts = [];
-  for (const path of files) {
-    const txt = await fetchRaw(owner, repo, branch, path);
-    if (txt) texts.push(txt);
+  
+  // Process files concurrently in chunks to speed up without hitting rate limits
+  const CHUNK_SIZE = 20;
+  for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+    const batch = files.slice(i, i + CHUNK_SIZE);
+    const results = await Promise.all(
+      batch.map(path => fetchRaw(owner, repo, branch, path))
+    );
+    for (const txt of results) {
+      if (txt) texts.push(txt);
+    }
   }
+  
   return { repoUrl, fileCount: files.length, text: texts.join('\n') };
 }
