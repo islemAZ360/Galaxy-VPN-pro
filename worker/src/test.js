@@ -88,7 +88,11 @@ function runXrayKnife(inFile, outFile, threads, url, timeoutMs) {
         return reject(Object.assign(new Error('xray-knife not found'), { enoent: true }));
       }
       if (err && err.code && err.code !== 1) {
-        log.warn(`xray-knife execution issue: ${err.message} (code: ${err.code}, signal: ${err.signal})`);
+        let cleanMsg = err.message.split('\n')[0];
+        if (err.message.includes('panic:')) {
+          cleanMsg = 'Go panic encountered (malformed server config crashed the core).';
+        }
+        log.warn(`xray-knife execution issue: ${cleanMsg} (code: ${err.code}, signal: ${err.signal})`);
       }
       resolve({ stdout, stderr });
     });
