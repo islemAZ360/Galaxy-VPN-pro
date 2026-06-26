@@ -30,6 +30,10 @@ export default async function AdminStatsPage({
   const { data: revenueByDay } = await admin.from('admin_revenue_by_day').select('*');
   const { data: usersByDay } = await admin.from('admin_users_by_day').select('*');
 
+  // 4. Fetch AI Engine Metrics
+  const { data: mlMetricsRaw } = await admin.from('ml_metrics').select('*').order('created_at', { ascending: false }).limit(10);
+  const mlMetrics = mlMetricsRaw || [];
+
   // 3. Compute MRR (Monthly Recurring Revenue)
   let mrr = 0;
   subs?.forEach((sub) => {
@@ -119,6 +123,7 @@ export default async function AdminStatsPage({
     networks,
     revenueByDay: revenueByDay || [],
     usersByDay: usersByDay || [],
+    mlMetrics, // <-- AI Engine stats
   };
 
   const translations = {
@@ -146,6 +151,10 @@ export default async function AdminStatsPage({
     confirmDesc: t('confirmDesc', { count: '{count}', fallback: 'Are you sure you want to permanently delete the {count} selected sales records and their associated subscriptions? This action cannot be undone.' }),
     cancelBtn: t('cancelBtn', { fallback: 'Cancel' }),
     deleteBtn: t('deleteBtn', { fallback: 'Yes, Delete' }),
+    aiEngineStats: t('aiEngineStats', { fallback: 'AI Engine Analytics' }),
+    accuracy: t('accuracy', { fallback: 'Model Accuracy' }),
+    datasetSize: t('datasetSize', { fallback: 'Training Dataset' }),
+    aiDesc: t('aiDesc', { fallback: 'Continuous learning performance tracking for predictive filtering.' }),
   };
 
   return (

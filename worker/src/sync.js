@@ -474,11 +474,75 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
       if (w.exitCc && !meta.get(k)?.exit_cc) meta.set(k, { ...(meta.get(k) || {}), exit_cc: w.exitCc });
     }
 
-    let finalWorking = working;
+    // ==============================================================
+    // 🧠 AI PREDICTIVE FILTERING STEP
+    // ==============================================================
+    let aiSelected = working;
+    if (working.length > 0) {
+      log.step('🧠 AI Engine — Predictive Filtering & Exploration...');
+      try {
+        const fs = await import('fs');
+        const { execFile } = await import('child_process');
+        const { promisify } = await import('util');
+        const execFileAsync = promisify(execFile);
+        const path = await import('path');
+
+        const poolFile = path.resolve('temp_phase1.json');
+        const outputFile = path.resolve('temp_predictions.json');
+        
+        // Prepare data for AI (using meta and the Phase 1 latency/delayMs)
+        const poolData = working.map(r => {
+          const m = meta.get(keyOf(r.uri)) || {};
+          const uStr = r.uri || '';
+          const typeMatch = uStr.match(/type=([^&#]+)/);
+          const portMatch = uStr.match(/:(\d+)(?:\?|#|\/|$)/);
+          return {
+            config_hash: r.hash || keyOf(r.uri),
+            latency_ms: r.delayMs || r.latencyMs || 9999, // use the delayMs from Phase 1
+            network_type: typeMatch ? typeMatch[1] : 'tcp',
+            port: portMatch ? Number(portMatch[1]) : 443,
+            host_cc: m.host_cc || 'Unknown',
+            exit_cc: r.exitCc || m.exit_cc || 'Unknown',
+            source_repo: m.source_repo || source || 'Unknown',
+            uri: r.uri,
+            host: r.host,
+            name: r.name,
+          };
+        });
+
+        fs.writeFileSync(poolFile, JSON.stringify(poolData));
+        
+        // Call AI Engine: limit to subset % of total or max 1000
+        const limitCount = Math.floor(working.length * (detailsPercentage / 100));
+        const aiEnginePath = path.resolve('../galaxy-ai-engine/predict.js');
+        if (fs.existsSync(aiEnginePath)) {
+          // Node exec
+          await execFileAsync('node', [aiEnginePath, poolFile, limitCount.toString(), '0.1', outputFile]);
+          const predictions = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+          aiSelected = predictions; // Only testing these
+          log.ok(`AI filtered down to ${predictions.length} high-potential servers.`);
+        } else {
+          log.warn('AI engine not found. Skipping prediction step.');
+        }
+
+        if (fs.existsSync(poolFile)) fs.unlinkSync(poolFile);
+        if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
+      } catch (err) {
+        log.warn(`AI Engine failed: ${err.message}. Proceeding without filter.`);
+      }
+    }
+
+    let finalWorking = aiSelected;
     const fastKeys = new Set();
+    
+    // We will collect speed test targets to log later
+    let mlLogTargets = [];
+
     if (process.env.ENABLE_SPEED_TEST === 'true') {
       log.step('Phase 2 — Download Speed Test (Cloudflare 5MB)…');
-      const speedUris = working.map((w) => w.uri);
+      const speedUris = finalWorking.map((w) => w.uri);
+      mlLogTargets = [...finalWorking];
+      
       // Run deepTest with 5MB file and generous timeout
       const speedResults = await deepTest(speedUris, {
         conc: CONC,
@@ -497,12 +561,43 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
         fastKeys.add(keyOf(sortedBySpeed[i].uri));
       }
       
-      log.ok(`${speedWorking.length} / ${working.length} passed speed test. Top 50% (${half}) marked as 🚀`);
+      log.ok(`${speedWorking.length} / ${finalWorking.length} passed speed test. Top 50% (${half}) marked as 🚀`);
       // Update working set to ONLY servers that passed the speed test.
-      // We keep the original 'w' from Phase 1 so we don't overwrite w.latencyMs (ping).
       const passedSpeed = new Set(speedWorking.map(r => r.uri));
-      finalWorking = working.filter(w => passedSpeed.has(w.uri));
+      finalWorking = finalWorking.filter(w => passedSpeed.has(w.uri));
       stats.working = finalWorking.length;
+
+      // LOG TO ML_DATASET
+      log.step('🧠 Logging results to ML Dataset for continuous learning...');
+      try {
+        const mlDataset = [];
+        for (const candidate of mlLogTargets) {
+          const passed = finalWorking.some(sr => keyOf(sr.uri) === keyOf(candidate.uri));
+          const uStr = candidate.uri || '';
+          const typeMatch = uStr.match(/type=([^&#]+)/);
+          const portMatch = uStr.match(/:(\d+)(?:\?|#|\/|$)/);
+          mlDataset.push({
+            config_hash: candidate.config_hash || keyOf(candidate.uri),
+            latency_ms: candidate.latency_ms || candidate.delayMs || 9999,
+            network_type: candidate.network_type || (typeMatch ? typeMatch[1] : 'tcp'),
+            port: candidate.port || (portMatch ? Number(portMatch[1]) : 443),
+            host_cc: candidate.host_cc || 'Unknown',
+            exit_cc: candidate.exit_cc || 'Unknown',
+            source_repo: candidate.source_repo || 'Unknown',
+            success: passed
+          });
+        }
+        
+        let insertedRows = 0;
+        for (let i = 0; i < mlDataset.length; i += 1000) {
+          const chunk = mlDataset.slice(i, i + 1000);
+          const { error } = await supa.from('ml_dataset').insert(chunk);
+          if (!error) insertedRows += chunk.length;
+        }
+        log.ok(`Logged ${insertedRows} results to ML memory.`);
+      } catch (err) {
+        log.warn(`Failed to log to ML Dataset: ${err.message}`);
+      }
     } else {
       log.info('Phase 2 — Speed Test skipped (ENABLE_SPEED_TEST !== true)');
     }
