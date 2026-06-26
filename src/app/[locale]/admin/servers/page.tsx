@@ -35,40 +35,38 @@ export default async function AdminServersPage({
   const { admin } = await requireAdmin(locale);
   const t = await getTranslations('admin.servers');
 
-  const { data: servers } = await admin
-    .from('servers')
-    .select('id, name, country, country_code, protocol, latency_ms, network_type')
-    // premium first: 'gemini' < 'lte' < 'wifi' alphabetically, so ascending lists
-    // gemini → lte → wifi; then by latency
-    .eq('is_working', true)
-    .eq('is_deleted', false)
-    .order('network_type', { ascending: true })
-    .order('latency_ms', { ascending: true, nullsFirst: false })
-    .limit(1000);
-
-  const { data: status } = await admin
-    .from('worker_status')
-    .select('last_seen, state')
-    .eq('id', 'worker')
-    .single();
-
   const [
+    { data: servers },
+    { data: status },
     { count: geminiLteCount },
     { count: geminiWifiCount },
     { count: lteCount },
     { count: wifiCount },
     { count: whitelistCount },
-    { count: geminiWhitelistCount }
+    { count: geminiWhitelistCount },
+    balanceMode
   ] = await Promise.all([
+    admin
+      .from('servers')
+      .select('id, name, country, country_code, protocol, latency_ms, network_type')
+      .eq('is_working', true)
+      .eq('is_deleted', false)
+      .order('network_type', { ascending: true })
+      .order('latency_ms', { ascending: true, nullsFirst: false })
+      .limit(1000),
+    admin
+      .from('worker_status')
+      .select('last_seen, state')
+      .eq('id', 'worker')
+      .single(),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_lte'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_wifi'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'lte'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'wifi'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'whitelist'),
     admin.from('servers').select('*', { count: 'exact', head: true }).eq('is_working', true).eq('is_deleted', false).eq('network_type', 'gemini_whitelist'),
+    getBalanceModeStatus()
   ]);
-
-  const balanceMode = await getBalanceModeStatus();
 
   let dispGeminiLte = geminiLteCount || 0;
   let dispGeminiWifi = geminiWifiCount || 0;

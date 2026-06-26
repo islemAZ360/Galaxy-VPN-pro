@@ -12,26 +12,33 @@ export default async function AdminStatsPage({
   const { admin } = await requireAdmin(locale);
   const t = await getTranslations('admin.stats');
 
-  // 1. Fetch Basic Stats (from views)
-  const { data: stats } = await admin.from('admin_stats').select('*').maybeSingle();
-  const { data: byPlan } = await admin.from('admin_revenue_by_plan').select('*');
+  // Fetch all data concurrently to reduce waterfall loading time
+  const [
+    { data: stats },
+    { data: byPlan },
+    { data: subs },
+    { data: servers },
+    { data: uniquePaidUsers },
+    { data: salesRecord },
+    { data: revenueByDay },
+    { data: usersByDay },
+    { data: mlMetricsRaw }
+  ] = await Promise.all([
+    admin.from('admin_stats').select('*').maybeSingle(),
+    admin.from('admin_revenue_by_plan').select('*'),
+    admin.from('subscriptions').select('status, network_type, price_rub, duration_days').eq('status', 'active'),
+    admin.from('servers').select('config_uri, is_working, latency_ms').eq('is_working', true),
+    admin.from('payments').select('user_id').eq('status', 'approved'),
+    admin.from('payments')
+      .select('id, amount_rub, plan, created_at, user_id, users!payments_user_id_fkey(email)')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(500),
+    admin.from('admin_revenue_by_day').select('*'),
+    admin.from('admin_users_by_day').select('*'),
+    admin.from('ml_metrics').select('*').order('created_at', { ascending: false }).limit(10)
+  ]);
 
-  // 2. Fetch Raw Data for Advanced Analytics
-  const { data: subs } = await admin.from('subscriptions').select('status, network_type, price_rub, duration_days').eq('status', 'active');
-  const { data: servers } = await admin.from('servers').select('config_uri, is_working, latency_ms').eq('is_working', true);
-  const { data: uniquePaidUsers } = await admin.from('payments').select('user_id').eq('status', 'approved');
-  const { data: salesRecord } = await admin.from('payments')
-    .select('id, amount_rub, plan, created_at, user_id, users!payments_user_id_fkey(email)')
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false })
-    .limit(500);
-  
-  // 3. Fetch Time-Series Data (Last 30 Days)
-  const { data: revenueByDay } = await admin.from('admin_revenue_by_day').select('*');
-  const { data: usersByDay } = await admin.from('admin_users_by_day').select('*');
-
-  // 4. Fetch AI Engine Metrics
-  const { data: mlMetricsRaw } = await admin.from('ml_metrics').select('*').order('created_at', { ascending: false }).limit(10);
   const mlMetrics = mlMetricsRaw || [];
 
   // 3. Compute MRR (Monthly Recurring Revenue)

@@ -25,30 +25,34 @@ export default async function AdminUsersPage({
   const tp = await getTranslations('admin.payments');
   const tu = await getTranslations('admin.users');
 
-  const { data: payments } = await admin
-    .from('payments')
-    .select('id, amount_rub, plan, receipt_base64, user_id, users!payments_user_id_fkey(email)')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true });
+  const [
+    { data: payments },
+    { data: users },
+    { data: subs },
+    { data: devicesData }
+  ] = await Promise.all([
+    admin
+      .from('payments')
+      .select('id, amount_rub, plan, receipt_base64, user_id, users!payments_user_id_fkey(email)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true }),
+    admin
+      .from('users')
+      .select('id, email, role, banned_until, created_at')
+      .order('created_at', { ascending: false })
+      .limit(500),
+    admin
+      .from('subscriptions')
+      .select('id, token:sub_token, user_id, end_at, plan, network_type, server_count, created_at, status')
+      .order('created_at', { ascending: false })
+      .limit(1000),
+    admin
+      .from('sub_devices')
+      .select('subscription_id, ip_address, device_type, last_seen_at')
+      .order('last_seen_at', { ascending: false })
+      .limit(2000)
+  ]);
 
-  const { data: users } = await admin
-    .from('users')
-    .select('id, email, role, banned_until, created_at')
-    .order('created_at', { ascending: false })
-    .limit(500);
-
-  const { data: subs } = await admin
-    .from('subscriptions')
-    .select('id, token:sub_token, user_id, end_at, plan, network_type, server_count, created_at, status')
-    .order('created_at', { ascending: false })
-    .limit(1000);
-
-  const { data: devicesData } = await admin
-    .from('sub_devices')
-    .select('subscription_id, ip_address, device_type, last_seen_at')
-    .order('last_seen_at', { ascending: false })
-    .limit(2000);
-  
   const allDevices: Device[] = devicesData ?? [];
 
   // All subscriptions per user
