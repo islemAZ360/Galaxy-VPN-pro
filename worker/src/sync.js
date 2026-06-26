@@ -734,6 +734,22 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
     await updateRepoStats();
     stats.finishedAt = new Date().toISOString();
     log.done(`Wi-Fi re-check done — ${eligible.length} live · ${stats.gemini} Gemini · ${stats.deleted} removed · took ${elapsed(stats)}s`);
+    
+    // Auto-train AI model asynchronously if the Python engine exists
+    const trainScript = path.resolve('../galaxy-ai-engine/train.py');
+    const pythonExePath = path.resolve('../galaxy-ai-engine/venv/Scripts/python.exe');
+    if (fs.existsSync(trainScript) && fs.existsSync(pythonExePath)) {
+      log.step('🤖 Starting automatic AI model training in the background...');
+      try {
+        await withVpnRetry(async () => {
+           await execFileAsync(pythonExePath, [trainScript]);
+        }, { label: 'ai-training' });
+        log.ok('✅ AI model successfully trained on new data!');
+      } catch (err) {
+        log.warn(`AI model training failed or was skipped: ${err.message}`);
+      }
+    }
+
     return stats;
   } catch (e) {
     log.err(`Wi-Fi re-check failed: ${e.message}`);
