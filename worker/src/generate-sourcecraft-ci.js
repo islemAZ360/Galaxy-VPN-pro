@@ -12,21 +12,21 @@ import { log } from './log.js';
   for (let i = 0; i < 3; i++) {
     const { count, error, status, statusText } = await supa
       .from('candidates')
-      .select('*', { count: 'planned' })
-      .eq('alive', true)
-      .limit(1);
+      .select('*', { count: 'estimated', head: true }); // Removed .eq('alive', true) to prevent full table scans and timeouts
 
     if (!error) {
-      aliveCount = count || 1;
-      log.info(`Total alive servers ready for Russia DPI scan: ${aliveCount}`);
+      // We assume roughly ~50% of the raw candidates are alive if we just take total estimated count
+      // It's just for splitting tasks, exact precision is not strictly needed.
+      aliveCount = Math.floor((count || 1) / 2) || 1;
+      log.info(`Total estimated candidates: ${count || 1}. Using ${aliveCount} as baseline for task splitting.`);
       break;
     }
 
-    log.warn(`Attempt ${i + 1}/3 failed to count alive servers. HTTP Status: ${status} ${statusText} | Error: ${error?.message || JSON.stringify(error)}`);
+    log.warn(`Attempt ${i + 1}/3 failed to count servers. HTTP Status: ${status} ${statusText} | Error: ${error?.message || JSON.stringify(error)}`);
     if (i === 2) {
-      log.err('All 3 attempts to count alive servers failed. Aborting.');
-      await closeSupa();
-      process.exit(1);
+      log.warn('All 3 attempts to count servers failed. Falling back to 10 default tasks (safe ceiling).');
+      aliveCount = 10 * 1500; // Will result in 10 tasks
+      break;
     }
     await sleep(2000);
   }
