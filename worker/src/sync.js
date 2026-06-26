@@ -294,18 +294,21 @@ async function fetchAllPaginatedDiscovery(table, select, filters, size, concurre
 }
 function allLen(pages) { return pages.reduce((n, p) => n + p.length, 0); }
 
-async function fetchCandidatesKeyset(select) {
+async function fetchCandidatesKeyset(select, enabledRepos) {
   const data = [];
   let lastHash = '';
   let fetched = 0;
   while (true) {
     const r = await withRetry(async () => {
-      const q = supa.from('candidates')
+      let q = supa.from('candidates')
         .select(select)
         .eq('alive', true)
         .gt('config_hash', lastHash)
         .order('config_hash', { ascending: true })
         .limit(2000);
+      if (enabledRepos && enabledRepos.length > 0) {
+        q = q.in('source_repo', enabledRepos);
+      }
       const res = await q;
       if (res.error) throw new Error(res.error.message);
       return res;
@@ -323,14 +326,19 @@ async function fetchCandidatesKeyset(select) {
 // Source the Wi-Fi test pool from the GitHub-maintained `candidates` (alive).
 // Returns { uris, meta } where meta maps keyOf(uri) → { exit_cc, source_repo }.
 async function loadAliveCandidates() {
+  const { data: repos, error: reposErr } = await supa.from('repos').select('repo_url').eq('enabled', true);
+  if (reposErr) throw new Error(`Failed to load enabled repos: ${reposErr.message}`);
+  const enabledRepos = repos ? repos.map(r => r.repo_url) : [];
+  if (enabledRepos.length === 0) return { uris: [], meta: new Map(), source: 'GitHub candidates (empty)' };
+
   let data;
   try {
     // host_cc/host_country are precomputed by the GitHub scan so we skip ip-api here.
-    data = await fetchCandidatesKeyset('config_hash, config_uri, exit_cc, source_repo, host_cc, host_country');
+    data = await fetchCandidatesKeyset('config_hash, config_uri, exit_cc, source_repo, host_cc, host_country', enabledRepos);
   } catch (e) {
     // Columns not migrated yet → fall back; ip-api fills the country gap locally.
     log.warn(`Falling back to legacy schema: ${e.message}`);
-    data = await fetchCandidatesKeyset('config_hash, config_uri, exit_cc, source_repo');
+    data = await fetchCandidatesKeyset('config_hash, config_uri, exit_cc, source_repo', enabledRepos);
   }
   if (!data || data.length === 0) {
     return { uris: [], meta: new Map(), source: 'GitHub candidates (empty)' };
