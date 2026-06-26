@@ -110,14 +110,16 @@ function runBatch(uris) {
 // host -> { country, country_code }. Empty if the columns don't exist yet.
 async function loadKnownHostGeo() {
   const cache = new Map();
-  let from = 0;
-  const size = 1000;
+  let lastHash = '';
+  const size = 3000;
   while (true) {
     const { data, error } = await supa
       .from('candidates')
-      .select('config_uri, host_cc, host_country')
+      .select('config_hash, config_uri, host_cc, host_country')
       .not('host_cc', 'is', null)
-      .range(from, from + size - 1);
+      .gt('config_hash', lastHash)
+      .order('config_hash', { ascending: true })
+      .limit(size);
     if (error) {
       if (/host_cc|host_country|column/i.test(error.message)) return cache; // not migrated yet
       log.warn(`host-geo cache read failed: ${error.message}`);
@@ -128,8 +130,8 @@ async function loadKnownHostGeo() {
       const h = parseConfig(r.config_uri).host;
       if (h && !cache.has(h)) cache.set(h, { country: r.host_country || null, country_code: r.host_cc });
     }
+    lastHash = data[data.length - 1].config_hash;
     if (data.length < size) break;
-    from += size;
   }
   return cache;
 }
