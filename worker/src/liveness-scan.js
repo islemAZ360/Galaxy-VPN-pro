@@ -317,9 +317,28 @@ async function loadKnownHostGeo() {
 
   // 5. prune configs that vanished from the repos (not re-scanned this run)
   const cutoff = new Date(Date.now() - STALE_HOURS * 3600 * 1000).toISOString();
-  const { error: delErr } = await supa.from('candidates').delete().lt('scanned_at', cutoff);
-  if (delErr) log.err(`prune: ${delErr.message}`);
-  else log.info(`Pruned candidates not seen in ${STALE_HOURS}h.`);
+  let prunedCount = 0;
+  try {
+    while (true) {
+      const { data, error } = await supa
+        .from('candidates')
+        .select('config_hash')
+        .lt('scanned_at', cutoff)
+        .limit(1000);
+
+      if (error) { log.err(`prune fetch: ${error.message}`); break; }
+      if (!data || data.length === 0) break;
+
+      const hashes = data.map((d) => d.config_hash);
+      const { error: delErr } = await supa.from('candidates').delete().in('config_hash', hashes);
+
+      if (delErr) { log.err(`prune delete: ${delErr.message}`); break; }
+      prunedCount += hashes.length;
+    }
+    log.info(`Pruned ${prunedCount} candidates not seen in ${STALE_HOURS}h.`);
+  } catch (e) {
+    log.err(`prune failed: ${e.message}`);
+  }
 
   log.done('Liveness scan complete.');
   await closeSupa();
