@@ -595,42 +595,6 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
       log.info('Phase 2 — Speed Test skipped (ENABLE_SPEED_TEST !== true)');
     }
 
-    // LOG TO ML_DATASET
-    log.step('🧠 Logging results to ML Dataset for continuous learning...');
-    try {
-      // Fallback: if AI step didn't populate it (or failed), use finalWorking
-      if (mlLogTargets.length === 0) {
-        mlLogTargets = [...finalWorking];
-      }
-      
-      const mlDataset = [];
-      for (const candidate of mlLogTargets) {
-        const passed = finalWorking.some(sr => keyOf(sr.uri) === keyOf(candidate.uri));
-        const uStr = candidate.uri || '';
-        const typeMatch = uStr.match(/type=([^&#]+)/);
-        const portMatch = uStr.match(/:(\d+)(?:\?|#|\/|$)/);
-        mlDataset.push({
-          config_hash: candidate.config_hash || keyOf(candidate.uri),
-          latency_ms: candidate.latency_ms || candidate.delayMs || 9999,
-          network_type: candidate.network_type || (typeMatch ? typeMatch[1] : 'tcp'),
-          port: candidate.port || (portMatch ? Number(portMatch[1]) : 443),
-          host_cc: candidate.host_cc || 'Unknown',
-          exit_cc: candidate.exit_cc || 'Unknown',
-          source_repo: candidate.source_repo || 'Unknown',
-          success: passed
-        });
-      }
-      
-      let insertedRows = 0;
-      for (let i = 0; i < mlDataset.length; i += 1000) {
-        const chunk = mlDataset.slice(i, i + 1000);
-        const { error } = await supa.from('ml_dataset').insert(chunk);
-        if (!error) insertedRows += chunk.length;
-      }
-      log.ok(`Logged ${insertedRows} results to ML memory.`);
-    } catch (err) {
-      log.warn(`Failed to log to ML Dataset: ${err.message}`);
-    }
 
     log.step('Phase 3 — Gemini availability…');
     let geminiCandidates = finalWorking.map((w) => w.uri);
@@ -644,6 +608,64 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
     const geminiKeys = await geminiKeysFor(geminiCandidates, meta);
     stats.gemini = finalWorking.filter((w) => geminiKeys.has(keyOf(w.uri))).length;
     log.ok(`${stats.gemini} tested servers reach Gemini.`);
+
+    // LOG TO ML_DATASET
+    log.step('🧠 Logging results to ML Dataset for continuous learning...');
+    try {
+      // Fallback: if AI step didn't populate it (or failed), use finalWorking
+      if (mlLogTargets.length === 0) {
+        mlLogTargets = [...finalWorking];
+      }
+      
+      const mlDataset = [];
+      for (const candidate of mlLogTargets) {
+        const k = keyOf(candidate.uri);
+        const passedPhase2 = finalWorking.some(sr => keyOf(sr.uri) === k);
+        
+        let success = false;
+        let shouldLog = true;
+        
+        if (!passedPhase2) {
+          // Failed Phase 2 -> Definitive failure
+          success = false;
+        } else {
+          // Passed Phase 2. Was it tested in Phase 3?
+          if (testedGeminiKeys.has(k)) {
+            // Tested in Phase 3. Did it pass Gemini?
+            success = geminiKeys.has(k);
+          } else {
+            // Passed Phase 2, but skipped in Phase 3. We don't know the final outcome!
+            shouldLog = false;
+          }
+        }
+
+        if (shouldLog) {
+          const uStr = candidate.uri || '';
+          const typeMatch = uStr.match(/type=([^&#]+)/);
+          const portMatch = uStr.match(/:(\d+)(?:\?|#|\/|$)/);
+          mlDataset.push({
+            config_hash: candidate.config_hash || k,
+            latency_ms: candidate.latency_ms || candidate.delayMs || 9999,
+            network_type: candidate.network_type || (typeMatch ? typeMatch[1] : 'tcp'),
+            port: candidate.port || (portMatch ? Number(portMatch[1]) : 443),
+            host_cc: candidate.host_cc || 'Unknown',
+            exit_cc: candidate.exit_cc || 'Unknown',
+            source_repo: candidate.source_repo || 'Unknown',
+            success: success
+          });
+        }
+      }
+      
+      let insertedRows = 0;
+      for (let i = 0; i < mlDataset.length; i += 1000) {
+        const chunk = mlDataset.slice(i, i + 1000);
+        const { error } = await supa.from('ml_dataset').insert(chunk);
+        if (!error) insertedRows += chunk.length;
+      }
+      log.ok(`Logged ${insertedRows} results to ML memory.`);
+    } catch (err) {
+      log.warn(`Failed to log to ML Dataset: ${err.message}`);
+    }
 
     vpnOnPrompt();
     log.step('Uploading results to Supabase…');
