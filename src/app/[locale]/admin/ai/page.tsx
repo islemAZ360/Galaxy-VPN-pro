@@ -2,6 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import AIEngineClient from '@/components/admin/AIEngineClient';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AIEnginePage() {
   const t = await getTranslations('admin');
   const supabase = createAdminClient();
