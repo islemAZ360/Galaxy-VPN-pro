@@ -5,6 +5,12 @@ import { testAll, tcpTestAll } from './test.js';
 import { lookupCountries } from './geoip.js';
 import { classifyGeminiPool, isCountryGeminiBlocked } from './gemini.js';
 import { log, C } from './log.js';
+import path from 'node:path';
+import fs from 'node:fs';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 // ── User-pool quality gate (applied when the Wi-Fi cascade builds the live pool).
 // Drops servers users should never receive, using data we ALREADY have (host
@@ -490,11 +496,6 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
     if (working.length > 0) {
       log.step(`🧠 AI Engine — Predictive Filtering & Exploration (Enabled: ${aiFilteringEnabled})...`);
       try {
-        const fs = await import('fs');
-        const { execFile } = await import('child_process');
-        const { promisify } = await import('util');
-        const execFileAsync = promisify(execFile);
-        const path = await import('path');
 
         const poolFile = path.resolve('temp_phase1.json');
         const outputFile = path.resolve('temp_predictions.json');
