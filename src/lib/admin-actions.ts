@@ -488,10 +488,11 @@ export async function getAITrainingStatus() {
   await assertAdmin();
   const admin = createAdminClient();
   
-  // Check if worker is currently running a sync
+  // Check if worker is currently running a sync (unprocessed requests)
   const { count } = await admin
     .from('sync_requests')
-    .select('*', { count: 'exact', head: true });
+    .select('*', { count: 'exact', head: true })
+    .is('processed_at', null);
     
   const isBusy = (count || 0) > 0;
   
