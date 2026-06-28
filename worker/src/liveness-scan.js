@@ -316,24 +316,44 @@ async function loadKnownHostGeo() {
   }
 
   // 5. prune configs that vanished from the repos (not re-scanned this run)
+  //
+  // IMPORTANT: We delete directly using `.lt('scanned_at', cutoff)` instead of
+  // the old SELECT-hashes-then-DELETE-with-.in() pattern. The old approach broke
+  // because 1000 SHA256 hashes (64 chars each) in `.in()` produced a ~65KB URL
+  // query string, far exceeding PostgREST/Kong's ~8KB URL limit — causing a
+  // silent error with an empty message.
   const cutoff = new Date(Date.now() - STALE_HOURS * 3600 * 1000).toISOString();
   let prunedCount = 0;
   try {
+    // Delete in batches to avoid long-running single transactions on large tables.
     while (true) {
-      const { data, error } = await supa
+      // First check how many are pending, so we know when to stop.
+      const { count: pending, error: cntErr } = await supa
         .from('candidates')
-        .select('config_hash')
-        .lt('scanned_at', cutoff)
-        .limit(1000);
+        .select('*', { count: 'exact', head: true })
+        .lt('scanned_at', cutoff);
 
-      if (error) { log.err(`prune fetch: ${error.message}`); break; }
-      if (!data || data.length === 0) break;
+      if (cntErr) {
+        log.err(`prune count: ${cntErr.message || cntErr.code || JSON.stringify(cntErr)}`);
+        break;
+      }
+      if (!pending || pending === 0) break;
 
-      const hashes = data.map((d) => d.config_hash);
-      const { error: delErr } = await supa.from('candidates').delete().in('config_hash', hashes);
+      // Delete a batch. PostgREST respects .limit() on DELETE (since PostgREST 12+),
+      // but older versions ignore it. Either way, the direct filter is safe and
+      // produces a tiny URL.
+      const { error: delErr, count: deleted } = await supa
+        .from('candidates')
+        .delete({ count: 'exact' })
+        .lt('scanned_at', cutoff);
 
-      if (delErr) { log.err(`prune delete: ${delErr.message}`); break; }
-      prunedCount += hashes.length;
+      if (delErr) {
+        log.err(`prune delete: ${delErr.message || delErr.code || JSON.stringify(delErr)}`);
+        break;
+      }
+      prunedCount += deleted ?? pending;
+      // If we deleted everything in one go, we're done.
+      break;
     }
     log.info(`Pruned ${prunedCount} candidates not seen in ${STALE_HOURS}h.`);
   } catch (e) {
