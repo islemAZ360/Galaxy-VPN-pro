@@ -524,8 +524,8 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
         
         // Call AI Engine: limit to subset % of total or max 1000
         const limitCount = Math.floor(working.length * (detailsPercentage / 100));
-        const aiEnginePath = path.resolve('../galaxy-ai-engine/predict.py');
-        const pythonExe = path.resolve('../galaxy-ai-engine/venv/Scripts/python.exe');
+        const aiEnginePath = path.resolve('../../galaxy-ai-engine/predict.py');
+        const pythonExe = path.resolve('../../galaxy-ai-engine/venv/Scripts/python.exe');
         if (fs.existsSync(aiEnginePath) && fs.existsSync(pythonExe)) {
           if (aiFilteringEnabled) {
             // Run Python script
@@ -591,39 +591,45 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
       finalWorking = finalWorking.filter(w => passedSpeed.has(w.uri));
       stats.working = finalWorking.length;
 
-      // LOG TO ML_DATASET
-      log.step('🧠 Logging results to ML Dataset for continuous learning...');
-      try {
-        const mlDataset = [];
-        for (const candidate of mlLogTargets) {
-          const passed = finalWorking.some(sr => keyOf(sr.uri) === keyOf(candidate.uri));
-          const uStr = candidate.uri || '';
-          const typeMatch = uStr.match(/type=([^&#]+)/);
-          const portMatch = uStr.match(/:(\d+)(?:\?|#|\/|$)/);
-          mlDataset.push({
-            config_hash: candidate.config_hash || keyOf(candidate.uri),
-            latency_ms: candidate.latency_ms || candidate.delayMs || 9999,
-            network_type: candidate.network_type || (typeMatch ? typeMatch[1] : 'tcp'),
-            port: candidate.port || (portMatch ? Number(portMatch[1]) : 443),
-            host_cc: candidate.host_cc || 'Unknown',
-            exit_cc: candidate.exit_cc || 'Unknown',
-            source_repo: candidate.source_repo || 'Unknown',
-            success: passed
-          });
-        }
-        
-        let insertedRows = 0;
-        for (let i = 0; i < mlDataset.length; i += 1000) {
-          const chunk = mlDataset.slice(i, i + 1000);
-          const { error } = await supa.from('ml_dataset').insert(chunk);
-          if (!error) insertedRows += chunk.length;
-        }
-        log.ok(`Logged ${insertedRows} results to ML memory.`);
-      } catch (err) {
-        log.warn(`Failed to log to ML Dataset: ${err.message}`);
-      }
     } else {
       log.info('Phase 2 — Speed Test skipped (ENABLE_SPEED_TEST !== true)');
+    }
+
+    // LOG TO ML_DATASET
+    log.step('🧠 Logging results to ML Dataset for continuous learning...');
+    try {
+      // Fallback: if AI step didn't populate it (or failed), use finalWorking
+      if (mlLogTargets.length === 0) {
+        mlLogTargets = [...finalWorking];
+      }
+      
+      const mlDataset = [];
+      for (const candidate of mlLogTargets) {
+        const passed = finalWorking.some(sr => keyOf(sr.uri) === keyOf(candidate.uri));
+        const uStr = candidate.uri || '';
+        const typeMatch = uStr.match(/type=([^&#]+)/);
+        const portMatch = uStr.match(/:(\d+)(?:\?|#|\/|$)/);
+        mlDataset.push({
+          config_hash: candidate.config_hash || keyOf(candidate.uri),
+          latency_ms: candidate.latency_ms || candidate.delayMs || 9999,
+          network_type: candidate.network_type || (typeMatch ? typeMatch[1] : 'tcp'),
+          port: candidate.port || (portMatch ? Number(portMatch[1]) : 443),
+          host_cc: candidate.host_cc || 'Unknown',
+          exit_cc: candidate.exit_cc || 'Unknown',
+          source_repo: candidate.source_repo || 'Unknown',
+          success: passed
+        });
+      }
+      
+      let insertedRows = 0;
+      for (let i = 0; i < mlDataset.length; i += 1000) {
+        const chunk = mlDataset.slice(i, i + 1000);
+        const { error } = await supa.from('ml_dataset').insert(chunk);
+        if (!error) insertedRows += chunk.length;
+      }
+      log.ok(`Logged ${insertedRows} results to ML memory.`);
+    } catch (err) {
+      log.warn(`Failed to log to ML Dataset: ${err.message}`);
     }
 
     log.step('Phase 3 — Gemini availability…');
@@ -747,8 +753,8 @@ export async function runWifiCascade({ basePercentage = 100, detailsPercentage =
     log.done(`Wi-Fi re-check done — ${eligible.length} live · ${stats.gemini} Gemini · ${stats.deleted} removed · took ${elapsed(stats)}s`);
     
     // Auto-train AI model asynchronously if the Python engine exists
-    const trainScript = path.resolve('../galaxy-ai-engine/train.py');
-    const pythonExePath = path.resolve('../galaxy-ai-engine/venv/Scripts/python.exe');
+    const trainScript = path.resolve('../../galaxy-ai-engine/train.py');
+    const pythonExePath = path.resolve('../../galaxy-ai-engine/venv/Scripts/python.exe');
     if (fs.existsSync(trainScript) && fs.existsSync(pythonExePath)) {
       log.step('🤖 Starting automatic AI model training in the background...');
       try {
