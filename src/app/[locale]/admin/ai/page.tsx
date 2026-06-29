@@ -22,6 +22,8 @@ export default async function AIEnginePage() {
     aiDesc: t('aiDesc', { fallback: 'Continuous learning performance tracking for predictive filtering.' }),
     aiActive: t('aiActive', { fallback: 'AI Filtering is ACTIVE' }),
     aiInactive: t('aiInactive', { fallback: 'Enable AI Filtering' }),
+    hyperTrain: t('hyperTrain', { target: 95 }),
+    workerOffline: t('workerOffline', { fallback: 'Worker Offline — Cannot Train' }),
   };
 
   return <AIEngineClient t={translations} mlMetrics={mlMetrics || []} />;

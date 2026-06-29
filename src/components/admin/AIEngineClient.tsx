@@ -255,8 +255,8 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
                     <WifiOff className="h-4 w-4" />
                   )}
                   {workerOnline 
-                    ? `Hyper-Train AI (Loop to ${targetAccuracy * 100}%)` 
-                    : 'Worker Offline — لا يمكن التدريب'}
+                    ? (t.hyperTrain || `Hyper-Train AI (Loop to ${targetAccuracy * 100}%)`)
+                    : (t.workerOffline || 'Worker Offline — Cannot Train')}
                 </button>
               ) : isRunning ? (
                 <button 

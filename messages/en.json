@@ -187,6 +187,8 @@
     "aiDesc": "Continuous learning performance tracking for predictive filtering.",
     "aiActive": "AI Filtering is ACTIVE",
     "aiInactive": "Enable AI Filtering",
+    "hyperTrain": "Hyper-Train AI (Loop to {target}%)",
+    "workerOffline": "Worker Offline — Cannot Train",
     "accuracy": "Model Accuracy",
     "datasetSize": "Training Dataset",
     "tabServers": "Servers",
