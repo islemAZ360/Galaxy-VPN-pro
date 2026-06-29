@@ -79,10 +79,10 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
     setHyperPhase('sending_scan');
     
     // Start the loop
-    runHyperLoop(0);
-  }, []);
+    runHyperLoop(0, targetLoops);
+  }, [targetLoops]);
 
-  const runHyperLoop = useCallback(async (currentIteration: number) => {
+  const runHyperLoop = useCallback(async (currentIteration: number, maxLoops: number) => {
     if (abortRef.current) return;
 
     const iter = currentIteration + 1;
@@ -192,7 +192,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
       router.refresh();
 
       // Check if goal reached
-      if (iter >= targetLoops) {
+      if (iter >= maxLoops) {
         setHyperPhase('reached_goal');
         setStatusMsg(t.goalReachedMsg?.replace('{iter}', iter.toString()) || `🎉 Completed ${iter} training cycles!`);
         return;
@@ -200,7 +200,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
 
       // Next loop
       // Small delay before starting next scan
-      setTimeout(() => runHyperLoop(iter), 3000);
+      setTimeout(() => runHyperLoop(iter, maxLoops), 3000);
     } catch (err: any) {
       if (err.message === 'aborted') return;
       if (err.message === 'timeout') {
@@ -210,7 +210,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
       }
       setHyperPhase('idle');
     }
-  }, [targetLoops, router]);
+  }, [router]);
 
   const isRunning = hyperPhase !== 'idle' && hyperPhase !== 'reached_goal';
 
