@@ -488,23 +488,42 @@ export async function getAITrainingStatus() {
   await assertAdmin();
   const admin = createAdminClient();
   
-  // Check if worker is currently running a sync (unprocessed requests)
+  // 1. Check worker_status row for the real state
+  const { data: workerRow } = await admin
+    .from('worker_status')
+    .select('state, last_seen, last_sync_at')
+    .eq('id', 'worker')
+    .single();
+
+  const now = Date.now();
+  const lastSeen = workerRow?.last_seen ? new Date(workerRow.last_seen).getTime() : 0;
+  const workerOnline = (now - lastSeen) < 40_000; // 40s threshold
+  const workerState = workerRow?.state || 'offline';
+  const lastSyncAt = workerRow?.last_sync_at || null;
+
+  // 2. Check if there are pending (unprocessed) sync requests
   const { count } = await admin
     .from('sync_requests')
     .select('*', { count: 'exact', head: true })
     .is('processed_at', null);
-    
-  const isBusy = (count || 0) > 0;
+  const hasPendingRequests = (count || 0) > 0;
+
+  // Worker is busy if it's syncing OR there are pending requests
+  const isBusy = workerState === 'syncing' || hasPendingRequests;
   
-  // Get latest accuracy
+  // 3. Get latest accuracy + its timestamp
   const { data: metrics } = await admin
     .from('ml_metrics')
-    .select('accuracy')
+    .select('accuracy, created_at')
     .order('created_at', { ascending: false })
     .limit(1);
     
   return {
+    workerOnline,
+    workerState,
     isBusy,
-    accuracy: metrics && metrics.length > 0 ? metrics[0].accuracy : 0
+    lastSyncAt,
+    accuracy: metrics && metrics.length > 0 ? metrics[0].accuracy : 0,
+    accuracyUpdatedAt: metrics && metrics.length > 0 ? metrics[0].created_at : null,
   };
 }
