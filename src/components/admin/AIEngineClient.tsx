@@ -120,11 +120,11 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
             const status = await getAITrainingStatus();
 
             if (!status.workerOnline) {
-              setStatusMsg(`الدورة ${iter}: ⚠️ Worker انقطع الاتصال! يرجى إعادة تشغيله...`);
+              setStatusMsg(t.workerDisconnected?.replace('{iter}', iter.toString()) || `Cycle ${iter}: ⚠️ Worker disconnected! Please restart it...`);
               // Don't reject, keep polling — worker might come back
             } else if (status.workerState === 'syncing' || status.isBusy) {
               seenSyncing = true;
-              setStatusMsg(`الدورة ${iter}: ⚙️ Worker يعمل (${status.workerState})...`);
+              setStatusMsg(t.workerWorking?.replace('{iter}', iter.toString()).replace('{state}', status.workerState) || `Cycle ${iter}: ⚙️ Worker is running (${status.workerState})...`);
             } else if (seenSyncing && !status.isBusy) {
               // Worker went from syncing → idle. Check if a NEW accuracy was written.
               if (status.accuracyUpdatedAt && status.accuracyUpdatedAt !== lastAccuracyTimestamp.current) {
@@ -134,14 +134,14 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
                 resolve({ accuracy: status.accuracy, accuracyUpdatedAt: status.accuracyUpdatedAt });
                 return;
               } else {
-                setStatusMsg(`الدورة ${iter}: ⏳ ينتظر اكتمال التدريب...`);
+                setStatusMsg(t.workerWaitingTrain?.replace('{iter}', iter.toString()) || `Cycle ${iter}: ⏳ Waiting for training to complete...`);
               }
             } else if (!seenSyncing && !status.isBusy) {
               // Worker hasn't picked up the request yet
-              setStatusMsg(`الدورة ${iter}: 📡 ينتظر Worker لاستلام الأمر...`);
+              setStatusMsg(t.workerWaitingPick?.replace('{iter}', iter.toString()) || `Cycle ${iter}: 📡 Waiting for Worker to pick up command...`);
             }
           } catch (err) {
-            setStatusMsg(`الدورة ${iter}: خطأ في الاتصال، يعاد المحاولة...`);
+            setStatusMsg(t.workerError?.replace('{iter}', iter.toString()) || `Cycle ${iter}: Connection error, retrying...`);
           }
         };
 
@@ -264,7 +264,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
                   className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
                 >
                   <StopCircle className="h-4 w-4" />
-                  إيقاف التدريب (الدورة {iteration})
+                  {t.stopTraining?.replace('{iter}', iteration.toString()) || `Stop training (Cycle ${iteration})`}
                   <Loader2 className="h-4 w-4 animate-spin ml-1" />
                 </button>
               ) : null}
@@ -340,12 +340,12 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
             <div className="mx-auto bg-green-500/20 w-16 h-16 rounded-full flex items-center justify-center mb-4">
               <Trophy className="h-8 w-8 text-green-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">تم الوصول للهدف! 🎉</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">{t.goalReached || 'Goal Reached! 🎉'}</h2>
             <p className="text-white/70 mb-2">
-              وصلت دقة النموذج إلى <strong className="text-green-400">{Math.round(currentAcc * 100)}%</strong>
+              {t.goalReachedDesc || 'Model accuracy reached'} <strong className="text-green-400">{Math.round(currentAcc * 100)}%</strong>
             </p>
             <p className="text-white/40 text-sm mb-8">
-              بعد {iteration} دورة تدريبية
+              {t.afterCycles?.replace('{iter}', iteration.toString()) || `after ${iteration} training cycles`}
             </p>
             <div className="flex flex-col gap-3">
               <button
@@ -358,7 +358,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
                 }}
                 className="w-full px-4 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition-colors"
               >
-                استمرار التدريب حتى 99%
+                {t.continueTraining99 || 'Continue training to 99%'}
               </button>
               <button
                 onClick={() => {
@@ -368,7 +368,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
                 }}
                 className="w-full px-4 py-3 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg font-medium transition-colors border border-white/10"
               >
-                إنهاء (إيقاف)
+                {t.finishTraining || 'Finish (Stop)'}
               </button>
             </div>
           </div>

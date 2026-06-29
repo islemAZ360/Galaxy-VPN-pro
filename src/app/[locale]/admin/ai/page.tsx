@@ -24,6 +24,17 @@ export default async function AIEnginePage() {
     aiInactive: t('aiInactive', { fallback: 'Enable AI Filtering' }),
     hyperTrain: t('hyperTrain', { target: 95 }),
     workerOffline: t('workerOffline', { fallback: 'Worker Offline — Cannot Train' }),
+    workerDisconnected: t('workerDisconnected', { fallback: 'Cycle {iter}: ⚠️ Worker disconnected! Please restart it...' }),
+    workerWorking: t('workerWorking', { fallback: 'Cycle {iter}: ⚙️ Worker is running ({state})...' }),
+    workerWaitingTrain: t('workerWaitingTrain', { fallback: 'Cycle {iter}: ⏳ Waiting for training to complete...' }),
+    workerWaitingPick: t('workerWaitingPick', { fallback: 'Cycle {iter}: 📡 Waiting for Worker to pick up command...' }),
+    workerError: t('workerError', { fallback: 'Cycle {iter}: Connection error, retrying...' }),
+    stopTraining: t('stopTraining', { fallback: 'Stop training (Cycle {iter})' }),
+    goalReached: t('goalReached', { fallback: 'Goal Reached! 🎉' }),
+    goalReachedDesc: t('goalReachedDesc', { fallback: 'Model accuracy reached' }),
+    afterCycles: t('afterCycles', { fallback: 'after {iter} training cycles' }),
+    continueTraining99: t('continueTraining99', { fallback: 'Continue training to 99%' }),
+    finishTraining: t('finishTraining', { fallback: 'Finish (Stop)' }),
   };
 
   return <AIEngineClient t={translations} mlMetrics={mlMetrics || []} />;
