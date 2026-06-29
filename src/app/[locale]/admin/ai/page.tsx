@@ -22,7 +22,7 @@ export default async function AIEnginePage() {
     aiDesc: t('aiDesc', { fallback: 'Continuous learning performance tracking for predictive filtering.' }),
     aiActive: t('aiActive', { fallback: 'AI Filtering is ACTIVE' }),
     aiInactive: t('aiInactive', { fallback: 'Enable AI Filtering' }),
-    hyperTrain: t('hyperTrain', { target: 95 }),
+    hyperTrain: t('hyperTrain', { target: 1 }), // It will be replaced dynamically
     workerOffline: t('workerOffline', { fallback: 'Worker Offline — Cannot Train' }),
     workerDisconnected: t('workerDisconnected', { fallback: 'Cycle {iter}: ⚠️ Worker disconnected! Please restart it...' }),
     workerWorking: t('workerWorking', { fallback: 'Cycle {iter}: ⚙️ Worker is running ({state})...' }),
@@ -30,10 +30,9 @@ export default async function AIEnginePage() {
     workerWaitingPick: t('workerWaitingPick', { fallback: 'Cycle {iter}: 📡 Waiting for Worker to pick up command...' }),
     workerError: t('workerError', { fallback: 'Cycle {iter}: Connection error, retrying...' }),
     stopTraining: t('stopTraining', { fallback: 'Stop training (Cycle {iter})' }),
-    goalReached: t('goalReached', { fallback: 'Goal Reached! 🎉' }),
-    goalReachedDesc: t('goalReachedDesc', { fallback: 'Model accuracy reached' }),
-    afterCycles: t('afterCycles', { fallback: 'after {iter} training cycles' }),
-    continueTraining99: t('continueTraining99', { fallback: 'Continue training to 99%' }),
+    goalReached: t('goalReached', { fallback: 'Training Completed! 🎉' }),
+    goalReachedDesc: t('goalReachedDesc', { fallback: 'Completed {iter} training cycles.' }),
+    trainAgain: t('trainAgain', { fallback: 'Train Again' }),
     finishTraining: t('finishTraining', { fallback: 'Finish (Stop)' }),
   };
 

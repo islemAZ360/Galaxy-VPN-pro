@@ -27,7 +27,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
   
   // Hyper-Training State
   const [hyperPhase, setHyperPhase] = useState<HyperPhase>('idle');
-  const [targetAccuracy, setTargetAccuracy] = useState(0.95);
+  const [targetLoops, setTargetLoops] = useState(1);
   const [currentAcc, setCurrentAcc] = useState(mlMetrics && mlMetrics.length > 0 ? mlMetrics[0].accuracy : 0);
   const [iteration, setIteration] = useState(0);
   const [statusMsg, setStatusMsg] = useState('');
@@ -188,24 +188,19 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
 
       // --- Phase 3: Read accuracy ---
       setHyperPhase('reading_accuracy');
-      setStatusMsg(`الدورة ${iter}: الدقة الجديدة ${Math.round(result.accuracy * 100)}%`);
+      setStatusMsg(t.newAccuracyMsg?.replace('{iter}', iter.toString()).replace('{acc}', Math.round(result.accuracy * 100).toString()) || `Cycle ${iter}: New accuracy ${Math.round(result.accuracy * 100)}%`);
       router.refresh();
 
       // Check if goal reached
-      if (result.accuracy >= targetAccuracy) {
+      if (iter >= targetLoops) {
         setHyperPhase('reached_goal');
-        setStatusMsg(`🎉 تم الوصول إلى ${Math.round(result.accuracy * 100)}% بعد ${iter} دورة!`);
+        setStatusMsg(t.goalReachedMsg?.replace('{iter}', iter.toString()) || `🎉 Completed ${iter} training cycles!`);
         return;
       }
 
-      // Wait 5 seconds before next iteration
-      setStatusMsg(`الدورة ${iter}: الدقة ${Math.round(result.accuracy * 100)}% < ${Math.round(targetAccuracy * 100)}%. دورة جديدة خلال 5 ثوان...`);
-      await new Promise(r => setTimeout(r, 5000));
-
-      if (abortRef.current) return;
-      
-      // Start next iteration
-      runHyperLoop(iter);
+      // Next loop
+      // Small delay before starting next scan
+      setTimeout(() => runHyperLoop(iter), 3000);
     } catch (err: any) {
       if (err.message === 'aborted') return;
       if (err.message === 'timeout') {
@@ -215,7 +210,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
       }
       setHyperPhase('idle');
     }
-  }, [targetAccuracy, router]);
+  }, [targetLoops, router]);
 
   const isRunning = hyperPhase !== 'idle' && hyperPhase !== 'reached_goal';
 
@@ -239,25 +234,37 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
               </button>
 
               {hyperPhase === 'idle' ? (
-                <button 
-                  onClick={startHyperTraining}
-                  disabled={!workerOnline}
-                  title={!workerOnline ? 'Worker غير متصل! قم بتشغيله أولاً.' : `تدريب تلقائي متكرر حتى ${targetAccuracy * 100}%`}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                    workerOnline 
-                      ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 cursor-pointer' 
-                      : 'bg-white/5 text-white/20 border border-white/10 cursor-not-allowed'
-                  }`}
-                >
-                  {workerOnline ? (
-                    <PlayCircle className="h-4 w-4" />
-                  ) : (
-                    <WifiOff className="h-4 w-4" />
-                  )}
-                  {workerOnline 
-                    ? (t.hyperTrain || `Hyper-Train AI (Loop to ${targetAccuracy * 100}%)`)
-                    : (t.workerOffline || 'Worker Offline — Cannot Train')}
-                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={targetLoops}
+                    onChange={(e) => setTargetLoops(Math.max(1, parseInt(e.target.value) || 1))}
+                    disabled={!workerOnline || isPending}
+                    className="w-16 px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-center focus:outline-none focus:border-indigo-500"
+                    title={t.loopsInputTitle || 'Number of training cycles'}
+                  />
+                  <button 
+                    onClick={startHyperTraining}
+                    disabled={!workerOnline}
+                    title={!workerOnline ? (t.workerOffline || 'Worker Offline') : ''}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                      workerOnline 
+                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 cursor-pointer' 
+                        : 'bg-white/5 text-white/20 border border-white/10 cursor-not-allowed'
+                    }`}
+                  >
+                    {workerOnline ? (
+                      <PlayCircle className="h-4 w-4" />
+                    ) : (
+                      <WifiOff className="h-4 w-4" />
+                    )}
+                    {workerOnline 
+                      ? (t.hyperTrain?.replace('{target}', targetLoops.toString()) || `Train ${targetLoops} Times`)
+                      : (t.workerOffline || 'Worker Offline — Cannot Train')}
+                  </button>
+                </div>
               ) : isRunning ? (
                 <button 
                   onClick={stopHyperTraining}
@@ -340,17 +347,16 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
             <div className="mx-auto bg-green-500/20 w-16 h-16 rounded-full flex items-center justify-center mb-4">
               <Trophy className="h-8 w-8 text-green-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">{t.goalReached || 'Goal Reached! 🎉'}</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">{t.goalReached || 'Training Completed! 🎉'}</h2>
             <p className="text-white/70 mb-2">
-              {t.goalReachedDesc || 'Model accuracy reached'} <strong className="text-green-400">{Math.round(currentAcc * 100)}%</strong>
+              {t.goalReachedDesc?.replace('{iter}', targetLoops.toString()) || `Completed ${targetLoops} training cycles.`}
             </p>
             <p className="text-white/40 text-sm mb-8">
-              {t.afterCycles?.replace('{iter}', iteration.toString()) || `after ${iteration} training cycles`}
+              {t.accuracy || 'Model Accuracy'}: <strong className="text-green-400">{Math.round(currentAcc * 100)}%</strong>
             </p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => {
-                  setTargetAccuracy(0.99);
                   setHyperPhase('idle');
                   setStatusMsg('');
                   // Small delay then restart
@@ -358,7 +364,7 @@ export default function AIEngineClient({ t, mlMetrics }: AIEngineClientProps) {
                 }}
                 className="w-full px-4 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition-colors"
               >
-                {t.continueTraining99 || 'Continue training to 99%'}
+                {t.trainAgain || 'Train Again'}
               </button>
               <button
                 onClick={() => {
